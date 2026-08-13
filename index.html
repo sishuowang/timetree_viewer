@@ -13,7 +13,9 @@
     --muted: #667085;
     --accent: #087f8c;
     --accent-dark: #075f69;
-    --highlight: #d9480f;
+    --tip: #d9480f;
+    --mrca: #7b2cbf;
+    --internal: #e8590c;
     --branch: #7d8a99;
     --ci: #e67700;
     --border: #d7dce2;
@@ -32,13 +34,13 @@ body {
 }
 
 header {
-    padding: 18px 24px;
+    padding: 16px 22px;
     color: white;
     background: #123b4a;
 }
 
 header h1 {
-    margin: 0 0 6px;
+    margin: 0 0 5px;
     font-size: 23px;
 }
 
@@ -53,7 +55,7 @@ header p {
     flex-wrap: wrap;
     align-items: center;
     gap: 8px;
-    padding: 12px 18px;
+    padding: 10px 16px;
     background: white;
     border-bottom: 1px solid var(--border);
 }
@@ -103,9 +105,33 @@ select {
     font-size: 13px;
 }
 
+.mrca-panel {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    min-height: 58px;
+    padding: 11px 18px;
+    color: var(--text);
+    background: #eef7f8;
+    border-top: 2px solid var(--accent);
+    border-bottom: 2px solid var(--accent);
+    font-size: 14px;
+    line-height: 1.55;
+}
+
+.mrca-panel strong {
+    color: var(--accent-dark);
+}
+
+.mrca-time {
+    color: var(--tip);
+    font-size: 16px;
+    font-weight: bold;
+}
+
 .viewer {
-    height: calc(100vh - 225px);
-    min-height: 500px;
+    height: 72vh;
+    min-height: 560px;
     overflow: hidden;
     background: white;
 }
@@ -125,6 +151,13 @@ svg:active {
     fill: none;
     stroke: var(--branch);
     stroke-width: 1.2;
+}
+
+.node-hit-area {
+    fill: transparent;
+    stroke: transparent;
+    pointer-events: all;
+    cursor: pointer;
 }
 
 .node circle.visible-node {
@@ -151,24 +184,32 @@ svg:active {
     stroke-width: 1.2;
 }
 
+/* Selected tips */
 .node.selected-tip circle.visible-node {
-    fill: var(--highlight);
+    fill: var(--tip);
     stroke: #8a2100;
-    stroke-width: 2.8;
+    stroke-width: 3;
 }
 
-.node.highlight circle.visible-node {
-    fill: #f08c00;
-    stroke: #8a2100;
-    stroke-width: 2.5;
+/* MRCA of the two selected tips */
+.node.mrca-node circle.visible-node {
+    fill: var(--mrca);
+    stroke: #4a1475;
+    stroke-width: 4;
 }
 
-/* Large invisible click target */
-.node-hit-area {
-    fill: transparent;
-    stroke: transparent;
-    pointer-events: all;
-    cursor: pointer;
+/* Internal node selected directly by the user */
+.node.internal-selected circle.visible-node {
+    fill: var(--internal);
+    stroke: #9c2c00;
+    stroke-width: 4;
+}
+
+/* If the selected internal node is also the MRCA */
+.node.mrca-node.internal-selected circle.visible-node {
+    fill: #9c36c7;
+    stroke: #4a1475;
+    stroke-width: 4.5;
 }
 
 .label {
@@ -182,17 +223,30 @@ svg:active {
     cursor: pointer;
 }
 
+.leaf-label:hover {
+    text-decoration: underline;
+}
+
+.label.selected-label {
+    fill: var(--tip);
+    font-weight: bold;
+}
+
+.label.mrca-label {
+    fill: var(--mrca);
+    font-weight: bold;
+}
+
+.label.internal-selected-label {
+    fill: var(--internal);
+    font-weight: bold;
+}
+
 .root-label {
     fill: var(--root);
     font-size: 11px;
     font-weight: bold;
     pointer-events: none;
-}
-
-.label.selected-label,
-.label.highlight {
-    fill: var(--highlight);
-    font-weight: bold;
 }
 
 .hpd-line {
@@ -224,33 +278,18 @@ svg:active {
 
 .tooltip {
     position: fixed;
-    z-index: 10;
+    z-index: 30;
     display: none;
-    max-width: 380px;
+    max-width: 400px;
     padding: 9px 11px;
     color: #17212b;
     background: white;
     border: 1px solid #aeb7c2;
     border-radius: 5px;
-    box-shadow: 0 3px 14px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 3px 14px rgba(0,0,0,.15);
     font-size: 12px;
     line-height: 1.45;
     pointer-events: none;
-}
-
-.mrca-panel {
-    min-height: 48px;
-    padding: 11px 18px;
-    color: var(--text);
-    background: #eef7f8;
-    border-top: 1px solid #c7e1e4;
-    border-bottom: 1px solid #c7e1e4;
-    font-size: 13px;
-    line-height: 1.5;
-}
-
-.mrca-panel strong {
-    color: var(--accent-dark);
 }
 
 .help {
@@ -268,8 +307,8 @@ svg:active {
 <header>
     <h1>Interactive Timetree Viewer</h1>
     <p>
-        Explore a Newick or NEXUS timetree with branch lengths,
-        confidence intervals, and MRCA timing.
+        Explore a Newick or NEXUS timetree with confidence intervals,
+        MRCA timing, clade sorting, and editable tip names.
     </p>
 </header>
 
@@ -286,17 +325,19 @@ svg:active {
         placeholder="Search taxon name..."
     >
 
-    <label for="tipSort">Sort:</label>
+    <label for="tipSort">Sort clades:</label>
 
     <select id="tipSort">
-        <option value="original">Original order</option>
-        <option value="ascending">Increasing order (A--Z)</option>
-        <option value="descending">Decreasing order (Z--A)</option>
+        <option value="original">Original tree order</option>
+        <option value="ascending">Increasing clade size</option>
+        <option value="descending">Decreasing clade size</option>
     </select>
 
+    <button id="zoomInButton">Zoom in</button>
+    <button id="zoomOutButton">Zoom out</button>
     <button id="fitButton">Fit tree</button>
     <button id="resetButton">Reset</button>
-    <button id="clearSelectionButton">Clear tips</button>
+    <button id="clearSelectionButton">Clear selections</button>
     <button id="downloadButton">Download SVG</button>
 
     <span class="status" id="status">
@@ -304,29 +345,25 @@ svg:active {
     </span>
 </div>
 
+<div id="mrcaPanel" class="mrca-panel">
+    Click two tip names to calculate their MRCA.
+    Click an internal node to display its timing information.
+</div>
+
 <div class="viewer" id="viewer">
     <svg id="treeSvg"></svg>
 </div>
 
-<div id="mrcaPanel" class="mrca-panel">
-    Select two tips to calculate their most recent common ancestor.
-    Click an internal node to view its timing information.
-</div>
-
 <div class="help">
-    Click a tip or tip label to select it. Select two tips to report their
-    MRCA time and confidence interval. Click an internal node to view its
-    timing information. Double-click an internal node to collapse or expand
-    a clade. Use the mouse wheel to zoom and drag to pan.
+    Click a tip circle or name to select it. Click two tips to display
+    their MRCA divergence time. Click an internal node to highlight it and
+    display its timing. Double-click a tip name to edit it. Double-click
+    an internal node to collapse or expand its clade.
 </div>
 
 <div class="tooltip" id="tooltip"></div>
 
 <script>
-/* ============================================================
-   Global variables
-   ============================================================ */
-
 const svg = d3.select("#treeSvg");
 const viewer = document.getElementById("viewer");
 const tooltip = document.getElementById("tooltip");
@@ -334,10 +371,14 @@ const status = document.getElementById("status");
 const mrcaPanel = document.getElementById("mrcaPanel");
 
 const DEFAULT_TREE_FILE = "Wang_Luo_2025_FigTree.tre";
+const MIN_ZOOM = 0.01;
+const MAX_ZOOM = 1000;
 
 let root = null;
 let zoomBehavior = null;
 let selectedTips = [];
+let selectedMRCA = null;
+let selectedInternalNode = null;
 let tipSort = "original";
 
 const margin = {
@@ -348,23 +389,26 @@ const margin = {
 };
 
 /* ============================================================
-   Newick/NEXUS parser
+   Parsing
    ============================================================ */
 
 function extractNewick(text) {
-    text = text.trim();
+    text = text.trim().replace(/#NEXUS/ig, "");
 
-    // Remove the NEXUS header
-    text = text.replace(/#NEXUS/ig, "");
+    const treeMatch = text.match(
+        /(?:UTREE|TREE)\s+[^=]+=\s*([\s\S]*)/i
+    );
 
-    // Keep the content after the first equals sign
-    const equalIndex = text.indexOf("=");
+    if (treeMatch) {
+        text = treeMatch[1];
+    } else {
+        const equalIndex = text.indexOf("=");
 
-    if (equalIndex !== -1) {
-        text = text.slice(equalIndex + 1);
+        if (equalIndex !== -1) {
+            text = text.slice(equalIndex + 1);
+        }
     }
 
-    // Remove the final semicolon
     const semicolonIndex = text.lastIndexOf(";");
 
     if (semicolonIndex !== -1) {
@@ -378,10 +422,7 @@ function parseNewick(input) {
     let index = 0;
 
     function skipWhitespace() {
-        while (
-            index < input.length &&
-            /\s/.test(input[index])
-        ) {
+        while (index < input.length && /\s/.test(input[index])) {
             index++;
         }
     }
@@ -408,9 +449,7 @@ function parseNewick(input) {
         let depth = 0;
 
         while (index < input.length) {
-            if (input[index] === "[") {
-                depth++;
-            }
+            if (input[index] === "[") depth++;
 
             if (input[index] === "]") {
                 depth--;
@@ -428,36 +467,24 @@ function parseNewick(input) {
     }
 
     function parseHPDComment(comment) {
-        let hpdLow = null;
-        let hpdHigh = null;
+        const match = comment && comment.match(
+            /95%HPD\s*=\s*\{\s*([^,]+)\s*,\s*([^}]+)\s*\}/i
+        );
 
-        if (comment) {
-            const match = comment.match(
-                /95%HPD\s*=\s*\{\s*([^,]+)\s*,\s*([^}]+)\s*\}/i
-            );
-
-            if (match) {
-                hpdLow = parseFloat(match[1]);
-                hpdHigh = parseFloat(match[2]);
-            }
+        if (!match) {
+            return {
+                hpdLow: null,
+                hpdHigh: null
+            };
         }
 
         return {
-            hpdLow,
-            hpdHigh
+            hpdLow: parseFloat(match[1]),
+            hpdHigh: parseFloat(match[2])
         };
     }
 
     function parseBareHPD(text) {
-        /*
-         * Supports intervals such as:
-         *
-         * 16.0001-18.7591
-         * 3.35-5.12
-         *
-         * This is deliberately applied only to internal-node
-         * text, not ordinary tip names.
-         */
         const match = text.match(
             /^\s*([+-]?(?:\d+(?:\.\d*)?|\.\d+))\s*-\s*([+-]?(?:\d+(?:\.\d*)?|\.\d+))\s*$/
         );
@@ -484,9 +511,6 @@ function parseNewick(input) {
             children: []
         };
 
-        /*
-         * Internal node
-         */
         if (input[index] === "(") {
             index++;
 
@@ -511,9 +535,6 @@ function parseNewick(input) {
 
             skipWhitespace();
 
-            /*
-             * Optional internal-node label or bare HPD interval.
-             */
             if (
                 input[index] !== ":" &&
                 input[index] !== "[" &&
@@ -522,47 +543,31 @@ function parseNewick(input) {
                 index < input.length
             ) {
                 const internalText = readUntil(":,[)]");
-
                 const bareHPD = parseBareHPD(internalText);
 
                 if (bareHPD) {
                     node.hpdLow = bareHPD.hpdLow;
                     node.hpdHigh = bareHPD.hpdHigh;
-                    node.name = "";
                 } else {
                     node.name = internalText;
                 }
             }
-        }
-
-        /*
-         * Tip node
-         */
-        else {
+        } else {
             node.name = readUntil(":,[)]");
         }
 
         skipWhitespace();
 
-        /*
-         * Standard comment-format CI:
-         *
-         * [&95%HPD={low,high}]
-         */
         if (input[index] === "[") {
             node.comment = readComment();
 
             const hpd = parseHPDComment(node.comment);
-
             node.hpdLow = hpd.hpdLow;
             node.hpdHigh = hpd.hpdHigh;
         }
 
         skipWhitespace();
 
-        /*
-         * Branch length
-         */
         if (input[index] === ":") {
             index++;
 
@@ -576,14 +581,10 @@ function parseNewick(input) {
 
         skipWhitespace();
 
-        /*
-         * Allow a comment after the branch length as well.
-         */
         if (input[index] === "[") {
             node.comment = readComment();
 
             const hpd = parseHPDComment(node.comment);
-
             node.hpdLow = hpd.hpdLow;
             node.hpdHigh = hpd.hpdHigh;
         }
@@ -595,53 +596,8 @@ function parseNewick(input) {
 }
 
 /* ============================================================
-   Tree calculations
+   Utilities
    ============================================================ */
-
-function assignDistances(node, distanceFromRoot = 0) {
-    node.distanceFromRoot = distanceFromRoot;
-
-    if (node.children) {
-        node.children.forEach(child => {
-            assignDistances(
-                child,
-                distanceFromRoot + (child.length || 0)
-            );
-        });
-    }
-}
-
-function getOrderedLeaves() {
-    const leaves = root.leaves().slice();
-
-    if (tipSort === "ascending") {
-        leaves.sort((a, b) =>
-            cleanLabel(a.data.name).localeCompare(
-                cleanLabel(b.data.name),
-                undefined,
-                {
-                    numeric: true,
-                    sensitivity: "base"
-                }
-            )
-        );
-    }
-
-    if (tipSort === "descending") {
-        leaves.sort((a, b) =>
-            cleanLabel(b.data.name).localeCompare(
-                cleanLabel(a.data.name),
-                undefined,
-                {
-                    numeric: true,
-                    sensitivity: "base"
-                }
-            )
-        );
-    }
-
-    return leaves;
-}
 
 function cleanLabel(label) {
     return String(label || "").replaceAll("_", " ");
@@ -668,23 +624,189 @@ function escapeHtml(value) {
         .replaceAll("'", "&#039;");
 }
 
+function getChildren(node) {
+    return node.children || node._children || [];
+}
+
+function assignDistances(node, distanceFromRoot = 0) {
+    node.data.distanceFromRoot = distanceFromRoot;
+
+    const children = node.children || [];
+
+    children.forEach(child => {
+        assignDistances(
+            child,
+            distanceFromRoot + (child.data.length || 0)
+        );
+    });
+}
+
+function getTipCount(node) {
+    const children = getChildren(node);
+
+    if (!children.length) {
+        return 1;
+    }
+
+    return children.reduce(
+        (total, child) => total + getTipCount(child),
+        0
+    );
+}
+
+function getTipCountLabel(node) {
+    const count = getTipCount(node);
+    return count === 1 ? "1 tip" : `${count} tips`;
+}
+
+function collectAllTips(node, result = []) {
+    const children = getChildren(node);
+
+    if (!children.length) {
+        result.push(node);
+        return result;
+    }
+
+    children.forEach(child => {
+        collectAllTips(child, result);
+    });
+
+    return result;
+}
+
 /* ============================================================
-   MRCA and timing functions
+   Sorting
+   ============================================================ */
+
+function saveOriginalChildOrder(node) {
+    if (node.children) {
+        node._originalChildren = node.children.slice();
+
+        node.children.forEach(child => {
+            saveOriginalChildOrder(child);
+        });
+    }
+}
+
+function restoreOriginalChildOrder(node) {
+    if (!node._originalChildren) {
+        return;
+    }
+
+    const currentChildren =
+        node.children || node._children || [];
+
+    const ordered = node._originalChildren.filter(
+        child => currentChildren.includes(child)
+    );
+
+    if (node.children) {
+        node.children = ordered;
+    } else if (node._children) {
+        node._children = ordered;
+    }
+
+    node._originalChildren.forEach(child => {
+        restoreOriginalChildOrder(child);
+    });
+}
+
+function sortChildrenRecursively(node) {
+    const children = getChildren(node);
+
+    children.forEach(child => {
+        sortChildrenRecursively(child);
+    });
+
+    if (
+        tipSort !== "ascending" &&
+        tipSort !== "descending"
+    ) {
+        return;
+    }
+
+    const direction =
+        tipSort === "ascending" ? 1 : -1;
+
+    children.sort((a, b) =>
+        direction * (getTipCount(a) - getTipCount(b))
+    );
+
+    if (node.children) {
+        node.children = children;
+    } else if (node._children) {
+        node._children = children;
+    }
+}
+
+function applyTipSort() {
+    if (!root) {
+        return;
+    }
+
+    if (tipSort === "original") {
+        restoreOriginalChildOrder(root);
+    } else {
+        sortChildrenRecursively(root);
+    }
+}
+
+function assignYPositions(node, yScale) {
+    const visibleChildren = node.children || [];
+
+    if (visibleChildren.length) {
+        visibleChildren.forEach(child => {
+            assignYPositions(child, yScale);
+        });
+
+        node.y = d3.mean(
+            visibleChildren,
+            child => child.y
+        );
+
+        return node.y;
+    }
+
+    const tips = collectAllTips(node);
+
+    node.y = tips.length
+        ? d3.mean(tips, tip => yScale(tip.data.name))
+        : 0;
+
+    return node.y;
+}
+
+/* ============================================================
+   MRCA and selection
    ============================================================ */
 
 function findMRCA(nodeA, nodeB) {
-    const ancestorsA = new Set(nodeA.ancestors());
+    const ancestorsA = new Set();
+    let current = nodeA;
 
-    return nodeB
-        .ancestors()
-        .find(node => ancestorsA.has(node));
+    while (current) {
+        ancestorsA.add(current);
+        current = current.parent;
+    }
+
+    current = nodeB;
+
+    while (current) {
+        if (ancestorsA.has(current)) {
+            return current;
+        }
+
+        current = current.parent;
+    }
+
+    return null;
 }
 
 function toggleTipSelection(tip) {
-    const existingIndex = selectedTips.indexOf(tip);
+    const index = selectedTips.indexOf(tip);
 
-    if (existingIndex !== -1) {
-        selectedTips.splice(existingIndex, 1);
+    if (index >= 0) {
+        selectedTips.splice(index, 1);
     } else {
         if (selectedTips.length >= 2) {
             selectedTips = [];
@@ -693,33 +815,149 @@ function toggleTipSelection(tip) {
         selectedTips.push(tip);
     }
 
-    reportMRCA();
+    selectedMRCA =
+        selectedTips.length === 2
+            ? findMRCA(selectedTips[0], selectedTips[1])
+            : null;
+
+    selectedInternalNode = null;
+
     renderTree();
+    reportMRCA();
 }
 
-function clearTipSelection() {
+function selectInternalNode(node) {
+    selectedInternalNode = node;
+
+    /*
+     * Selecting an internal node manually does not remove
+     * the two selected tips or their MRCA highlight.
+     */
+    renderTree();
+    reportNodeTiming(node);
+}
+
+function clearSelections() {
     selectedTips = [];
-    reportMRCA();
+    selectedMRCA = null;
+    selectedInternalNode = null;
 
     if (root) {
         renderTree();
     }
+
+    reportMRCA();
+}
+
+function reportMRCA() {
+    if (selectedTips.length === 0) {
+        mrcaPanel.innerHTML = `
+            Click two tip names or tip circles to calculate their MRCA.
+            Click an internal node to display its timing.
+        `;
+        return;
+    }
+
+    if (selectedTips.length === 1) {
+        mrcaPanel.innerHTML = `
+            Selected tip:
+            <strong>${escapeHtml(
+                cleanLabel(selectedTips[0].data.name)
+            )}</strong>.
+            Select one more tip.
+        `;
+        return;
+    }
+
+    selectedMRCA =
+        findMRCA(selectedTips[0], selectedTips[1]);
+
+    if (!selectedMRCA) {
+        mrcaPanel.textContent =
+            "The MRCA could not be identified.";
+        return;
+    }
+
+    const nameA = cleanLabel(
+        selectedTips[0].data.name
+    );
+
+    const nameB = cleanLabel(
+        selectedTips[1].data.name
+    );
+
+    const mrcaName =
+        selectedMRCA === root
+            ? "Root / oldest node"
+            : selectedMRCA.data.name
+                ? cleanLabel(selectedMRCA.data.name)
+                : "unnamed internal node";
+
+    let html = `
+        <strong>Selected tips:</strong>
+        ${escapeHtml(nameA)}
+        and
+        ${escapeHtml(nameB)}
+        &nbsp; | &nbsp;
+
+        <strong>MRCA:</strong>
+        ${escapeHtml(mrcaName)}
+        &nbsp; | &nbsp;
+
+        <strong>MRCA divergence time:</strong>
+        <span class="mrca-time">
+            ${formatNumber(selectedMRCA.data.age)}
+        </span>
+        time units before present
+        &nbsp; | &nbsp;
+
+        <strong>Clade size:</strong>
+        ${getTipCountLabel(selectedMRCA)}
+    `;
+
+    if (
+        selectedMRCA.data.hpdLow !== null &&
+        selectedMRCA.data.hpdHigh !== null
+    ) {
+        html += `
+            &nbsp; | &nbsp;
+            <strong>95% CI:</strong>
+            ${formatNumber(selectedMRCA.data.hpdLow)}
+            --
+            ${formatNumber(selectedMRCA.data.hpdHigh)}
+        `;
+    } else {
+        html += `
+            &nbsp; | &nbsp;
+            <strong>95% CI:</strong> unavailable
+        `;
+    }
+
+    mrcaPanel.innerHTML = html;
 }
 
 function reportNodeTiming(node) {
-    const nodeName = node === root
-        ? "Root / oldest node"
-        : node.data.name
-            ? cleanLabel(node.data.name)
-            : "unnamed internal node";
+    const name =
+        node === root
+            ? "Root / oldest node"
+            : node.data.name
+                ? cleanLabel(node.data.name)
+                : "unnamed internal node";
 
     let html = `
-        <strong>Internal node:</strong>
-        ${escapeHtml(nodeName)}
-        &nbsp;&nbsp;|&nbsp;&nbsp;
+        <strong>Selected internal node:</strong>
+        ${escapeHtml(name)}
+        &nbsp; | &nbsp;
+
         <strong>Divergence time:</strong>
-        ${formatNumber(node.data.age)}
+        <span class="mrca-time">
+            ${formatNumber(node.data.age)}
+        </span>
         time units before present
+        &nbsp; | &nbsp;
+
+        <strong>Clade size:</strong>
+        ${getTipCountLabel(node)}
     `;
 
     if (
@@ -727,7 +965,7 @@ function reportNodeTiming(node) {
         node.data.hpdHigh !== null
     ) {
         html += `
-            &nbsp;&nbsp;|&nbsp;&nbsp;
+            &nbsp; | &nbsp;
             <strong>95% CI:</strong>
             ${formatNumber(node.data.hpdLow)}
             --
@@ -735,87 +973,8 @@ function reportNodeTiming(node) {
         `;
     } else {
         html += `
-            &nbsp;&nbsp;|&nbsp;&nbsp;
-            <strong>95% CI:</strong>
-            unavailable
-        `;
-    }
-
-    mrcaPanel.innerHTML = html;
-}
-
-function reportMRCA() {
-    if (selectedTips.length === 0) {
-        mrcaPanel.innerHTML = `
-            Select two tips to calculate their most recent common ancestor.
-            Click an internal node to view its timing information.
-        `;
-        return;
-    }
-
-    if (selectedTips.length === 1) {
-        const selectedName = cleanLabel(
-            selectedTips[0].data.name
-        );
-
-        mrcaPanel.innerHTML = `
-            Selected tip:
-            <strong>${escapeHtml(selectedName)}</strong>.
-            Select one more tip.
-        `;
-
-        return;
-    }
-
-    const tipA = selectedTips[0];
-    const tipB = selectedTips[1];
-    const mrca = findMRCA(tipA, tipB);
-
-    if (!mrca) {
-        mrcaPanel.innerHTML =
-            "The MRCA could not be identified.";
-        return;
-    }
-
-    const nameA = cleanLabel(tipA.data.name);
-    const nameB = cleanLabel(tipB.data.name);
-
-    const mrcaName = mrca === root
-        ? "Root / oldest node"
-        : mrca.data.name
-            ? cleanLabel(mrca.data.name)
-            : "unnamed internal node";
-
-    let html = `
-        <strong>Tips:</strong>
-        ${escapeHtml(nameA)}
-        and
-        ${escapeHtml(nameB)}
-        &nbsp;&nbsp;|&nbsp;&nbsp;
-        <strong>MRCA:</strong>
-        ${escapeHtml(mrcaName)}
-        &nbsp;&nbsp;|&nbsp;&nbsp;
-        <strong>Divergence time:</strong>
-        ${formatNumber(mrca.data.age)}
-        time units before present
-    `;
-
-    if (
-        mrca.data.hpdLow !== null &&
-        mrca.data.hpdHigh !== null
-    ) {
-        html += `
-            &nbsp;&nbsp;|&nbsp;&nbsp;
-            <strong>95% CI:</strong>
-            ${formatNumber(mrca.data.hpdLow)}
-            --
-            ${formatNumber(mrca.data.hpdHigh)}
-        `;
-    } else {
-        html += `
-            &nbsp;&nbsp;|&nbsp;&nbsp;
-            <strong>95% CI:</strong>
-            unavailable
+            &nbsp; | &nbsp;
+            <strong>95% CI:</strong> unavailable
         `;
     }
 
@@ -823,59 +982,39 @@ function reportMRCA() {
 }
 
 /* ============================================================
-   Tooltip
+   Tip-name editing
    ============================================================ */
 
-function showTooltip(event, d) {
-    const node = d.data;
+function editTipName(tip) {
+    const oldName = cleanLabel(tip.data.name);
 
-    let html = "";
+    const newName = window.prompt(
+        "Edit tip name:",
+        oldName
+    );
 
-    if (d === root) {
-        html += "<strong>Root / oldest node</strong><br>";
-    } else if (node.name) {
-        html += `
-            <strong>${escapeHtml(node.name)}</strong><br>
-        `;
-    } else {
-        html += "<strong>Internal node</strong><br>";
+    if (newName === null) {
+        return;
     }
 
-    html += `
-        Divergence time:
-        ${formatNumber(node.age)}
-        time units before present<br>
-    `;
+    const trimmedName = newName.trim();
 
-    html += `
-        Branch length:
-        ${formatNumber(node.length)}<br>
-    `;
-
-    if (
-        node.hpdLow !== null &&
-        node.hpdHigh !== null
-    ) {
-        html += `
-            95% CI:
-            ${formatNumber(node.hpdLow)}
-            --
-            ${formatNumber(node.hpdHigh)}
-        `;
+    if (!trimmedName) {
+        return;
     }
 
-    tooltip.innerHTML = html;
-    tooltip.style.display = "block";
-    tooltip.style.left = `${event.clientX + 14}px`;
-    tooltip.style.top = `${event.clientY + 14}px`;
-}
+    /*
+     * Use underscores internally so the name remains safe
+     * for Newick-style display and sorting.
+     */
+    tip.data.name = trimmedName.replace(/\s+/g, "_");
 
-function hideTooltip() {
-    tooltip.style.display = "none";
+    renderTree();
+    reportMRCA();
 }
 
 /* ============================================================
-   Search
+   Search and tooltip
    ============================================================ */
 
 function applySearch() {
@@ -895,21 +1034,59 @@ function applySearch() {
                 .toLowerCase()
                 .includes(query);
         });
+}
 
-    svg.selectAll(".label")
-        .classed("highlight", d => {
-            if (!query) {
-                return false;
-            }
+function showTooltip(event, d) {
+    const node = d.data;
 
-            return String(d.data.name)
-                .toLowerCase()
-                .includes(query);
-        });
+    const title =
+        d === root
+            ? "Root / oldest node"
+            : node.name
+                ? cleanLabel(node.name)
+                : d.children || d._children
+                    ? "Internal node"
+                    : "Tip";
+
+    let html = `
+        <strong>${escapeHtml(title)}</strong><br>
+        Divergence time:
+        ${formatNumber(node.age)}
+        time units before present<br>
+
+        Clade size:
+        ${getTipCountLabel(d)}<br>
+
+        Branch length:
+        ${formatNumber(node.length)}<br>
+    `;
+
+    if (
+        node.hpdLow !== null &&
+        node.hpdHigh !== null
+    ) {
+        html += `
+            95% CI:
+            ${formatNumber(node.hpdLow)}
+            --
+            ${formatNumber(node.hpdHigh)}
+        `;
+    }
+
+    tooltip.innerHTML = html;
+    tooltip.style.display = "block";
+    tooltip.style.left =
+        `${event.clientX + 14}px`;
+    tooltip.style.top =
+        `${event.clientY + 14}px`;
+}
+
+function hideTooltip() {
+    tooltip.style.display = "none";
 }
 
 /* ============================================================
-   Tree rendering
+   Rendering
    ============================================================ */
 
 function renderTree() {
@@ -917,42 +1094,35 @@ function renderTree() {
         return;
     }
 
+    applyTipSort();
     svg.selectAll("*").remove();
 
     const width = viewer.clientWidth;
-    const visibleLeafCount = root.leaves().length;
-    const rowHeight = 20;
-
+    const allTips = collectAllTips(root);
     const height = Math.max(
         viewer.clientHeight,
         margin.top +
         margin.bottom +
-        visibleLeafCount * rowHeight
+        allTips.length * 20
     );
 
-    svg.attr("viewBox", `0 0 ${width} ${height}`);
+    svg.attr(
+        "viewBox",
+        `0 0 ${width} ${height}`
+    );
 
-    assignDistances(root.data);
+    assignDistances(root);
 
     const maxAge = d3.max(
         root.descendants(),
         d => d.data.distanceFromRoot
     );
 
-    /*
-     * Root = maximum age.
-     * Tips = zero.
-     */
     root.descendants().forEach(d => {
         d.data.age =
             maxAge - d.data.distanceFromRoot;
     });
 
-    /*
-     * Reversed timeline:
-     * left = maximum age
-     * right = present
-     */
     const xScale = d3.scaleLinear()
         .domain([maxAge, 0])
         .range([
@@ -960,11 +1130,9 @@ function renderTree() {
             width - margin.right
         ]);
 
-    const leaves = getOrderedLeaves();
-
     const yScale = d3.scalePoint()
         .domain(
-            leaves.map(d => d.data.name)
+            allTips.map(d => d.data.name)
         )
         .range([
             margin.top,
@@ -972,32 +1140,7 @@ function renderTree() {
         ])
         .padding(0.5);
 
-    leaves.forEach(d => {
-        d.y = yScale(d.data.name);
-    });
-
-    /*
-     * Calculate internal-node vertical positions.
-     */
-    root.descendants()
-        .filter(d => d.children)
-        .reverse()
-        .forEach(d => {
-            d.y = d3.mean(
-                d.children,
-                child => child.y
-            );
-        });
-
-    /*
-     * The root may have only one visible child after
-     * collapsing, so make sure it always receives a position.
-     */
-    if (root.y === undefined) {
-        root.y = root.children && root.children.length
-            ? d3.mean(root.children, d => d.y)
-            : height / 2;
-    }
+    assignYPositions(root, yScale);
 
     root.descendants().forEach(d => {
         d.x = xScale(d.data.age);
@@ -1006,12 +1149,9 @@ function renderTree() {
     const treeGroup = svg.append("g")
         .attr("class", "tree-group");
 
-    /* --------------------------------------------------------
-       Branches
-       -------------------------------------------------------- */
+    /* Branches */
 
-    const branchGroup = treeGroup.append("g")
-        .attr("class", "branches");
+    const branchGroup = treeGroup.append("g");
 
     root.descendants()
         .filter(d => d.parent)
@@ -1033,12 +1173,9 @@ function renderTree() {
                 );
         });
 
-    /* --------------------------------------------------------
-       Confidence intervals
-       -------------------------------------------------------- */
+    /* Confidence intervals */
 
-    const ciGroup = treeGroup.append("g")
-        .attr("class", "ci-group");
+    const ciGroup = treeGroup.append("g");
 
     root.descendants()
         .filter(d =>
@@ -1046,24 +1183,14 @@ function renderTree() {
             d.data.hpdHigh !== null
         )
         .forEach(d => {
-            /*
-             * Older age is on the left;
-             * younger age is on the right.
-             */
-            const olderEndpoint =
-                xScale(d.data.hpdHigh);
-
-            const youngerEndpoint =
-                xScale(d.data.hpdLow);
-
             const x1 = Math.min(
-                olderEndpoint,
-                youngerEndpoint
+                xScale(d.data.hpdHigh),
+                xScale(d.data.hpdLow)
             );
 
             const x2 = Math.max(
-                olderEndpoint,
-                youngerEndpoint
+                xScale(d.data.hpdHigh),
+                xScale(d.data.hpdLow)
             );
 
             ciGroup.append("line")
@@ -1088,14 +1215,10 @@ function renderTree() {
                 .attr("y2", d.y + 4);
         });
 
-    /* --------------------------------------------------------
-       Nodes
-       -------------------------------------------------------- */
+    /* Nodes */
 
-    const nodeGroup = treeGroup.append("g")
-        .attr("class", "nodes");
-
-    const nodes = nodeGroup.selectAll("g")
+    const nodes = treeGroup.append("g")
+        .selectAll("g")
         .data(root.descendants())
         .join("g")
         .attr("class", d => {
@@ -1115,6 +1238,14 @@ function renderTree() {
                 classes.push("selected-tip");
             }
 
+            if (selectedMRCA === d) {
+                classes.push("mrca-node");
+            }
+
+            if (selectedInternalNode === d) {
+                classes.push("internal-selected");
+            }
+
             return classes.join(" ");
         })
         .attr(
@@ -1124,25 +1255,15 @@ function renderTree() {
         .on("click", (event, d) => {
             event.stopPropagation();
 
-            /*
-             * Click tips to select them.
-             */
             if (!d.children && !d._children) {
                 toggleTipSelection(d);
-                return;
+            } else {
+                selectInternalNode(d);
             }
-
-            /*
-             * Click internal nodes to report timing.
-             */
-            reportNodeTiming(d);
         })
         .on("dblclick", (event, d) => {
             event.stopPropagation();
 
-            /*
-             * Keep the root visible and expanded.
-             */
             if (d === root) {
                 return;
             }
@@ -1156,24 +1277,19 @@ function renderTree() {
             }
 
             renderTree();
+            reportMRCA();
         })
         .on("mousemove", showTooltip)
         .on("mouseleave", hideTooltip);
 
-    /*
-     * Enlarged invisible hit area.
-     */
     nodes.append("circle")
         .attr("class", "node-hit-area")
         .attr("r", d => {
-            if (d === root) return 14;
-            if (d.children || d._children) return 11;
+            if (d === root) return 15;
+            if (d.children || d._children) return 12;
             return 8;
         });
 
-    /*
-     * Visible node marker.
-     */
     nodes.append("circle")
         .attr("class", "visible-node")
         .attr("r", d => {
@@ -1183,7 +1299,8 @@ function renderTree() {
         });
 
     /*
-     * Tip labels.
+     * Tip names are clickable.
+     * Double-clicking a tip name edits it.
      */
     nodes.append("text")
         .attr("class", d => {
@@ -1195,6 +1312,14 @@ function renderTree() {
 
             if (selectedTips.includes(d)) {
                 classes.push("selected-label");
+            }
+
+            if (selectedMRCA === d) {
+                classes.push("mrca-label");
+            }
+
+            if (selectedInternalNode === d) {
+                classes.push("internal-selected-label");
             }
 
             return classes.join(" ");
@@ -1220,23 +1345,24 @@ function renderTree() {
             if (!d.children && !d._children) {
                 toggleTipSelection(d);
             }
+        })
+        .on("dblclick", (event, d) => {
+            event.stopPropagation();
+
+            if (!d.children && !d._children) {
+                editTipName(d);
+            }
         });
 
-    /*
-     * Explicit root label.
-     */
     nodes
         .filter(d => d === root)
         .append("text")
         .attr("class", "root-label")
         .attr("x", 11)
         .attr("y", -11)
-        .attr("text-anchor", "start")
         .text("Root / oldest");
 
-    /* --------------------------------------------------------
-       Time axis
-       -------------------------------------------------------- */
+    /* Timeline */
 
     const axis = d3.axisBottom(xScale)
         .ticks(8)
@@ -1257,12 +1383,11 @@ function renderTree() {
         .attr("text-anchor", "middle")
         .text("Time before present");
 
-    /* --------------------------------------------------------
-       Zoom and pan
-       -------------------------------------------------------- */
+    /* Zoom */
 
     zoomBehavior = d3.zoom()
-        .scaleExtent([0.2, 8])
+        .scaleExtent([MIN_ZOOM, MAX_ZOOM])
+        .wheelDelta(event => -event.deltaY * 0.003)
         .on("zoom", event => {
             treeGroup.attr(
                 "transform",
@@ -1283,6 +1408,11 @@ function renderTree() {
 function loadTree(text) {
     try {
         const newick = extractNewick(text);
+
+        if (!newick.includes("(")) {
+            throw new Error("No valid Newick tree found.");
+        }
+
         const parsedTree = parseNewick(newick);
 
         root = d3.hierarchy(
@@ -1290,7 +1420,19 @@ function loadTree(text) {
             d => d.children
         );
 
+        if (!root || root.leaves().length === 0) {
+            throw new Error("The tree contains no tips.");
+        }
+
+        saveOriginalChildOrder(root);
+
         selectedTips = [];
+        selectedMRCA = null;
+        selectedInternalNode = null;
+        tipSort = "original";
+
+        document.getElementById("tipSort").value =
+            "original";
 
         renderTree();
         reportMRCA();
@@ -1300,12 +1442,10 @@ function loadTree(text) {
     } catch (error) {
         console.error(error);
 
-        status.textContent =
-            "Could not parse tree";
+        status.textContent = "Could not parse tree";
 
         mrcaPanel.innerHTML = `
             The tree could not be parsed.
-            Please check the Newick/NEXUS format.
             <br>
             <small>${escapeHtml(error.message)}</small>
         `;
@@ -1319,9 +1459,7 @@ async function loadDefaultTree() {
 
         const response = await fetch(
             DEFAULT_TREE_FILE,
-            {
-                cache: "no-store"
-            }
+            { cache: "no-store" }
         );
 
         if (!response.ok) {
@@ -1330,13 +1468,7 @@ async function loadDefaultTree() {
             );
         }
 
-        const text = await response.text();
-
-        if (!text.trim()) {
-            throw new Error("The tree file is empty.");
-        }
-
-        loadTree(text);
+        loadTree(await response.text());
     } catch (error) {
         console.error(error);
 
@@ -1376,10 +1508,18 @@ document
             return;
         }
 
+        status.textContent =
+            `Reading ${file.name}...`;
+
         const reader = new FileReader();
 
         reader.onload = event => {
             loadTree(event.target.result);
+        };
+
+        reader.onerror = () => {
+            status.textContent =
+                "Could not read the selected file.";
         };
 
         reader.readAsText(file);
@@ -1396,12 +1536,39 @@ document
 
         if (root) {
             renderTree();
+            reportMRCA();
+        }
+    });
+
+document
+    .getElementById("zoomInButton")
+    .addEventListener("click", () => {
+        if (zoomBehavior) {
+            svg.transition()
+                .duration(250)
+                .call(
+                    zoomBehavior.scaleBy,
+                    2
+                );
+        }
+    });
+
+document
+    .getElementById("zoomOutButton")
+    .addEventListener("click", () => {
+        if (zoomBehavior) {
+            svg.transition()
+                .duration(250)
+                .call(
+                    zoomBehavior.scaleBy,
+                    0.5
+                );
         }
     });
 
 document
     .getElementById("clearSelectionButton")
-    .addEventListener("click", clearTipSelection);
+    .addEventListener("click", clearSelections);
 
 document
     .getElementById("resetButton")
@@ -1409,7 +1576,12 @@ document
         document.getElementById("searchInput").value = "";
 
         tipSort = "original";
-        document.getElementById("tipSort").value = "original";
+        selectedTips = [];
+        selectedMRCA = null;
+        selectedInternalNode = null;
+
+        document.getElementById("tipSort").value =
+            "original";
 
         if (!root) {
             return;
@@ -1422,16 +1594,18 @@ document
             }
         });
 
-        selectedTips = [];
+        restoreOriginalChildOrder(root);
 
         renderTree();
         reportMRCA();
 
         if (zoomBehavior) {
-            svg.call(
-                zoomBehavior.transform,
-                d3.zoomIdentity
-            );
+            svg.transition()
+                .duration(250)
+                .call(
+                    zoomBehavior.transform,
+                    d3.zoomIdentity
+                );
         }
     });
 
@@ -1445,10 +1619,12 @@ document
         renderTree();
 
         if (zoomBehavior) {
-            svg.call(
-                zoomBehavior.transform,
-                d3.zoomIdentity
-            );
+            svg.transition()
+                .duration(250)
+                .call(
+                    zoomBehavior.transform,
+                    d3.zoomIdentity
+                );
         }
     });
 
@@ -1458,29 +1634,20 @@ document
         const svgElement =
             document.getElementById("treeSvg");
 
-        const serializer =
-            new XMLSerializer();
-
         const source =
-            serializer.serializeToString(svgElement);
+            new XMLSerializer()
+                .serializeToString(svgElement);
 
         const blob = new Blob(
             [source],
-            {
-                type: "image/svg+xml;charset=utf-8"
-            }
+            { type: "image/svg+xml;charset=utf-8" }
         );
 
-        const url =
-            URL.createObjectURL(blob);
-
-        const link =
-            document.createElement("a");
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
 
         link.href = url;
-        link.download =
-            "interactive-timetree.svg";
-
+        link.download = "interactive-timetree.svg";
         link.click();
 
         URL.revokeObjectURL(url);
@@ -1489,10 +1656,11 @@ document
 window.addEventListener("resize", () => {
     if (root) {
         renderTree();
+        reportMRCA();
     }
 });
 
-/* Automatically preload the default tree */
+/* Preload default tree */
 loadDefaultTree();
 </script>
 
