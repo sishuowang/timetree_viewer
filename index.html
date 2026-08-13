@@ -420,9 +420,9 @@ svg:active {
 
 <div class="help">
     Click a tip or tip label to select it. Select two tips to display the
-    MRCA and highlight the connecting paths. Click an internal node to select
-    it. Double-click an internal node to collapse or expand it as a triangle.
-    Double-click a tip name to edit it.
+    MRCA and highlight the connecting paths. Double-click an internal node
+    to collapse or expand it as a triangle. The triangle ends at the date
+    of the most recent descendant tip. Double-click a tip name to edit it.
 </div>
 
 <div class="tooltip" id="tooltip"></div>
@@ -456,18 +456,12 @@ const margin = {
 };
 
 /* ============================================================
-   Newick/NEXUS parser
+   Parsing
    ============================================================ */
 
 function extractNewick(text) {
     text = text.trim().replace(/#NEXUS/ig, "");
 
-    /*
-     * Match the actual tree declaration:
-     *
-     * UTREE 1 = (...);
-     * TREE tree1 = (...);
-     */
     const treeMatch = text.match(
         /(?:UTREE|TREE)\s+[^=]*=\s*([\s\S]*)/i
     );
@@ -610,11 +604,6 @@ function parseNewick(input) {
 
             skipWhitespace();
 
-            /*
-             * Internal node name or bare CI:
-             *
-             * )16.0001-18.7591:1.856897
-             */
             if (
                 input[index] !== ":" &&
                 input[index] !== "[" &&
@@ -638,25 +627,16 @@ function parseNewick(input) {
 
         skipWhitespace();
 
-        /*
-         * Standard CI format:
-         *
-         * [&95%HPD={low,high}]
-         */
         if (input[index] === "[") {
             node.comment = readComment();
 
             const hpd = parseHPDComment(node.comment);
-
             node.hpdLow = hpd.hpdLow;
             node.hpdHigh = hpd.hpdHigh;
         }
 
         skipWhitespace();
 
-        /*
-         * Branch length.
-         */
         if (input[index] === ":") {
             index++;
 
@@ -670,14 +650,10 @@ function parseNewick(input) {
 
         skipWhitespace();
 
-        /*
-         * CI comment after branch length.
-         */
         if (input[index] === "[") {
             node.comment = readComment();
 
             const hpd = parseHPDComment(node.comment);
-
             node.hpdLow = hpd.hpdLow;
             node.hpdHigh = hpd.hpdHigh;
         }
@@ -735,6 +711,18 @@ function assignDistances(node, distanceFromRoot = 0) {
             distanceFromRoot + (child.data.length || 0)
         );
     });
+
+    /*
+     * Also calculate distances through collapsed clades.
+     * This is essential for positioning collapsed triangles
+     * according to the dates of their hidden descendant tips.
+     */
+    (node._children || []).forEach(child => {
+        assignDistances(
+            child,
+            distanceFromRoot + (child.data.length || 0)
+        );
+    });
 }
 
 function getTipCount(node) {
@@ -786,11 +774,11 @@ function collectAllTips(node, result = []) {
     return result;
 }
 
-function collectDescendants(node, result = []) {
+function collectAllDescendantNodes(node, result = []) {
     result.push(node);
 
     getChildren(node).forEach(child => {
-        collectDescendants(child, result);
+        collectAllDescendantNodes(child, result);
     });
 
     return result;
@@ -899,7 +887,7 @@ function assignYPositions(node, yScale) {
 }
 
 /* ============================================================
-   MRCA and selected paths
+   MRCA and path highlighting
    ============================================================ */
 
 function findMRCA(nodeA, nodeB) {
@@ -958,8 +946,9 @@ function focusNode(node) {
         return;
     }
 
-    const descendants = collectDescendants(node)
-        .filter(d => !d.data.hidden);
+    const descendants =
+        collectAllDescendantNodes(node)
+            .filter(d => !d.data.hidden);
 
     if (!descendants.length) {
         return;
@@ -1014,7 +1003,7 @@ function focusSelection() {
 }
 
 /* ============================================================
-   Information panels
+   Panels
    ============================================================ */
 
 function reportMRCA() {
@@ -1316,13 +1305,13 @@ function expandAllClades() {
 }
 
 /* ============================================================
-   Collapsed triangles
+   Collapsed triangle
    ============================================================ */
 
 function drawCollapsedTriangle(
     treeGroup,
     node,
-    xLimit,
+    xScale,
     yScale
 ) {
     if (
@@ -1333,6 +1322,10 @@ function drawCollapsedTriangle(
         return;
     }
 
+    /*
+     * Use all descendants of the collapsed clade,
+     * including hidden descendants stored in _children.
+     */
     const tips = collectAllTips(node);
 
     if (!tips.length) {
@@ -1343,7 +1336,11 @@ function drawCollapsedTriangle(
         .map(tip => yScale(tip.data.name))
         .filter(value => Number.isFinite(value));
 
-    if (!yValues.length) {
+    const tipAges = tips
+        .map(tip => tip.data.age)
+        .filter(age => Number.isFinite(age));
+
+    if (!yValues.length || !tipAges.length) {
         return;
     }
 
@@ -1351,24 +1348,27 @@ function drawCollapsedTriangle(
     const maxY = Math.max(...yValues);
     const centerY = (minY + maxY) / 2;
 
-    const triangleHeight =
-        Math.max(maxY - minY, 28);
+    /*
+     * The most recent tip has the smallest age.
+     * With the reversed time axis, this is the rightmost point.
+     */
+    const mostRecentTipAge = Math.min(...tipAges);
+    const mostRecentTipX = xScale(mostRecentTipAge);
 
-    const triangleWidth =
-        Math.max(
-            35,
-            Math.min(150, triangleHeight * 0.35)
-        );
-
-    const x2 = Math.min(
-        xLimit,
-        node.x + triangleWidth
+    /*
+     * The triangle begins at the collapsed node and ends
+     * at the most recent descendant tip date.
+     */
+    const triangleLeftX = node.x;
+    const triangleRightX = Math.max(
+        mostRecentTipX,
+        triangleLeftX + 35
     );
 
     const points = [
-        `${node.x},${centerY}`,
-        `${x2},${minY}`,
-        `${x2},${maxY}`
+        `${triangleLeftX},${centerY}`,
+        `${triangleRightX},${minY}`,
+        `${triangleRightX},${maxY}`
     ].join(" ");
 
     treeGroup.append("polygon")
@@ -1392,7 +1392,7 @@ function drawCollapsedTriangle(
 
     treeGroup.append("text")
         .attr("class", "collapsed-label")
-        .attr("x", x2 + 5)
+        .attr("x", triangleRightX + 5)
         .attr("y", centerY + 3)
         .text(`${getTipCount(node)} tips`);
 }
@@ -1509,6 +1509,9 @@ function renderTree() {
         return;
     }
 
+    /*
+     * Preserve current zoom and pan during redraw.
+     */
     const currentTransform =
         d3.zoomTransform(svg.node());
 
@@ -1530,6 +1533,10 @@ function renderTree() {
         `0 0 ${width} ${height}`
     );
 
+    /*
+     * Calculate distances through both visible and
+     * collapsed parts of the hierarchy.
+     */
     assignDistances(root);
 
     const maxAge = d3.max(
@@ -1537,9 +1544,13 @@ function renderTree() {
         d => d.data.distanceFromRoot
     );
 
-    root.descendants().forEach(d => {
-        d.data.age =
-            maxAge - d.data.distanceFromRoot;
+    /*
+     * Include collapsed descendants when calculating
+     * their ages.
+     */
+    collectAllDescendantNodes(root).forEach(node => {
+        node.data.age =
+            maxAge - node.data.distanceFromRoot;
     });
 
     const xScale = d3.scaleLinear()
@@ -1562,6 +1573,14 @@ function renderTree() {
     assignYPositions(root, yScale);
 
     root.descendants().forEach(d => {
+        d.x = xScale(d.data.age);
+    });
+
+    /*
+     * Assign x/y positions to nodes inside collapsed clades,
+     * which are not returned by root.descendants().
+     */
+    collectAllDescendantNodes(root).forEach(d => {
         d.x = xScale(d.data.age);
     });
 
@@ -1660,19 +1679,19 @@ function renderTree() {
             drawCollapsedTriangle(
                 treeGroup,
                 d,
-                width - margin.right - 20,
+                xScale,
                 yScale
             );
         });
 
     /* Nodes */
 
+    const visibleNodes = root.descendants()
+        .filter(d => !d.data.hidden);
+
     const nodes = treeGroup.append("g")
         .selectAll("g")
-        .data(
-            root.descendants()
-                .filter(d => !d.data.hidden)
-        )
+        .data(visibleNodes)
         .join("g")
         .attr("class", d => {
             const classes = ["node"];
@@ -1751,8 +1770,11 @@ function renderTree() {
             return 3.2;
         });
 
-    /* Tip labels */
-
+    /*
+     * Tip labels:
+     * single-click selects;
+     * double-click edits.
+     */
     nodes.append("text")
         .attr("class", d => {
             const classes = ["label"];
@@ -1835,7 +1857,7 @@ function renderTree() {
         .text("Time before present");
 
     /*
-     * Preserve zoom and pan during redraw.
+     * Recreate zoom behavior but preserve current transform.
      */
     zoomBehavior = d3.zoom()
         .scaleExtent([MIN_ZOOM, MAX_ZOOM])
@@ -1848,6 +1870,7 @@ function renderTree() {
         });
 
     svg.call(zoomBehavior);
+
     svg.call(
         zoomBehavior.transform,
         currentTransform
@@ -2171,7 +2194,7 @@ window.addEventListener("resize", () => {
     }
 });
 
-/* Automatically load the default tree */
+/* Automatically preload the default tree */
 loadDefaultTree();
 </script>
 
