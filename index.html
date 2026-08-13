@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
 <title>Interactive Timetree Viewer</title>
 
 <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
@@ -141,7 +142,6 @@ select {
 }
 
 .info-bar {
-    display: block;
     min-height: 52px;
     padding: 9px 18px;
     color: var(--text);
@@ -328,14 +328,6 @@ svg:active {
     font-size: 11px;
 }
 
-.help {
-    padding: 7px 14px;
-    color: var(--muted);
-    background: white;
-    border-top: 1px solid var(--border);
-    font-size: 11px;
-}
-
 .tooltip {
     position: fixed;
     z-index: 30;
@@ -350,6 +342,14 @@ svg:active {
     font-size: 12px;
     line-height: 1.4;
     pointer-events: none;
+}
+
+.help {
+    padding: 7px 14px;
+    color: var(--muted);
+    background: white;
+    border-top: 1px solid var(--border);
+    font-size: 11px;
 }
 
 .error {
@@ -446,8 +446,7 @@ svg:active {
 <div class="help">
     Click tips to select them. Double-click a tip name to edit it.
     Click an internal node for timing. Double-click an internal node
-    to collapse or expand it as a triangle. Rotate changes the tree
-    orientation by 90 degrees.
+    to collapse or expand it as a triangle.
 </div>
 
 <div class="tooltip" id="tooltip"></div>
@@ -481,7 +480,7 @@ const margin = {
 };
 
 /* ============================================================
-   Parsing
+   Newick/NEXUS parser
    ============================================================ */
 
 function extractNewick(text) {
@@ -596,17 +595,23 @@ function parseNewick(input) {
     function parseNode() {
         skipWhitespace();
 
+        /*
+         * Important:
+         * tips have children: null;
+         * internal nodes receive children: [].
+         */
         const node = {
             name: "",
             length: 0,
             comment: "",
             hpdLow: null,
             hpdHigh: null,
-            children: []
+            children: null
         };
 
         if (input[index] === "(") {
             index++;
+            node.children = [];
 
             while (true) {
                 node.children.push(parseNode());
@@ -647,6 +652,9 @@ function parseNewick(input) {
                 }
             }
         } else {
+            /*
+             * This is a true tip.
+             */
             node.name = readUntil(":,[)]");
         }
 
@@ -718,13 +726,19 @@ function escapeHtml(value) {
         .replaceAll("'", "&#039;");
 }
 
-function getChildren(node) {
-    return node.children || node._children || [];
+function isTip(node) {
+    return !node.children || node.children.length === 0;
 }
 
-function getVisibleChildren(node) {
-    return (node.children || [])
-        .filter(child => !child.data.hidden);
+function isCollapsed(node) {
+    return Boolean(
+        node._children &&
+        node._children.length > 0
+    );
+}
+
+function getChildren(node) {
+    return node.children || node._children || [];
 }
 
 function assignDistances(node, distanceFromRoot = 0) {
@@ -741,41 +755,41 @@ function assignDistances(node, distanceFromRoot = 0) {
     });
 }
 
+function allNodes(node, result = []) {
+    result.push(node);
+
+    getChildren(node).forEach(child => {
+        allNodes(child, result);
+    });
+
+    return result;
+}
+
 function getTipCount(node) {
     const children = getChildren(node);
 
-    if (!children.length) {
+    if (children.length === 0) {
         return 1;
     }
 
     return children.reduce(
-        (total, child) => total + getTipCount(child),
-        0
-    );
-}
-
-function getVisibleTipCount(node) {
-    const children = getVisibleChildren(node);
-
-    if (!children.length) {
-        return node.data.hidden ? 0 : 1;
-    }
-
-    return children.reduce(
-        (total, child) => total + getVisibleTipCount(child),
+        (sum, child) => sum + getTipCount(child),
         0
     );
 }
 
 function getTipCountLabel(node) {
-    const n = getTipCount(node);
-    return n === 1 ? "1 tip" : `${n} tips`;
+    const count = getTipCount(node);
+
+    return count === 1
+        ? "1 tip"
+        : `${count} tips`;
 }
 
 function collectAllTips(node, result = []) {
     const children = getChildren(node);
 
-    if (!children.length) {
+    if (children.length === 0) {
         if (!node.data.hidden) {
             result.push(node);
         }
@@ -790,14 +804,50 @@ function collectAllTips(node, result = []) {
     return result;
 }
 
-function collectDescendants(node, result = []) {
-    result.push(node);
+function getVisibleChildren(node) {
+    return (node.children || [])
+        .filter(child => !child.data.hidden);
+}
 
-    getChildren(node).forEach(child => {
-        collectDescendants(child, result);
-    });
+function getVisibleTipCount(node) {
+    const children = getVisibleChildren(node);
 
-    return result;
+    if (children.length === 0) {
+        return node.data.hidden ? 0 : 1;
+    }
+
+    return children.reduce(
+        (sum, child) => sum + getVisibleTipCount(child),
+        0
+    );
+}
+
+function assignYPositions(node, yScale) {
+    const children = getVisibleChildren(node);
+
+    if (children.length > 0) {
+        children.forEach(child => {
+            assignYPositions(child, yScale);
+        });
+
+        node.y = d3.mean(
+            children,
+            child => child.y
+        );
+
+        return node.y;
+    }
+
+    const tips = collectAllTips(node);
+
+    node.y = tips.length
+        ? d3.mean(
+            tips,
+            tip => yScale(tip.data.name)
+        )
+        : 0;
+
+    return node.y;
 }
 
 /* ============================================================
@@ -806,7 +856,8 @@ function collectDescendants(node, result = []) {
 
 function saveOriginalChildOrder(node) {
     if (node.children) {
-        node._originalChildren = node.children.slice();
+        node._originalChildren =
+            node.children.slice();
 
         node.children.forEach(child => {
             saveOriginalChildOrder(child);
@@ -819,12 +870,13 @@ function restoreOriginalChildOrder(node) {
         return;
     }
 
-    const current =
+    const currentChildren =
         node.children || node._children || [];
 
-    const ordered = node._originalChildren.filter(
-        child => current.includes(child)
-    );
+    const ordered =
+        node._originalChildren.filter(
+            child => currentChildren.includes(child)
+        );
 
     if (node.children) {
         node.children = ordered;
@@ -852,10 +904,19 @@ function sortChildrenRecursively(node) {
     }
 
     const direction =
-        tipSort === "ascending" ? 1 : -1;
+        tipSort === "ascending"
+            ? 1
+            : -1;
 
+    /*
+     * Sort child clades by their number of descendant tips.
+     * Tip names are not changed.
+     */
     children.sort((a, b) =>
-        direction * (getTipCount(a) - getTipCount(b))
+        direction * (
+            getTipCount(a) -
+            getTipCount(b)
+        )
     );
 
     if (node.children) {
@@ -877,44 +938,23 @@ function applyTipSort() {
     }
 }
 
-function assignYPositions(node, yScale) {
-    const children = getVisibleChildren(node);
-
-    if (children.length) {
-        children.forEach(child => {
-            assignYPositions(child, yScale);
-        });
-
-        node.y = d3.mean(children, child => child.y);
-        return node.y;
-    }
-
-    const tips = collectAllTips(node);
-
-    node.y = tips.length
-        ? d3.mean(tips, tip => yScale(tip.data.name))
-        : 0;
-
-    return node.y;
-}
-
 /* ============================================================
    MRCA
    ============================================================ */
 
-function findMRCA(a, b) {
-    const ancestors = new Set();
-    let current = a;
+function findMRCA(nodeA, nodeB) {
+    const ancestorsA = new Set();
+    let current = nodeA;
 
     while (current) {
-        ancestors.add(current);
+        ancestorsA.add(current);
         current = current.parent;
     }
 
-    current = b;
+    current = nodeB;
 
     while (current) {
-        if (ancestors.has(current)) {
+        if (ancestorsA.has(current)) {
             return current;
         }
 
@@ -925,7 +965,7 @@ function findMRCA(a, b) {
 }
 
 /* ============================================================
-   Information display
+   Display
    ============================================================ */
 
 function showInfo(title, html) {
@@ -936,7 +976,7 @@ function showInfo(title, html) {
 }
 
 function reportMRCA() {
-    if (!selectedTips.length) {
+    if (selectedTips.length === 0) {
         showInfo(
             "MRCA / selected node",
             "Click two tips to calculate their MRCA, or click an internal node to view its timing."
@@ -955,7 +995,10 @@ function reportMRCA() {
     }
 
     selectedMRCA =
-        findMRCA(selectedTips[0], selectedTips[1]);
+        findMRCA(
+            selectedTips[0],
+            selectedTips[1]
+        );
 
     if (!selectedMRCA) {
         showInfo(
@@ -965,26 +1008,45 @@ function reportMRCA() {
         return;
     }
 
-    const tipA = cleanLabel(selectedTips[0].data.name);
-    const tipB = cleanLabel(selectedTips[1].data.name);
+    const tipA = cleanLabel(
+        selectedTips[0].data.name
+    );
+
+    const tipB = cleanLabel(
+        selectedTips[1].data.name
+    );
 
     const mrcaName =
         selectedMRCA === root
             ? "Root / oldest"
             : selectedMRCA.data.name
-                ? cleanLabel(selectedMRCA.data.name)
+                ? cleanLabel(
+                    selectedMRCA.data.name
+                )
                 : "unnamed node";
 
     let html = `
-        <strong>Tips:</strong> ${escapeHtml(tipA)}
-        and ${escapeHtml(tipB)}
+        <strong>Tips:</strong>
+        ${escapeHtml(tipA)}
+        and
+        ${escapeHtml(tipB)}
+
         <span class="separator">|</span>
-        <strong>MRCA:</strong> ${escapeHtml(mrcaName)}
+
+        <strong>MRCA:</strong>
+        ${escapeHtml(mrcaName)}
+
         <span class="separator">|</span>
+
         <strong>Time:</strong>
-        <span class="value">${formatNumber(selectedMRCA.data.age)}</span>
+        <span class="value">
+            ${formatNumber(selectedMRCA.data.age)}
+        </span>
+
         <span class="separator">|</span>
-        <strong>Clade:</strong> ${getTipCountLabel(selectedMRCA)}
+
+        <strong>Clade:</strong>
+        ${getTipCountLabel(selectedMRCA)}
     `;
 
     if (
@@ -994,12 +1056,20 @@ function reportMRCA() {
         html += `
             <span class="separator">|</span>
             <strong>95% CI:</strong>
-            ${formatNumber(selectedMRCA.data.hpdLow)}
-            -- ${formatNumber(selectedMRCA.data.hpdHigh)}
+            ${formatNumber(
+                selectedMRCA.data.hpdLow
+            )}
+            --
+            ${formatNumber(
+                selectedMRCA.data.hpdHigh
+            )}
         `;
     }
 
-    showInfo("MRCA / selected tips", html);
+    showInfo(
+        "MRCA / selected tips",
+        html
+    );
 }
 
 function reportNode(node) {
@@ -1019,12 +1089,20 @@ function reportNode(node) {
                 : "unnamed node";
 
     let html = `
-        <strong>Node:</strong> ${escapeHtml(name)}
+        <strong>Node:</strong>
+        ${escapeHtml(name)}
+
         <span class="separator">|</span>
+
         <strong>Time:</strong>
-        <span class="value">${formatNumber(node.data.age)}</span>
+        <span class="value">
+            ${formatNumber(node.data.age)}
+        </span>
+
         <span class="separator">|</span>
-        <strong>Clade:</strong> ${getTipCountLabel(node)}
+
+        <strong>Clade:</strong>
+        ${getTipCountLabel(node)}
     `;
 
     if (
@@ -1035,19 +1113,24 @@ function reportNode(node) {
             <span class="separator">|</span>
             <strong>95% CI:</strong>
             ${formatNumber(node.data.hpdLow)}
-            -- ${formatNumber(node.data.hpdHigh)}
+            --
+            ${formatNumber(node.data.hpdHigh)}
         `;
     }
 
-    showInfo("Selected node", html);
+    showInfo(
+        "Selected node",
+        html
+    );
 }
 
 /* ============================================================
-   Selection and actions
+   Actions
    ============================================================ */
 
 function toggleTipSelection(tip) {
-    const index = selectedTips.indexOf(tip);
+    const index =
+        selectedTips.indexOf(tip);
 
     if (index >= 0) {
         selectedTips.splice(index, 1);
@@ -1061,7 +1144,10 @@ function toggleTipSelection(tip) {
 
     selectedMRCA =
         selectedTips.length === 2
-            ? findMRCA(selectedTips[0], selectedTips[1])
+            ? findMRCA(
+                selectedTips[0],
+                selectedTips[1]
+            )
             : null;
 
     selectedInternalNode = null;
@@ -1107,8 +1193,8 @@ function hideSelectedClade() {
         return;
     }
 
-    collectDescendants(node).forEach(d => {
-        d.data.hidden = true;
+    allNodes(node).forEach(child => {
+        child.data.hidden = true;
     });
 
     selectedTips = [];
@@ -1120,7 +1206,7 @@ function hideSelectedClade() {
 }
 
 function restoreHidden() {
-    root.descendants().forEach(node => {
+    allNodes(root).forEach(node => {
         node.data.hidden = false;
     });
 
@@ -1129,14 +1215,23 @@ function restoreHidden() {
 }
 
 function collapseNode(node) {
-    if (node && node !== root && node.children) {
+    if (
+        node &&
+        node !== root &&
+        node.children &&
+        node.children.length > 0
+    ) {
         node._children = node.children;
         node.children = null;
     }
 }
 
 function expandNode(node) {
-    if (node && node._children) {
+    if (
+        node &&
+        node._children &&
+        node._children.length > 0
+    ) {
         node.children = node._children;
         node._children = null;
     }
@@ -1152,12 +1247,13 @@ function collapseSelectedClade() {
     }
 
     collapseNode(node);
+
     renderTree();
     reportMRCA();
 }
 
 function expandAllClades() {
-    root.descendants().forEach(node => {
+    allNodes(root).forEach(node => {
         expandNode(node);
     });
 
@@ -1173,7 +1269,10 @@ function editTipName(tip) {
         oldName
     );
 
-    if (newName === null || !newName.trim()) {
+    if (
+        newName === null ||
+        !newName.trim()
+    ) {
         return;
     }
 
@@ -1193,15 +1292,24 @@ function focusNode(node) {
         return;
     }
 
-    const descendants = collectDescendants(node)
+    const nodes = allNodes(node)
         .filter(d => !d.data.hidden);
 
-    if (!descendants.length) {
+    if (!nodes.length) {
         return;
     }
 
-    const xs = descendants.map(d => d.x);
-    const ys = descendants.map(d => d.y);
+    const xs = nodes
+        .map(d => d.x)
+        .filter(Number.isFinite);
+
+    const ys = nodes
+        .map(d => d.y)
+        .filter(Number.isFinite);
+
+    if (!xs.length || !ys.length) {
+        return;
+    }
 
     const minX = d3.min(xs);
     const maxX = d3.max(xs);
@@ -1212,13 +1320,18 @@ function focusNode(node) {
     const height = viewer.clientHeight;
 
     const scale = Math.min(
-        0.85 * width / Math.max(maxX - minX, 80),
-        0.85 * height / Math.max(maxY - minY, 80),
+        0.85 * width /
+            Math.max(maxX - minX, 80),
+        0.85 * height /
+            Math.max(maxY - minY, 80),
         MAX_ZOOM
     );
 
-    const centerX = (minX + maxX) / 2;
-    const centerY = (minY + maxY) / 2;
+    const centerX =
+        (minX + maxX) / 2;
+
+    const centerY =
+        (minY + maxY) / 2;
 
     const transform = d3.zoomIdentity
         .translate(
@@ -1246,7 +1359,7 @@ function focusSelection() {
 }
 
 /* ============================================================
-   Collapsed triangle
+   Collapsed triangles
    ============================================================ */
 
 function drawCollapsedTriangle(
@@ -1255,17 +1368,16 @@ function drawCollapsedTriangle(
     xScale,
     yScale
 ) {
-    if (
-        !node._children ||
-        node.children ||
-        node.data.hidden
-    ) {
+    if (!isCollapsed(node) || node.data.hidden) {
         return;
     }
 
     const tips = collectAllTips(node);
 
-    if (!tips.length) {
+    /*
+     * A single tip is rendered as a tip, not a collapsed triangle.
+     */
+    if (tips.length <= 1) {
         return;
     }
 
@@ -1283,13 +1395,14 @@ function drawCollapsedTriangle(
 
     const minY = Math.min(...yValues);
     const maxY = Math.max(...yValues);
-    const centerY = (minY + maxY) / 2;
+    const centerY =
+        (minY + maxY) / 2;
 
     /*
-     * Most recent tip = smallest age.
-     * On the reversed time axis, this is the rightmost point.
+     * Most recent descendant tip = smallest age.
      */
     const youngestAge = Math.min(...ages);
+
     const rightX = Math.max(
         xScale(youngestAge),
         node.x + 35
@@ -1302,12 +1415,16 @@ function drawCollapsedTriangle(
     ].join(" ");
 
     scene.append("polygon")
-        .attr("class", "collapsed-triangle")
+        .attr(
+            "class",
+            "collapsed-triangle"
+        )
         .attr("points", points)
         .on("click", event => {
             event.stopPropagation();
 
             selectedInternalNode = node;
+
             renderTree();
             reportNode(node);
         })
@@ -1315,15 +1432,19 @@ function drawCollapsedTriangle(
             event.stopPropagation();
 
             expandNode(node);
+
             renderTree();
             reportMRCA();
         });
 
     scene.append("text")
-        .attr("class", "collapsed-label")
+        .attr(
+            "class",
+            "collapsed-label"
+        )
         .attr("x", rightX + 5)
         .attr("y", centerY + 3)
-        .text(`${getTipCount(node)} tips`);
+        .text(getTipCountLabel(node));
 }
 
 /* ============================================================
@@ -1357,18 +1478,21 @@ function showTooltip(event, d) {
     const title =
         d === root
             ? "Root / oldest"
-            : node.name
+            : isTip(d)
                 ? cleanLabel(node.name)
-                : d.children || d._children
-                    ? "Internal node"
-                    : "Tip";
+                : node.name
+                    ? cleanLabel(node.name)
+                    : "Internal node";
 
     let html = `
         <strong>${escapeHtml(title)}</strong><br>
-        Time: ${formatNumber(node.age)}
+        Time:
+        ${formatNumber(node.age)}
         units before present<br>
-        Clade: ${getTipCountLabel(d)}<br>
-        Branch: ${formatNumber(node.length)}
+        Clade:
+        ${getTipCountLabel(d)}<br>
+        Branch:
+        ${formatNumber(node.length)}
     `;
 
     if (
@@ -1376,16 +1500,20 @@ function showTooltip(event, d) {
         node.hpdHigh !== null
     ) {
         html += `
-            <br>95% CI:
+            <br>
+            95% CI:
             ${formatNumber(node.hpdLow)}
-            -- ${formatNumber(node.hpdHigh)}
+            --
+            ${formatNumber(node.hpdHigh)}
         `;
     }
 
     tooltip.innerHTML = html;
     tooltip.style.display = "block";
-    tooltip.style.left = `${event.clientX + 14}px`;
-    tooltip.style.top = `${event.clientY + 14}px`;
+    tooltip.style.left =
+        `${event.clientX + 14}px`;
+    tooltip.style.top =
+        `${event.clientY + 14}px`;
 }
 
 function hideTooltip() {
@@ -1422,19 +1550,25 @@ function renderTree() {
         `0 0 ${width} ${height}`
     );
 
+    /*
+     * Calculate distances through visible and collapsed nodes.
+     */
     assignDistances(root);
 
+    const all = allNodes(root);
+
     const maxAge = d3.max(
-        root.descendants(),
+        all,
         d => d.data.distanceFromRoot
     );
 
     /*
-     * Assign ages to visible and collapsed nodes.
+     * Correct tip age calculation after sorting.
      */
-    collectDescendants(root).forEach(node => {
+    all.forEach(node => {
         node.data.age =
-            maxAge - node.data.distanceFromRoot;
+            maxAge -
+            node.data.distanceFromRoot;
     });
 
     const xScale = d3.scaleLinear()
@@ -1445,7 +1579,9 @@ function renderTree() {
         ]);
 
     const yScale = d3.scalePoint()
-        .domain(tips.map(d => d.data.name))
+        .domain(
+            tips.map(d => d.data.name)
+        )
         .range([
             margin.top,
             height - margin.bottom
@@ -1454,7 +1590,7 @@ function renderTree() {
 
     assignYPositions(root, yScale);
 
-    collectDescendants(root).forEach(node => {
+    all.forEach(node => {
         node.x = xScale(node.data.age);
     });
 
@@ -1463,7 +1599,6 @@ function renderTree() {
 
     /*
      * Normal gray branches only.
-     * No purple selected path is drawn.
      */
     const branchGroup = scene.append("g");
 
@@ -1540,8 +1675,7 @@ function renderTree() {
      */
     root.descendants()
         .filter(d =>
-            d._children &&
-            !d.children &&
+            isCollapsed(d) &&
             !d.data.hidden
         )
         .forEach(d => {
@@ -1554,10 +1688,11 @@ function renderTree() {
         });
 
     /*
-     * Nodes.
+     * Visible nodes.
      */
-    const visibleNodes = root.descendants()
-        .filter(d => !d.data.hidden);
+    const visibleNodes =
+        root.descendants()
+            .filter(d => !d.data.hidden);
 
     const nodes = scene.append("g")
         .selectAll("g")
@@ -1570,10 +1705,10 @@ function renderTree() {
                 classes.push("root-node");
             }
 
-            if (d.children || d._children) {
-                classes.push("internal-node");
-            } else {
+            if (isTip(d)) {
                 classes.push("leaf-node");
+            } else {
+                classes.push("internal-node");
             }
 
             if (selectedTips.includes(d)) {
@@ -1597,10 +1732,11 @@ function renderTree() {
         .on("click", (event, d) => {
             event.stopPropagation();
 
-            if (!d.children && !d._children) {
+            if (isTip(d)) {
                 toggleTipSelection(d);
             } else {
                 selectedInternalNode = d;
+
                 renderTree();
                 reportNode(d);
             }
@@ -1608,14 +1744,14 @@ function renderTree() {
         .on("dblclick", (event, d) => {
             event.stopPropagation();
 
-            if (d === root) {
+            if (d === root || isTip(d)) {
                 return;
             }
 
             if (d.children) {
                 d._children = d.children;
                 d.children = null;
-            } else if (d._children) {
+            } else if (isCollapsed(d)) {
                 d.children = d._children;
                 d._children = null;
             }
@@ -1626,32 +1762,37 @@ function renderTree() {
         .on("mousemove", showTooltip)
         .on("mouseleave", hideTooltip);
 
+    /*
+     * Large invisible click targets.
+     */
     nodes.append("circle")
         .attr("class", "node-hit-area")
         .attr("r", d => {
             if (d === root) return 15;
-            if (d.children || d._children) return 12;
+            if (!isTip(d)) return 12;
             return 8;
         });
 
+    /*
+     * Visible node markers.
+     */
     nodes.append("circle")
         .attr("class", "visible-node")
         .attr("r", d => {
             if (d === root) return 6;
-            if (d.children || d._children) return 4.2;
+            if (!isTip(d)) return 4.2;
             return 3.2;
         });
 
     /*
-     * Tip names:
-     * single-click selects;
-     * double-click edits.
+     * Tip names remain visible after sorting because the code
+     * tests isTip(d), not d.children directly.
      */
     nodes.append("text")
         .attr("class", d => {
             const classes = ["label"];
 
-            if (!d.children && !d._children) {
+            if (isTip(d)) {
                 classes.push("leaf-label");
             }
 
@@ -1671,34 +1812,37 @@ function renderTree() {
         })
         .attr(
             "x",
-            d => d.children || d._children ? -9 : 9
+            d => isTip(d) ? 9 : -9
         )
         .attr(
             "text-anchor",
-            d => d.children || d._children
-                ? "end"
-                : "start"
+            d => isTip(d) ? "start" : "end"
         )
-        .text(
-            d => d.children || d._children
-                ? ""
-                : cleanLabel(d.data.name)
-        )
+        .text(d => {
+            if (isTip(d)) {
+                return cleanLabel(d.data.name);
+            }
+
+            return "";
+        })
         .on("click", (event, d) => {
             event.stopPropagation();
 
-            if (!d.children && !d._children) {
+            if (isTip(d)) {
                 toggleTipSelection(d);
             }
         })
         .on("dblclick", (event, d) => {
             event.stopPropagation();
 
-            if (!d.children && !d._children) {
+            if (isTip(d)) {
                 editTipName(d);
             }
         });
 
+    /*
+     * Root label.
+     */
     nodes
         .filter(d => d === root)
         .append("text")
@@ -1730,7 +1874,7 @@ function renderTree() {
         .text("Time before present");
 
     /*
-     * Rotation is applied to the whole scene.
+     * Rotation and zoom.
      */
     function applySceneTransform(transform) {
         scene.attr(
@@ -1747,7 +1891,6 @@ function renderTree() {
         });
 
     svg.call(zoomBehavior);
-
     applySceneTransform(currentTransform);
 
     updateStatus();
@@ -1768,10 +1911,10 @@ function loadTree(text) {
             );
         }
 
-        const parsedTree = parseNewick(newick);
+        const parsed = parseNewick(newick);
 
         root = d3.hierarchy(
-            parsedTree,
+            parsed,
             d => d.children
         );
 
@@ -1862,14 +2005,17 @@ function updateStatus() {
         return;
     }
 
-    const hiddenCount = root.descendants()
-        .filter(d => d.data.hidden)
-        .length;
+    const hiddenCount =
+        allNodes(root).filter(
+            node => node.data.hidden
+        ).length;
 
     status.textContent =
         `${root.leaves().length} tips, ` +
-        `${root.descendants().length} nodes` +
-        (hiddenCount ? `, ${hiddenCount} hidden` : "");
+        `${allNodes(root).length} nodes` +
+        (hiddenCount
+            ? `, ${hiddenCount} hidden`
+            : "");
 }
 
 /* ============================================================
@@ -2010,8 +2156,8 @@ document
             return;
         }
 
-        collectDescendants(node).forEach(d => {
-            d.data.hidden = true;
+        allNodes(node).forEach(child => {
+            child.data.hidden = true;
         });
 
         selectedTips = [];
@@ -2025,8 +2171,8 @@ document
 document
     .getElementById("restoreHiddenButton")
     .addEventListener("click", () => {
-        root.descendants().forEach(d => {
-            d.data.hidden = false;
+        allNodes(root).forEach(node => {
+            node.data.hidden = false;
         });
 
         renderTree();
@@ -2044,11 +2190,7 @@ document
             return;
         }
 
-        if (node.children) {
-            node._children = node.children;
-            node.children = null;
-        }
-
+        collapseNode(node);
         renderTree();
         reportMRCA();
     });
@@ -2056,11 +2198,8 @@ document
 document
     .getElementById("expandButton")
     .addEventListener("click", () => {
-        root.descendants().forEach(d => {
-            if (d._children) {
-                d.children = d._children;
-                d._children = null;
-            }
+        allNodes(root).forEach(node => {
+            expandNode(node);
         });
 
         renderTree();
@@ -2085,13 +2224,9 @@ document
             return;
         }
 
-        root.descendants().forEach(d => {
-            d.data.hidden = false;
-
-            if (d._children) {
-                d.children = d._children;
-                d._children = null;
-            }
+        allNodes(root).forEach(node => {
+            node.data.hidden = false;
+            expandNode(node);
         });
 
         restoreOriginalChildOrder(root);
