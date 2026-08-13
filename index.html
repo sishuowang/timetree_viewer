@@ -184,28 +184,24 @@ svg:active {
     stroke-width: 1.2;
 }
 
-/* Selected tips */
 .node.selected-tip circle.visible-node {
     fill: var(--tip);
     stroke: #8a2100;
     stroke-width: 3;
 }
 
-/* MRCA of the two selected tips */
 .node.mrca-node circle.visible-node {
     fill: var(--mrca);
     stroke: #4a1475;
     stroke-width: 4;
 }
 
-/* Internal node selected directly by the user */
 .node.internal-selected circle.visible-node {
     fill: var(--internal);
     stroke: #9c2c00;
     stroke-width: 4;
 }
 
-/* If the selected internal node is also the MRCA */
 .node.mrca-node.internal-selected circle.visible-node {
     fill: #9c36c7;
     stroke: #4a1475;
@@ -356,9 +352,9 @@ svg:active {
 
 <div class="help">
     Click a tip circle or name to select it. Click two tips to display
-    their MRCA divergence time. Click an internal node to highlight it and
-    display its timing. Double-click a tip name to edit it. Double-click
-    an internal node to collapse or expand its clade.
+    their MRCA divergence time. Click an internal node to highlight it.
+    Double-click a tip name to edit it. Double-click an internal node to
+    collapse or expand its clade. Clicking a node does not reset the zoom.
 </div>
 
 <div class="tooltip" id="tooltip"></div>
@@ -777,7 +773,7 @@ function assignYPositions(node, yScale) {
 }
 
 /* ============================================================
-   MRCA and selection
+   MRCA and selections
    ============================================================ */
 
 function findMRCA(nodeA, nodeB) {
@@ -822,6 +818,9 @@ function toggleTipSelection(tip) {
 
     selectedInternalNode = null;
 
+    /*
+     * renderTree() preserves the current zoom/pan.
+     */
     renderTree();
     reportMRCA();
 }
@@ -830,8 +829,7 @@ function selectInternalNode(node) {
     selectedInternalNode = node;
 
     /*
-     * Selecting an internal node manually does not remove
-     * the two selected tips or their MRCA highlight.
+     * renderTree() preserves the current zoom/pan.
      */
     renderTree();
     reportNodeTiming(node);
@@ -852,8 +850,8 @@ function clearSelections() {
 function reportMRCA() {
     if (selectedTips.length === 0) {
         mrcaPanel.innerHTML = `
-            Click two tip names or tip circles to calculate their MRCA.
-            Click an internal node to display its timing.
+            Click two tip names to calculate their MRCA.
+            Click an internal node to display its timing information.
         `;
         return;
     }
@@ -1003,12 +1001,12 @@ function editTipName(tip) {
         return;
     }
 
-    /*
-     * Use underscores internally so the name remains safe
-     * for Newick-style display and sorting.
-     */
-    tip.data.name = trimmedName.replace(/\s+/g, "_");
+    tip.data.name =
+        trimmedName.replace(/\s+/g, "_");
 
+    /*
+     * Re-render while preserving zoom/pan.
+     */
     renderTree();
     reportMRCA();
 }
@@ -1094,11 +1092,19 @@ function renderTree() {
         return;
     }
 
+    /*
+     * Save the current zoom/pan before rebuilding the SVG.
+     * This is the key fix preventing automatic zoom reset.
+     */
+    const currentTransform =
+        d3.zoomTransform(svg.node());
+
     applyTipSort();
     svg.selectAll("*").remove();
 
     const width = viewer.clientWidth;
     const allTips = collectAllTips(root);
+
     const height = Math.max(
         viewer.clientHeight,
         margin.top +
@@ -1282,6 +1288,9 @@ function renderTree() {
         .on("mousemove", showTooltip)
         .on("mouseleave", hideTooltip);
 
+    /*
+     * Large invisible click target.
+     */
     nodes.append("circle")
         .attr("class", "node-hit-area")
         .attr("r", d => {
@@ -1290,6 +1299,9 @@ function renderTree() {
             return 8;
         });
 
+    /*
+     * Visible node marker.
+     */
     nodes.append("circle")
         .attr("class", "visible-node")
         .attr("r", d => {
@@ -1299,8 +1311,7 @@ function renderTree() {
         });
 
     /*
-     * Tip names are clickable.
-     * Double-clicking a tip name edits it.
+     * Clickable and editable tip names.
      */
     nodes.append("text")
         .attr("class", d => {
@@ -1354,6 +1365,9 @@ function renderTree() {
             }
         });
 
+    /*
+     * Root label.
+     */
     nodes
         .filter(d => d === root)
         .append("text")
@@ -1383,8 +1397,10 @@ function renderTree() {
         .attr("text-anchor", "middle")
         .text("Time before present");
 
-    /* Zoom */
-
+    /*
+     * Recreate zoom behavior, then restore the previous
+     * transform rather than resetting to identity.
+     */
     zoomBehavior = d3.zoom()
         .scaleExtent([MIN_ZOOM, MAX_ZOOM])
         .wheelDelta(event => -event.deltaY * 0.003)
@@ -1396,6 +1412,14 @@ function renderTree() {
         });
 
     svg.call(zoomBehavior);
+
+    /*
+     * Restore the zoom/pan from before the redraw.
+     */
+    svg.call(
+        zoomBehavior.transform,
+        currentTransform
+    );
 
     updateStatus();
     applySearch();
@@ -1596,8 +1620,11 @@ document
 
         restoreOriginalChildOrder(root);
 
+        /*
+         * Reset intentionally returns the view to the
+         * default zoom and pan.
+         */
         renderTree();
-        reportMRCA();
 
         if (zoomBehavior) {
             svg.transition()
@@ -1607,6 +1634,8 @@ document
                     d3.zoomIdentity
                 );
         }
+
+        reportMRCA();
     });
 
 document
@@ -1618,6 +1647,9 @@ document
 
         renderTree();
 
+        /*
+         * Fit tree intentionally resets the transform.
+         */
         if (zoomBehavior) {
             svg.transition()
                 .duration(250)
@@ -1655,12 +1687,15 @@ document
 
 window.addEventListener("resize", () => {
     if (root) {
+        /*
+         * Resize preserves the current zoom/pan too.
+         */
         renderTree();
         reportMRCA();
     }
 });
 
-/* Preload default tree */
+/* Preload the default tree */
 loadDefaultTree();
 </script>
 
