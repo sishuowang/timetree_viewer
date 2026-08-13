@@ -1,0 +1,1234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Interactive Timetree Viewer</title>
+
+<script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+
+<style>
+:root {
+    --text: #243447;
+    --muted: #667085;
+    --accent: #087f8c;
+    --highlight: #d9480f;
+    --branch: #7d8a99;
+    --ci: #e67700;
+    --border: #d7dce2;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    color: var(--text);
+    background: #f7f9fb;
+    font-family: Arial, Helvetica, sans-serif;
+}
+
+header {
+    padding: 18px 24px;
+    color: white;
+    background: #123b4a;
+}
+
+header h1 {
+    margin: 0 0 6px;
+    font-size: 23px;
+}
+
+header p {
+    margin: 0;
+    color: #d9eef2;
+    font-size: 14px;
+}
+
+.toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 18px;
+    background: white;
+    border-bottom: 1px solid var(--border);
+}
+
+button,
+input[type="text"],
+input[type="file"] {
+    font: inherit;
+}
+
+button {
+    padding: 7px 11px;
+    color: white;
+    background: var(--accent);
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+button:hover {
+    background: #075f69;
+}
+
+input[type="text"] {
+    width: 250px;
+    padding: 7px 9px;
+    border: 1px solid #b8c1cc;
+    border-radius: 4px;
+}
+
+input[type="file"] {
+    max-width: 280px;
+}
+
+.status {
+    margin-left: auto;
+    color: var(--muted);
+    font-size: 13px;
+}
+
+.viewer {
+    height: calc(100vh - 220px);
+    min-height: 500px;
+    overflow: hidden;
+    background: white;
+}
+
+svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+    cursor: grab;
+}
+
+svg:active {
+    cursor: grabbing;
+}
+
+.branch {
+    fill: none;
+    stroke: var(--branch);
+    stroke-width: 1.15;
+}
+
+.node circle {
+    fill: white;
+    stroke: var(--accent);
+    stroke-width: 1.3;
+    cursor: pointer;
+}
+
+.node.leaf circle {
+    fill: var(--accent);
+}
+
+.node.selected-tip circle {
+    fill: var(--highlight);
+    stroke: #8a2100;
+    stroke-width: 2.5;
+}
+
+.node.highlight circle {
+    fill: #f08c00;
+    stroke: #8a2100;
+    stroke-width: 2;
+}
+
+.label {
+    font-size: 10.5px;
+    dominant-baseline: middle;
+    pointer-events: none;
+}
+
+.leaf-label {
+    pointer-events: auto;
+    cursor: pointer;
+}
+
+.label.selected-label,
+.label.highlight {
+    fill: var(--highlight);
+    font-weight: bold;
+}
+
+.hpd-line {
+    stroke: var(--ci);
+    stroke-width: 2;
+    opacity: 0.9;
+}
+
+.hpd-cap {
+    stroke: var(--ci);
+    stroke-width: 1.2;
+    opacity: 0.9;
+}
+
+.axis path,
+.axis line {
+    stroke: #87909b;
+}
+
+.axis text {
+    fill: #4b5563;
+    font-size: 10px;
+}
+
+.axis-title {
+    fill: #4b5563;
+    font-size: 11px;
+}
+
+.tooltip {
+    position: fixed;
+    z-index: 10;
+    display: none;
+    max-width: 380px;
+    padding: 9px 11px;
+    color: #17212b;
+    background: white;
+    border: 1px solid #aeb7c2;
+    border-radius: 5px;
+    box-shadow: 0 3px 14px rgba(0, 0, 0, 0.15);
+    font-size: 12px;
+    line-height: 1.45;
+    pointer-events: none;
+}
+
+.mrca-panel {
+    min-height: 48px;
+    padding: 11px 18px;
+    color: #243447;
+    background: #eef7f8;
+    border-top: 1px solid #c7e1e4;
+    border-bottom: 1px solid #c7e1e4;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.mrca-panel strong {
+    color: #075f69;
+}
+
+.help {
+    padding: 9px 18px;
+    color: var(--muted);
+    background: white;
+    border-top: 1px solid var(--border);
+    font-size: 12px;
+}
+</style>
+</head>
+
+<body>
+
+<header>
+    <h1>Interactive Timetree Viewer</h1>
+    <p>
+        Explore a Newick or NEXUS timetree with branch lengths,
+        95% HPD intervals, and MRCA timing.
+    </p>
+</header>
+
+<div class="toolbar">
+    <input
+        type="file"
+        id="fileInput"
+        accept=".tre,.tree,.nex,.nexus,.txt"
+    >
+
+    <input
+        type="text"
+        id="searchInput"
+        placeholder="Search taxon name..."
+    >
+
+    <button id="fitButton">Fit tree</button>
+    <button id="resetButton">Reset</button>
+    <button id="clearSelectionButton">Clear tips</button>
+    <button id="downloadButton">Download SVG</button>
+
+    <span class="status" id="status">No tree loaded</span>
+</div>
+
+<div class="viewer" id="viewer">
+    <svg id="treeSvg"></svg>
+</div>
+
+<div id="mrcaPanel" class="mrca-panel">
+    Select two tips to calculate their most recent common ancestor.
+    Click an internal node to view its timing information.
+</div>
+
+<div class="help">
+    Click a tip or tip label to select it. Select two tips to report their
+    MRCA age and 95% HPD interval. Click an internal node to view its age
+    and 95% HPD interval. Double-click an internal node to collapse or
+    expand a clade. Use the mouse wheel to zoom and drag to pan.
+</div>
+
+<div class="tooltip" id="tooltip"></div>
+
+<script>
+/* ============================================================
+   Global variables
+   ============================================================ */
+
+const svg = d3.select("#treeSvg");
+const viewer = document.getElementById("viewer");
+const tooltip = document.getElementById("tooltip");
+const status = document.getElementById("status");
+const mrcaPanel = document.getElementById("mrcaPanel");
+
+let root = null;
+let zoomBehavior = null;
+let selectedTips = [];
+
+const margin = {
+    top: 40,
+    right: 300,
+    bottom: 70,
+    left: 40
+};
+
+/* ============================================================
+   Newick/NEXUS parser
+   ============================================================ */
+
+function extractNewick(text) {
+    text = text.trim();
+
+    text = text.replace(/#NEXUS/ig, "");
+
+    const equalIndex = text.indexOf("=");
+
+    if (equalIndex !== -1) {
+        text = text.slice(equalIndex + 1);
+    }
+
+    const semicolonIndex = text.lastIndexOf(";");
+
+    if (semicolonIndex !== -1) {
+        text = text.slice(0, semicolonIndex);
+    }
+
+    return text.trim();
+}
+
+function parseNewick(input) {
+    let index = 0;
+
+    function skipWhitespace() {
+        while (
+            index < input.length &&
+            /\s/.test(input[index])
+        ) {
+            index++;
+        }
+    }
+
+    function readUntil(stopCharacters) {
+        const start = index;
+
+        while (
+            index < input.length &&
+            !stopCharacters.includes(input[index])
+        ) {
+            index++;
+        }
+
+        return input.slice(start, index).trim();
+    }
+
+    function readComment() {
+        if (input[index] !== "[") {
+            return "";
+        }
+
+        const start = index;
+        let depth = 0;
+
+        while (index < input.length) {
+            if (input[index] === "[") {
+                depth++;
+            }
+
+            if (input[index] === "]") {
+                depth--;
+
+                if (depth === 0) {
+                    index++;
+                    break;
+                }
+            }
+
+            index++;
+        }
+
+        return input.slice(start, index);
+    }
+
+    function parseHPD(comment) {
+        let hpdLow = null;
+        let hpdHigh = null;
+
+        if (comment) {
+            const match = comment.match(
+                /95%HPD\s*=\s*\{\s*([^,]+)\s*,\s*([^}]+)\s*\}/i
+            );
+
+            if (match) {
+                hpdLow = parseFloat(match[1]);
+                hpdHigh = parseFloat(match[2]);
+            }
+        }
+
+        return {
+            hpdLow,
+            hpdHigh
+        };
+    }
+
+    function parseNode() {
+        skipWhitespace();
+
+        const node = {
+            name: "",
+            length: 0,
+            comment: "",
+            hpdLow: null,
+            hpdHigh: null,
+            children: []
+        };
+
+        if (input[index] === "(") {
+            index++;
+
+            while (true) {
+                node.children.push(parseNode());
+                skipWhitespace();
+
+                if (input[index] === ",") {
+                    index++;
+                    continue;
+                }
+
+                if (input[index] === ")") {
+                    index++;
+                    break;
+                }
+
+                throw new Error(
+                    "Invalid Newick format near character " + index
+                );
+            }
+
+            skipWhitespace();
+
+            if (
+                input[index] !== ":" &&
+                input[index] !== "[" &&
+                input[index] !== "," &&
+                input[index] !== ")" &&
+                index < input.length
+            ) {
+                node.name = readUntil(":,[)]");
+            }
+        } else {
+            node.name = readUntil(":,[)]");
+        }
+
+        skipWhitespace();
+
+        if (input[index] === "[") {
+            node.comment = readComment();
+
+            const hpd = parseHPD(node.comment);
+            node.hpdLow = hpd.hpdLow;
+            node.hpdHigh = hpd.hpdHigh;
+        }
+
+        skipWhitespace();
+
+        if (input[index] === ":") {
+            index++;
+
+            const branchLength = readUntil(",[)]");
+            node.length = parseFloat(branchLength);
+
+            if (!Number.isFinite(node.length)) {
+                node.length = 0;
+            }
+        }
+
+        skipWhitespace();
+
+        if (input[index] === "[") {
+            node.comment = readComment();
+
+            const hpd = parseHPD(node.comment);
+            node.hpdLow = hpd.hpdLow;
+            node.hpdHigh = hpd.hpdHigh;
+        }
+
+        return node;
+    }
+
+    return parseNode();
+}
+
+/* ============================================================
+   Tree calculations
+   ============================================================ */
+
+function assignDistances(node, distanceFromRoot = 0) {
+    node.distanceFromRoot = distanceFromRoot;
+
+    if (node.children) {
+        node.children.forEach(child => {
+            assignDistances(
+                child,
+                distanceFromRoot + (child.length || 0)
+            );
+        });
+    }
+}
+
+function cleanLabel(label) {
+    return String(label || "").replaceAll("_", " ");
+}
+
+function formatNumber(value) {
+    if (
+        value === null ||
+        value === undefined ||
+        !Number.isFinite(Number(value))
+    ) {
+        return "NA";
+    }
+
+    return Number(value).toFixed(4);
+}
+
+function escapeHtml(value) {
+    return String(value)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+}
+
+/* ============================================================
+   MRCA and node-timing functions
+   ============================================================ */
+
+function findMRCA(nodeA, nodeB) {
+    const ancestorsA = new Set(nodeA.ancestors());
+
+    return nodeB
+        .ancestors()
+        .find(node => ancestorsA.has(node));
+}
+
+function toggleTipSelection(tip) {
+    const existingIndex = selectedTips.indexOf(tip);
+
+    if (existingIndex !== -1) {
+        selectedTips.splice(existingIndex, 1);
+    } else {
+        if (selectedTips.length >= 2) {
+            selectedTips = [];
+        }
+
+        selectedTips.push(tip);
+    }
+
+    reportMRCA();
+    renderTree();
+}
+
+function clearTipSelection() {
+    selectedTips = [];
+    reportMRCA();
+
+    if (root) {
+        renderTree();
+    }
+}
+
+function reportNodeTiming(node) {
+    const nodeName = node.data.name
+        ? cleanLabel(node.data.name)
+        : "unnamed internal node";
+
+    let html = `
+        <strong>Internal node:</strong>
+        ${escapeHtml(nodeName)}
+        &nbsp;&nbsp;|&nbsp;&nbsp;
+        <strong>Divergence time:</strong>
+        ${formatNumber(node.data.age)}
+        time units before present
+    `;
+
+    if (
+        node.data.hpdLow !== null &&
+        node.data.hpdHigh !== null
+    ) {
+        html += `
+            &nbsp;&nbsp;|&nbsp;&nbsp;
+            <strong>95% HPD:</strong>
+            ${formatNumber(node.data.hpdLow)}
+            --
+            ${formatNumber(node.data.hpdHigh)}
+        `;
+    } else {
+        html += `
+            &nbsp;&nbsp;|&nbsp;&nbsp;
+            <strong>95% HPD:</strong>
+            unavailable
+        `;
+    }
+
+    mrcaPanel.innerHTML = html;
+}
+
+function reportMRCA() {
+    if (selectedTips.length === 0) {
+        mrcaPanel.innerHTML = `
+            Select two tips to calculate their most recent common ancestor.
+            Click an internal node to view its timing information.
+        `;
+        return;
+    }
+
+    if (selectedTips.length === 1) {
+        const selectedName = cleanLabel(
+            selectedTips[0].data.name
+        );
+
+        mrcaPanel.innerHTML = `
+            Selected tip:
+            <strong>${escapeHtml(selectedName)}</strong>.
+            Select one more tip.
+        `;
+
+        return;
+    }
+
+    const tipA = selectedTips[0];
+    const tipB = selectedTips[1];
+    const mrca = findMRCA(tipA, tipB);
+
+    if (!mrca) {
+        mrcaPanel.innerHTML =
+            "The MRCA could not be identified.";
+        return;
+    }
+
+    const nameA = cleanLabel(tipA.data.name);
+    const nameB = cleanLabel(tipB.data.name);
+
+    const mrcaName = mrca.data.name
+        ? cleanLabel(mrca.data.name)
+        : "unnamed internal node";
+
+    let html = `
+        <strong>Tips:</strong>
+        ${escapeHtml(nameA)}
+        and
+        ${escapeHtml(nameB)}
+        &nbsp;&nbsp;|&nbsp;&nbsp;
+        <strong>MRCA:</strong>
+        ${escapeHtml(mrcaName)}
+        &nbsp;&nbsp;|&nbsp;&nbsp;
+        <strong>divergence time:</strong>
+        ${formatNumber(mrca.data.age)}
+        time units before present
+    `;
+
+    if (
+        mrca.data.hpdLow !== null &&
+        mrca.data.hpdHigh !== null
+    ) {
+        html += `
+            &nbsp;&nbsp;|&nbsp;&nbsp;
+            <strong>95% HPD:</strong>
+            ${formatNumber(mrca.data.hpdLow)}
+            --
+            ${formatNumber(mrca.data.hpdHigh)}
+        `;
+    } else {
+        html += `
+            &nbsp;&nbsp;|&nbsp;&nbsp;
+            <strong>95% HPD:</strong>
+            unavailable
+        `;
+    }
+
+    mrcaPanel.innerHTML = html;
+}
+
+/* ============================================================
+   Tooltip
+   ============================================================ */
+
+function showTooltip(event, d) {
+    const node = d.data;
+
+    let html = "";
+
+    if (node.name) {
+        html += `
+            <strong>${escapeHtml(node.name)}</strong><br>
+        `;
+    } else {
+        html += "<strong>Internal node</strong><br>";
+    }
+
+    html += `
+        divergence time:
+        ${formatNumber(node.age)}
+        time units before present<br>
+    `;
+
+    html += `
+        Branch length:
+        ${formatNumber(node.length)}<br>
+    `;
+
+    if (
+        node.hpdLow !== null &&
+        node.hpdHigh !== null
+    ) {
+        html += `
+            95% HPD:
+            ${formatNumber(node.hpdLow)}
+            --
+            ${formatNumber(node.hpdHigh)}
+        `;
+    }
+
+    tooltip.innerHTML = html;
+    tooltip.style.display = "block";
+    tooltip.style.left = `${event.clientX + 14}px`;
+    tooltip.style.top = `${event.clientY + 14}px`;
+}
+
+function hideTooltip() {
+    tooltip.style.display = "none";
+}
+
+/* ============================================================
+   Search
+   ============================================================ */
+
+function applySearch() {
+    const query = document
+        .getElementById("searchInput")
+        .value
+        .trim()
+        .toLowerCase();
+
+    svg.selectAll(".node")
+        .classed("highlight", d => {
+            if (!query) {
+                return false;
+            }
+
+            return String(d.data.name)
+                .toLowerCase()
+                .includes(query);
+        });
+
+    svg.selectAll(".label")
+        .classed("highlight", d => {
+            if (!query) {
+                return false;
+            }
+
+            return String(d.data.name)
+                .toLowerCase()
+                .includes(query);
+        });
+}
+
+/* ============================================================
+   Tree rendering
+   ============================================================ */
+
+function renderTree() {
+    if (!root) {
+        return;
+    }
+
+    svg.selectAll("*").remove();
+
+    const width = viewer.clientWidth;
+    const visibleLeafCount = root.leaves().length;
+    const rowHeight = 20;
+
+    const height = Math.max(
+        viewer.clientHeight,
+        margin.top +
+        margin.bottom +
+        visibleLeafCount * rowHeight
+    );
+
+    svg.attr("viewBox", `0 0 ${width} ${height}`);
+
+    assignDistances(root.data);
+
+    const maxAge = d3.max(
+        root.descendants(),
+        d => d.data.distanceFromRoot
+    );
+
+    /*
+     * Convert root-to-node distances to ages before present:
+     *
+     * root = maximum age
+     * tips = zero
+     */
+    root.descendants().forEach(d => {
+        d.data.age =
+            maxAge - d.data.distanceFromRoot;
+    });
+
+    /*
+     * Reversed time axis:
+     *
+     * left  = maximum age
+     * right = present, age zero
+     */
+    const xScale = d3.scaleLinear()
+        .domain([maxAge, 0])
+        .range([
+            margin.left,
+            width - margin.right
+        ]);
+
+    const leaves = root.leaves();
+
+    const yScale = d3.scalePoint()
+        .domain(
+            leaves.map(d => d.data.name)
+        )
+        .range([
+            margin.top,
+            height - margin.bottom
+        ])
+        .padding(0.5);
+
+    leaves.forEach(d => {
+        d.y = yScale(d.data.name);
+    });
+
+    root.descendants()
+        .filter(d => d.children)
+        .reverse()
+        .forEach(d => {
+            d.y = d3.mean(
+                d.children,
+                child => child.y
+            );
+        });
+
+    root.descendants().forEach(d => {
+        d.x = xScale(d.data.age);
+    });
+
+    const treeGroup = svg.append("g")
+        .attr("class", "tree-group");
+
+    /* Branches */
+
+    const branchGroup = treeGroup.append("g")
+        .attr("class", "branches");
+
+    root.descendants()
+        .filter(d => d.parent)
+        .forEach(d => {
+            const parent = d.parent;
+
+            branchGroup.append("path")
+                .attr("class", "branch")
+                .attr(
+                    "d",
+                    `M${parent.x},${d.y} H${d.x}`
+                );
+
+            branchGroup.append("path")
+                .attr("class", "branch")
+                .attr(
+                    "d",
+                    `M${parent.x},${parent.y} V${d.y}`
+                );
+        });
+
+    /* 95% HPD intervals */
+
+    const hpdGroup = treeGroup.append("g")
+        .attr("class", "hpd-group");
+
+    root.descendants()
+        .filter(d =>
+            d.data.hpdLow !== null &&
+            d.data.hpdHigh !== null
+        )
+        .forEach(d => {
+            /*
+             * Older age is on the left;
+             * younger age is on the right.
+             */
+            const olderEndpoint =
+                xScale(d.data.hpdHigh);
+
+            const youngerEndpoint =
+                xScale(d.data.hpdLow);
+
+            const x1 = Math.min(
+                olderEndpoint,
+                youngerEndpoint
+            );
+
+            const x2 = Math.max(
+                olderEndpoint,
+                youngerEndpoint
+            );
+
+            hpdGroup.append("line")
+                .attr("class", "hpd-line")
+                .attr("x1", x1)
+                .attr("x2", x2)
+                .attr("y1", d.y)
+                .attr("y2", d.y);
+
+            hpdGroup.append("line")
+                .attr("class", "hpd-cap")
+                .attr("x1", x1)
+                .attr("x2", x1)
+                .attr("y1", d.y - 4)
+                .attr("y2", d.y + 4);
+
+            hpdGroup.append("line")
+                .attr("class", "hpd-cap")
+                .attr("x1", x2)
+                .attr("x2", x2)
+                .attr("y1", d.y - 4)
+                .attr("y2", d.y + 4);
+        });
+
+    /* Nodes and labels */
+
+    const nodeGroup = treeGroup.append("g")
+        .attr("class", "nodes");
+
+    const nodes = nodeGroup.selectAll("g")
+        .data(root.descendants())
+        .join("g")
+        .attr("class", d => {
+            const classes = [
+                "node",
+                d.children || d._children
+                    ? "internal"
+                    : "leaf"
+            ];
+
+            if (selectedTips.includes(d)) {
+                classes.push("selected-tip");
+            }
+
+            return classes.join(" ");
+        })
+        .attr(
+            "transform",
+            d => `translate(${d.x},${d.y})`
+        )
+        .on("click", (event, d) => {
+            event.stopPropagation();
+
+            /*
+             * Click on a tip:
+             * select or deselect it.
+             */
+            if (!d.children && !d._children) {
+                toggleTipSelection(d);
+                return;
+            }
+
+            /*
+             * Click on an internal node:
+             * display its timing information.
+             */
+            reportNodeTiming(d);
+        })
+        .on("dblclick", (event, d) => {
+            event.stopPropagation();
+
+            /*
+             * Double-click on an internal node:
+             * collapse or expand the clade.
+             */
+            if (d.children) {
+                d._children = d.children;
+                d.children = null;
+            } else if (d._children) {
+                d.children = d._children;
+                d._children = null;
+            }
+
+            renderTree();
+        })
+        .on("mousemove", showTooltip)
+        .on("mouseleave", hideTooltip);
+
+    nodes.append("circle")
+        .attr(
+            "r",
+            d => d.children ? 3 : 2.5
+        );
+
+    /*
+     * Tip labels are also clickable.
+     */
+    nodes.append("text")
+        .attr("class", d => {
+            const classes = ["label"];
+
+            if (!d.children && !d._children) {
+                classes.push("leaf-label");
+            }
+
+            if (selectedTips.includes(d)) {
+                classes.push("selected-label");
+            }
+
+            return classes.join(" ");
+        })
+        .attr(
+            "x",
+            d => d.children ? -7 : 7
+        )
+        .attr(
+            "text-anchor",
+            d => d.children ? "end" : "start"
+        )
+        .text(
+            d => d.children
+                ? ""
+                : cleanLabel(d.data.name)
+        )
+        .on("click", (event, d) => {
+            event.stopPropagation();
+
+            if (!d.children && !d._children) {
+                toggleTipSelection(d);
+            }
+        });
+
+    /* Reversed time axis */
+
+    const axis = d3.axisBottom(xScale)
+        .ticks(8)
+        .tickFormat(d => Number(d).toFixed(1));
+
+    treeGroup.append("g")
+        .attr("class", "axis")
+        .attr(
+            "transform",
+            `translate(0,${height - margin.bottom + 20})`
+        )
+        .call(axis);
+
+    treeGroup.append("text")
+        .attr("class", "axis-title")
+        .attr("x", width / 2)
+        .attr("y", height - 12)
+        .attr("text-anchor", "middle")
+        .text("Time before present");
+
+    /* Zoom and pan */
+
+    zoomBehavior = d3.zoom()
+        .scaleExtent([0.2, 8])
+        .on("zoom", event => {
+            treeGroup.attr(
+                "transform",
+                event.transform
+            );
+        });
+
+    svg.call(zoomBehavior);
+
+    updateStatus();
+    applySearch();
+}
+
+/* ============================================================
+   Load tree
+   ============================================================ */
+
+function loadTree(text) {
+    try {
+        const newick = extractNewick(text);
+        const parsedTree = parseNewick(newick);
+
+        root = d3.hierarchy(
+            parsedTree,
+            d => d.children
+        );
+
+        selectedTips = [];
+
+        renderTree();
+        reportMRCA();
+
+        status.textContent =
+            `${root.leaves().length} tips loaded`;
+    } catch (error) {
+        console.error(error);
+
+        status.textContent =
+            "Could not parse tree";
+
+        alert(
+            "The tree could not be parsed. Please check that it is valid Newick or NEXUS format."
+        );
+    }
+}
+
+function updateStatus() {
+    if (!root) {
+        status.textContent = "No tree loaded";
+        return;
+    }
+
+    status.textContent =
+        `${root.leaves().length} tips, ` +
+        `${root.descendants().length} visible nodes`;
+}
+
+/* ============================================================
+   Controls
+   ============================================================ */
+
+document
+    .getElementById("fileInput")
+    .addEventListener("change", event => {
+        const file = event.target.files[0];
+
+        if (!file) {
+            return;
+        }
+
+        const reader = new FileReader();
+
+        reader.onload = event => {
+            loadTree(event.target.result);
+        };
+
+        reader.readAsText(file);
+    });
+
+document
+    .getElementById("searchInput")
+    .addEventListener("input", applySearch);
+
+document
+    .getElementById("clearSelectionButton")
+    .addEventListener("click", clearTipSelection);
+
+document
+    .getElementById("resetButton")
+    .addEventListener("click", () => {
+        document.getElementById("searchInput").value = "";
+
+        if (!root) {
+            return;
+        }
+
+        root.descendants().forEach(d => {
+            if (d._children) {
+                d.children = d._children;
+                d._children = null;
+            }
+        });
+
+        selectedTips = [];
+
+        renderTree();
+        reportMRCA();
+
+        if (zoomBehavior) {
+            svg.call(
+                zoomBehavior.transform,
+                d3.zoomIdentity
+            );
+        }
+    });
+
+document
+    .getElementById("fitButton")
+    .addEventListener("click", () => {
+        if (!root) {
+            return;
+        }
+
+        renderTree();
+
+        if (zoomBehavior) {
+            svg.call(
+                zoomBehavior.transform,
+                d3.zoomIdentity
+            );
+        }
+    });
+
+document
+    .getElementById("downloadButton")
+    .addEventListener("click", () => {
+        const svgElement =
+            document.getElementById("treeSvg");
+
+        const serializer =
+            new XMLSerializer();
+
+        const source =
+            serializer.serializeToString(svgElement);
+
+        const blob = new Blob(
+            [source],
+            {
+                type: "image/svg+xml;charset=utf-8"
+            }
+        );
+
+        const url =
+            URL.createObjectURL(blob);
+
+        const link =
+            document.createElement("a");
+
+        link.href = url;
+        link.download =
+            "interactive-timetree.svg";
+
+        link.click();
+
+        URL.revokeObjectURL(url);
+    });
+
+window.addEventListener("resize", () => {
+    if (root) {
+        renderTree();
+    }
+});
+</script>
+
+</body>
+</html>
