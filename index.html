@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
 <title>Interactive Timetree Viewer</title>
 
 <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
@@ -12,10 +13,12 @@
     --text: #243447;
     --muted: #667085;
     --accent: #087f8c;
+    --accent-dark: #075f69;
     --highlight: #d9480f;
     --branch: #7d8a99;
     --ci: #e67700;
     --border: #d7dce2;
+    --root: #6f42c1;
 }
 
 * {
@@ -72,7 +75,7 @@ button {
 }
 
 button:hover {
-    background: #075f69;
+    background: var(--accent-dark);
 }
 
 input[type="text"] {
@@ -113,30 +116,59 @@ svg:active {
 .branch {
     fill: none;
     stroke: var(--branch);
-    stroke-width: 1.15;
+    stroke-width: 1.2;
 }
 
-.node circle {
+.node circle.visible-node {
     fill: white;
     stroke: var(--accent);
-    stroke-width: 1.3;
-    cursor: pointer;
+    stroke-width: 1.8;
+    pointer-events: none;
 }
 
-.node.leaf circle {
+.node.internal-node circle.visible-node {
+    fill: #f8ffff;
+    stroke-width: 2;
+}
+
+.node.root-node circle.visible-node {
+    fill: #f1eaff;
+    stroke: var(--root);
+    stroke-width: 2.8;
+}
+
+.node.leaf-node circle.visible-node {
     fill: var(--accent);
+    stroke: var(--accent-dark);
+    stroke-width: 1.2;
 }
 
-.node.selected-tip circle {
+.node.selected-tip circle.visible-node {
     fill: var(--highlight);
+    stroke: #8a2100;
+    stroke-width: 2.8;
+}
+
+.node.highlight circle.visible-node {
+    fill: #f08c00;
     stroke: #8a2100;
     stroke-width: 2.5;
 }
 
-.node.highlight circle {
-    fill: #f08c00;
-    stroke: #8a2100;
-    stroke-width: 2;
+/*
+ * Invisible but large click target.
+ * This makes internal nodes much easier to select.
+ */
+.node-hit-area {
+    fill: transparent;
+    stroke: transparent;
+    stroke-width: 0;
+    cursor: pointer;
+    pointer-events: all;
+}
+
+.node:hover circle.visible-node {
+    stroke-width: 3;
 }
 
 .label {
@@ -148,6 +180,13 @@ svg:active {
 .leaf-label {
     pointer-events: auto;
     cursor: pointer;
+}
+
+.root-label {
+    fill: var(--root);
+    font-size: 11px;
+    font-weight: bold;
+    pointer-events: none;
 }
 
 .label.selected-label,
@@ -211,7 +250,7 @@ svg:active {
 }
 
 .mrca-panel strong {
-    color: #075f69;
+    color: var(--accent-dark);
 }
 
 .help {
@@ -290,11 +329,13 @@ let root = null;
 let zoomBehavior = null;
 let selectedTips = [];
 
+const DEFAULT_TREE_FILE = "Wang_Luo_2025_FigTree.tre";
+
 const margin = {
-    top: 40,
+    top: 55,
     right: 300,
     bottom: 70,
-    left: 40
+    left: 70
 };
 
 /* ============================================================
@@ -526,7 +567,7 @@ function escapeHtml(value) {
 }
 
 /* ============================================================
-   MRCA and node-timing functions
+   MRCA and timing functions
    ============================================================ */
 
 function findMRCA(nodeA, nodeB) {
@@ -566,7 +607,7 @@ function clearTipSelection() {
 function reportNodeTiming(node) {
     const nodeName = node.data.name
         ? cleanLabel(node.data.name)
-        : "unnamed internal node";
+        : "Root / oldest node";
 
     let html = `
         <strong>Internal node:</strong>
@@ -688,6 +729,8 @@ function showTooltip(event, d) {
         html += `
             <strong>${escapeHtml(node.name)}</strong><br>
         `;
+    } else if (d === root) {
+        html += "<strong>Root / oldest node</strong><br>";
     } else {
         html += "<strong>Internal node</strong><br>";
     }
@@ -791,7 +834,10 @@ function renderTree() {
     );
 
     /*
-     * Root = maximum age; tips = zero.
+     * Convert distances from root into ages before present:
+     *
+     * root = maximum age
+     * tips = zero
      */
     root.descendants().forEach(d => {
         d.data.age =
@@ -799,7 +845,10 @@ function renderTree() {
     });
 
     /*
-     * Left = maximum age; right = present.
+     * Reversed time axis:
+     *
+     * left  = maximum age
+     * right = present
      */
     const xScale = d3.scaleLinear()
         .domain([maxAge, 0])
@@ -841,7 +890,9 @@ function renderTree() {
     const treeGroup = svg.append("g")
         .attr("class", "tree-group");
 
-    /* Branches */
+    /* --------------------------------------------------------
+       Branches
+       -------------------------------------------------------- */
 
     const branchGroup = treeGroup.append("g")
         .attr("class", "branches");
@@ -866,7 +917,9 @@ function renderTree() {
                 );
         });
 
-    /* 95% HPD intervals */
+    /* --------------------------------------------------------
+       95% HPD intervals
+       -------------------------------------------------------- */
 
     const hpdGroup = treeGroup.append("g")
         .attr("class", "hpd-group");
@@ -915,7 +968,9 @@ function renderTree() {
                 .attr("y2", d.y + 4);
         });
 
-    /* Nodes and labels */
+    /* --------------------------------------------------------
+       Nodes
+       -------------------------------------------------------- */
 
     const nodeGroup = treeGroup.append("g")
         .attr("class", "nodes");
@@ -924,12 +979,17 @@ function renderTree() {
         .data(root.descendants())
         .join("g")
         .attr("class", d => {
-            const classes = [
-                "node",
-                d.children || d._children
-                    ? "internal"
-                    : "leaf"
-            ];
+            const classes = ["node"];
+
+            if (d === root) {
+                classes.push("root-node");
+            }
+
+            if (d.children || d._children) {
+                classes.push("internal-node");
+            } else {
+                classes.push("leaf-node");
+            }
 
             if (selectedTips.includes(d)) {
                 classes.push("selected-tip");
@@ -945,7 +1005,7 @@ function renderTree() {
             event.stopPropagation();
 
             /*
-             * Clicking a tip selects or deselects it.
+             * Click a tip to select or deselect it.
              */
             if (!d.children && !d._children) {
                 toggleTipSelection(d);
@@ -953,7 +1013,7 @@ function renderTree() {
             }
 
             /*
-             * Clicking an internal node reports
+             * Click an internal node to display
              * its divergence time and HPD.
              */
             reportNodeTiming(d);
@@ -962,9 +1022,13 @@ function renderTree() {
             event.stopPropagation();
 
             /*
-             * Double-clicking an internal node collapses
-             * or expands its clade.
+             * Double-click internal nodes to collapse
+             * or expand clades. The root is not collapsed.
              */
+            if (d === root) {
+                return;
+            }
+
             if (d.children) {
                 d._children = d.children;
                 d.children = null;
@@ -978,14 +1042,32 @@ function renderTree() {
         .on("mousemove", showTooltip)
         .on("mouseleave", hideTooltip);
 
+    /*
+     * Large invisible hit area.
+     * Internal nodes are now easy to click even when
+     * their visible circles are small.
+     */
     nodes.append("circle")
-        .attr(
-            "r",
-            d => d.children ? 3 : 2.5
-        );
+        .attr("class", "node-hit-area")
+        .attr("r", d => {
+            if (d === root) return 12;
+            if (d.children || d._children) return 10;
+            return 7;
+        });
 
     /*
-     * Tip labels are also clickable.
+     * Visible node marker.
+     */
+    nodes.append("circle")
+        .attr("class", "visible-node")
+        .attr("r", d => {
+            if (d === root) return 6;
+            if (d.children || d._children) return 4.2;
+            return 3.2;
+        });
+
+    /*
+     * Tip labels.
      */
     nodes.append("text")
         .attr("class", d => {
@@ -1003,14 +1085,16 @@ function renderTree() {
         })
         .attr(
             "x",
-            d => d.children ? -7 : 7
+            d => d.children || d._children ? -9 : 9
         )
         .attr(
             "text-anchor",
-            d => d.children ? "end" : "start"
+            d => d.children || d._children
+                ? "end"
+                : "start"
         )
         .text(
-            d => d.children
+            d => d.children || d._children
                 ? ""
                 : cleanLabel(d.data.name)
         )
@@ -1022,7 +1106,20 @@ function renderTree() {
             }
         });
 
-    /* Reversed time axis */
+    /*
+     * Explicit root label.
+     */
+    nodes.filter(d => d === root)
+        .append("text")
+        .attr("class", "root-label")
+        .attr("x", 10)
+        .attr("y", -10)
+        .attr("text-anchor", "start")
+        .text("Root / oldest");
+
+    /* --------------------------------------------------------
+       Time axis
+       -------------------------------------------------------- */
 
     const axis = d3.axisBottom(xScale)
         .ticks(8)
@@ -1043,7 +1140,9 @@ function renderTree() {
         .attr("text-anchor", "middle")
         .text("Time before present");
 
-    /* Zoom and pan */
+    /* --------------------------------------------------------
+       Zoom and pan
+       -------------------------------------------------------- */
 
     zoomBehavior = d3.zoom()
         .scaleExtent([0.2, 8])
@@ -1061,7 +1160,7 @@ function renderTree() {
 }
 
 /* ============================================================
-   Load tree
+   Loading
    ============================================================ */
 
 function loadTree(text) {
@@ -1087,31 +1186,36 @@ function loadTree(text) {
         status.textContent =
             "Could not parse tree";
 
-        mrcaPanel.innerHTML =
-            "The tree could not be parsed. Please check the file format.";
-
-        alert(
-            "The tree could not be parsed. Please check that it is valid Newick or NEXUS format."
-        );
+        mrcaPanel.innerHTML = `
+            The tree could not be parsed.
+            Please check the Newick/NEXUS file format.
+        `;
     }
 }
 
 async function loadDefaultTree() {
-    const filename = "Wang_Luo_2025_FigTree.tre";
-
     try {
         status.textContent =
-            `Loading ${filename}...`;
+            `Loading ${DEFAULT_TREE_FILE}...`;
 
-        const response = await fetch(filename);
+        const response = await fetch(
+            DEFAULT_TREE_FILE,
+            {
+                cache: "no-store"
+            }
+        );
 
         if (!response.ok) {
             throw new Error(
-                `HTTP ${response.status}: tree file not found`
+                `HTTP ${response.status}: ${response.statusText}`
             );
         }
 
         const text = await response.text();
+
+        if (!text.trim()) {
+            throw new Error("The tree file is empty.");
+        }
 
         loadTree(text);
     } catch (error) {
@@ -1123,14 +1227,15 @@ async function loadDefaultTree() {
         mrcaPanel.innerHTML = `
             Default tree could not be loaded.
             Please choose a tree file manually.
+            <br>
+            <small>${escapeHtml(error.message)}</small>
         `;
     }
 }
 
 function updateStatus() {
     if (!root) {
-        status.textContent =
-            "No tree loaded";
+        status.textContent = "No tree loaded";
         return;
     }
 
@@ -1255,10 +1360,7 @@ window.addEventListener("resize", () => {
     }
 });
 
-/* ============================================================
-   Automatically preload the default tree
-   ============================================================ */
-
+/* Automatically preload the default tree */
 loadDefaultTree();
 </script>
 
