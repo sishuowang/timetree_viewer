@@ -252,7 +252,9 @@ svg:active {
     <button id="clearSelectionButton">Clear tips</button>
     <button id="downloadButton">Download SVG</button>
 
-    <span class="status" id="status">No tree loaded</span>
+    <span class="status" id="status">
+        Loading Wang_Luo_2025_Figtree.tre...
+    </span>
 </div>
 
 <div class="viewer" id="viewer">
@@ -646,7 +648,7 @@ function reportMRCA() {
         <strong>MRCA:</strong>
         ${escapeHtml(mrcaName)}
         &nbsp;&nbsp;|&nbsp;&nbsp;
-        <strong>divergence time:</strong>
+        <strong>Divergence time:</strong>
         ${formatNumber(mrca.data.age)}
         time units before present
     `;
@@ -691,7 +693,7 @@ function showTooltip(event, d) {
     }
 
     html += `
-        divergence time:
+        Divergence time:
         ${formatNumber(node.age)}
         time units before present<br>
     `;
@@ -789,10 +791,7 @@ function renderTree() {
     );
 
     /*
-     * Convert root-to-node distances to ages before present:
-     *
-     * root = maximum age
-     * tips = zero
+     * Root = maximum age; tips = zero.
      */
     root.descendants().forEach(d => {
         d.data.age =
@@ -800,10 +799,7 @@ function renderTree() {
     });
 
     /*
-     * Reversed time axis:
-     *
-     * left  = maximum age
-     * right = present, age zero
+     * Left = maximum age; right = present.
      */
     const xScale = d3.scaleLinear()
         .domain([maxAge, 0])
@@ -881,10 +877,6 @@ function renderTree() {
             d.data.hpdHigh !== null
         )
         .forEach(d => {
-            /*
-             * Older age is on the left;
-             * younger age is on the right.
-             */
             const olderEndpoint =
                 xScale(d.data.hpdHigh);
 
@@ -953,8 +945,7 @@ function renderTree() {
             event.stopPropagation();
 
             /*
-             * Click on a tip:
-             * select or deselect it.
+             * Clicking a tip selects or deselects it.
              */
             if (!d.children && !d._children) {
                 toggleTipSelection(d);
@@ -962,8 +953,8 @@ function renderTree() {
             }
 
             /*
-             * Click on an internal node:
-             * display its timing information.
+             * Clicking an internal node reports
+             * its divergence time and HPD.
              */
             reportNodeTiming(d);
         })
@@ -971,8 +962,8 @@ function renderTree() {
             event.stopPropagation();
 
             /*
-             * Double-click on an internal node:
-             * collapse or expand the clade.
+             * Double-clicking an internal node collapses
+             * or expands its clade.
              */
             if (d.children) {
                 d._children = d.children;
@@ -1096,15 +1087,50 @@ function loadTree(text) {
         status.textContent =
             "Could not parse tree";
 
+        mrcaPanel.innerHTML =
+            "The tree could not be parsed. Please check the file format.";
+
         alert(
             "The tree could not be parsed. Please check that it is valid Newick or NEXUS format."
         );
     }
 }
 
+async function loadDefaultTree() {
+    const filename = "Wang_Luo_2025_Figtree.tre";
+
+    try {
+        status.textContent =
+            `Loading ${filename}...`;
+
+        const response = await fetch(filename);
+
+        if (!response.ok) {
+            throw new Error(
+                `HTTP ${response.status}: tree file not found`
+            );
+        }
+
+        const text = await response.text();
+
+        loadTree(text);
+    } catch (error) {
+        console.error(error);
+
+        status.textContent =
+            "Default tree unavailable";
+
+        mrcaPanel.innerHTML = `
+            Default tree could not be loaded.
+            Please choose a tree file manually.
+        `;
+    }
+}
+
 function updateStatus() {
     if (!root) {
-        status.textContent = "No tree loaded";
+        status.textContent =
+            "No tree loaded";
         return;
     }
 
@@ -1228,6 +1254,12 @@ window.addEventListener("resize", () => {
         renderTree();
     }
 });
+
+/* ============================================================
+   Automatically preload the default tree
+   ============================================================ */
+
+loadDefaultTree();
 </script>
 
 </body>
