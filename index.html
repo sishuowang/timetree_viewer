@@ -16,15 +16,15 @@
     }
 
     :root {
-      --background: #f5f6f8;
+      --background: #f4f6f8;
       --panel: #ffffff;
-      --border: #d9dde3;
-      --text: #222222;
+      --border: #d5dae1;
+      --text: #222831;
       --muted: #68717d;
       --branch: #4d5968;
       --blue: #2f6fdb;
       --orange: #e26f30;
-      --grid: #e8ebef;
+      --grid: #e2e6eb;
       --danger: #c74343;
       --success: #2f9d50;
       --warning: #d89a22;
@@ -32,7 +32,7 @@
 
     body {
       margin: 0;
-      padding: 20px;
+      padding: 18px;
       color: var(--text);
       background: var(--background);
       font-family: Arial, Helvetica, sans-serif;
@@ -41,17 +41,17 @@
     }
 
     .container {
-      max-width: 1600px;
+      max-width: 1700px;
       margin: 0 auto;
     }
 
     h1 {
-      margin: 0 0 5px;
+      margin: 0 0 4px;
       font-size: 24px;
     }
 
     .description {
-      margin: 0 0 14px;
+      margin: 0 0 13px;
       color: var(--muted);
     }
 
@@ -60,7 +60,7 @@
       flex-wrap: wrap;
       align-items: center;
       gap: 7px;
-      margin-bottom: 10px;
+      margin-bottom: 9px;
       padding: 10px;
       background: var(--panel);
       border: 1px solid var(--border);
@@ -73,9 +73,10 @@
 
     button,
     select,
-    input[type="text"] {
+    input[type="text"],
+    input[type="number"] {
       min-height: 32px;
-      padding: 5px 10px;
+      padding: 5px 9px;
       color: var(--text);
       background: #ffffff;
       border: 1px solid #bfc5ce;
@@ -89,7 +90,7 @@
 
     button:hover,
     select:hover,
-    input[type="text"]:hover {
+    input:hover {
       border-color: #75869c;
       background: #f7f9fb;
     }
@@ -136,7 +137,7 @@
 
     .toolbar-divider {
       width: 1px;
-      height: 24px;
+      height: 25px;
       margin: 0 2px;
       background: var(--border);
     }
@@ -146,7 +147,11 @@
     }
 
     #timeline-units {
-      width: 120px;
+      width: 145px;
+    }
+
+    #tick-interval {
+      width: 82px;
     }
 
     .file-status {
@@ -154,7 +159,7 @@
       align-items: center;
       gap: 7px;
       min-width: 0;
-      margin: 0 0 10px;
+      margin-bottom: 9px;
       padding: 7px 10px;
       color: var(--muted);
       background: var(--panel);
@@ -193,10 +198,10 @@
 
     .tree-container {
       position: relative;
-      min-height: 500px;
-      max-height: 74vh;
+      min-height: 540px;
+      max-height: 75vh;
       overflow: auto;
-      background: var(--panel);
+      background: #ffffff;
       border: 1px solid var(--border);
       border-radius: 6px;
     }
@@ -232,8 +237,8 @@
     .information {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 10px;
-      margin-top: 10px;
+      gap: 9px;
+      margin-top: 9px;
     }
 
     .info-panel {
@@ -276,38 +281,39 @@
       font-size: 13px;
     }
 
-    /*
-     * Larger timeline text.
-     */
-    .timeline-label {
-      fill: #4d5662;
-      font-size: 22px;
-      text-anchor: middle;
-      pointer-events: none;
-    }
-
-    .timeline-direction-label {
-      fill: #4d5662;
-      font-size: 17px;
-      pointer-events: none;
-    }
+    /* Timeline */
 
     .timeline-title {
-      fill: #222222;
-      font-size: 24px;
+      fill: #20252c;
+      font-size: 21px;
       font-weight: 700;
       text-anchor: middle;
       pointer-events: none;
     }
 
+    .timeline-label {
+      fill: #404a57;
+      font-size: 14px;
+      font-weight: 600;
+      text-anchor: middle;
+      pointer-events: none;
+    }
+
+    .timeline-direction-label {
+      fill: #596473;
+      font-size: 12px;
+      font-weight: 600;
+      pointer-events: none;
+    }
+
     .timeline-axis {
-      stroke: #4c5664;
+      stroke: #414b58;
       stroke-width: 1.5;
       vector-effect: non-scaling-stroke;
     }
 
     .timeline-tick {
-      stroke: #68717d;
+      stroke: #596473;
       stroke-width: 1.2;
       vector-effect: non-scaling-stroke;
     }
@@ -318,6 +324,58 @@
       pointer-events: none;
       vector-effect: non-scaling-stroke;
     }
+
+    /* Geological ranges */
+
+    .geology-row-label {
+      fill: #4d5662;
+      font-size: 10px;
+      font-weight: 700;
+      text-anchor: end;
+      dominant-baseline: middle;
+      pointer-events: none;
+    }
+
+    .geology-range {
+      stroke: rgba(30, 35, 42, 0.58);
+      stroke-width: 0.8;
+      cursor: help;
+      vector-effect: non-scaling-stroke;
+    }
+
+    .geology-range:hover {
+      stroke: #111111;
+      stroke-width: 2;
+      filter: brightness(1.04);
+    }
+
+    .geology-label {
+      fill: #17202a;
+      font-size: 10px;
+      font-weight: 700;
+      text-anchor: middle;
+      dominant-baseline: middle;
+      pointer-events: none;
+    }
+
+    .geology-label.light {
+      fill: #ffffff;
+      text-shadow:
+        -1px -1px 0 rgba(0, 0, 0, 0.35),
+        1px -1px 0 rgba(0, 0, 0, 0.35),
+        -1px 1px 0 rgba(0, 0, 0, 0.35),
+        1px 1px 0 rgba(0, 0, 0, 0.35);
+    }
+
+    .geology-boundary {
+      stroke: rgba(40, 45, 52, 0.45);
+      stroke-width: 0.7;
+      stroke-dasharray: 2 2;
+      pointer-events: none;
+      vector-effect: non-scaling-stroke;
+    }
+
+    /* Tree */
 
     .branch {
       fill: none;
@@ -415,9 +473,8 @@
       pointer-events: none;
     }
 
-    /*
-     * Tip-name editor.
-     */
+    /* Tip editor */
+
     .tip-editor {
       position: fixed;
       z-index: 1000;
@@ -454,14 +511,11 @@
 
     .tip-editor button {
       flex: 0 0 auto;
-      min-width: auto;
-      padding-right: 9px;
-      padding-left: 9px;
     }
 
     @media (max-width: 900px) {
       body {
-        padding: 10px;
+        padding: 9px;
       }
 
       .information {
@@ -473,17 +527,7 @@
       }
 
       .tree-container {
-        max-height: 70vh;
-      }
-    }
-
-    @media (max-width: 500px) {
-      .tip-editor-row {
-        flex-wrap: wrap;
-      }
-
-      .tip-editor input {
-        flex-basis: 100%;
+        max-height: 71vh;
       }
     }
   </style>
@@ -494,8 +538,8 @@
     <h1>Interactive Timetree Viewer</h1>
 
     <p class="description">
-      Explore a Newick or NEXUS timetree with confidence intervals,
-      MRCA timing, clade sorting, editable tip names, and a timeline.
+      Explore a Newick or NEXUS timetree with geological ranges,
+      confidence intervals, MRCA timing, clade sorting, and editable tips.
     </p>
 
     <section class="toolbar" aria-label="Timetree controls">
@@ -517,23 +561,31 @@
 
       <span class="toolbar-divider" aria-hidden="true"></span>
 
-      <label for="sort-clades">Sort clades:</label>
+      <label for="sort-clades">Sort:</label>
 
       <select id="sort-clades">
-        <option value="original">Original tree order</option>
+        <option value="original">Original order</option>
         <option value="increasing">Increasing clade size</option>
         <option value="decreasing">Decreasing clade size</option>
       </select>
 
-      <label for="timeline-units">Timeline units:</label>
+      <label for="timeline-units">Units:</label>
 
       <input
         id="timeline-units"
         type="text"
-        value="tree units"
-        maxlength="30"
-        title="For example: Ma, Ga, years, or substitutions"
+        value="100 Million yrs ago"
+        maxlength="20"
       >
+
+      <label for="tick-interval">Tick interval:</label>
+
+<input id="tick-interval" type="number" value="10" step="10">
+
+      <label>
+        <input id="show-geology" type="checkbox" checked>
+        Geological ranges
+      </label>
 
       <span class="toolbar-divider" aria-hidden="true"></span>
 
@@ -566,7 +618,7 @@
       </button>
 
       <button type="button" id="expand-all-clades">
-        Expand all clades
+        Expand all
       </button>
 
       <span class="toolbar-divider" aria-hidden="true"></span>
@@ -580,7 +632,8 @@
       <span id="status-dot" class="status-dot loading"></span>
 
       <span id="status-text" class="status-text">
-        Loading <strong>Wang_Luo_2025_FigTree.tre</strong>...
+        Loading
+        <strong>Wang_Luo_2025_FigTree.tre</strong>...
       </span>
     </div>
 
@@ -592,7 +645,7 @@
       <svg
         id="tree-svg"
         role="img"
-        aria-label="Interactive timetree with timeline"
+        aria-label="Interactive timetree with geological timeline"
       ></svg>
 
       <div id="empty-tree-message" class="empty-tree-message">
@@ -624,9 +677,9 @@
 
     <p class="instructions">
       Click a tip once to select it.
-      <strong>Double-click a tip name or tip circle to rename it.</strong>
-      Press Enter or click Save to apply the new name. Press Escape to cancel.
+      <strong>Double-click a tip name or circle to rename it.</strong>
       Double-click an internal node to collapse or expand its clade.
+      Geological ranges use Ma before present.
     </p>
   </main>
 
@@ -634,7 +687,6 @@
     id="tip-editor"
     class="tip-editor"
     role="dialog"
-    aria-modal="false"
     aria-labelledby="tip-editor-label"
   >
     <label
@@ -653,13 +705,8 @@
         spellcheck="false"
       >
 
-      <button type="button" id="tip-editor-save">
-        Save
-      </button>
-
-      <button type="button" id="tip-editor-cancel">
-        Cancel
-      </button>
+      <button type="button" id="tip-editor-save">Save</button>
+      <button type="button" id="tip-editor-cancel">Cancel</button>
     </div>
   </aside>
 
@@ -667,19 +714,211 @@
     "use strict";
 
     const DEFAULT_TREE_FILE = "Wang_Luo_2025_FigTree.tre";
+    const DOUBLE_CLICK_DELAY = 280;
     const SVG_NS = "http://www.w3.org/2000/svg";
 
     /*
-     * The delay allows the browser to distinguish between:
-     * 1. A single click for selection.
-     * 2. A double-click for editing or collapsing.
+     * Geological ranges in millions of years before present.
+     *
+     * younger = younger boundary
+     * older   = older boundary
+     *
+     * These arrays can be edited if a different geological scale
+     * or a custom set of ranges is required.
      */
-    const DOUBLE_CLICK_DELAY = 280;
+
+// All geological times are expressed in units of 100 Ma.
+// Examples:
+//   0.66 = 66 Ma ago
+//   1    = 100 Ma ago
+//   10   = 1,000 Ma ago
+
+const GEOLOGICAL_ERAS = [
+  {
+    name: "Cenozoic",
+    younger: 0,
+    older: 0.66,
+    color: "#f2f91d",
+    text: "dark"
+  },
+  {
+    name: "Mesozoic",
+    younger: 0.66,
+    older: 2.51902,
+    color: "#67c5ca",
+    text: "dark"
+  },
+  {
+    name: "Paleozoic",
+    younger: 2.51902,
+    older: 5.388,
+    color: "#99c08d",
+    text: "dark"
+  },
+  {
+    name: "Neoproterozoic",
+    younger: 5.388,
+    older: 10,
+    color: "#f29eaa",
+    text: "dark"
+  },
+  {
+    name: "Mesoproterozoic",
+    younger: 10,
+    older: 16,
+    color: "#f5b3c2",
+    text: "dark"
+  },
+  {
+    name: "Paleoproterozoic",
+    younger: 16,
+    older: 25,
+    color: "#ef7fa1",
+    text: "dark"
+  },
+  {
+    name: "Archean",
+    younger: 25,
+    older: 40.31,
+    color: "#e45b96",
+    text: "light"
+  },
+  {
+    name: "Hadean",
+    younger: 40.31,
+    older: 45.673,
+    color: "#ae4b8f",
+    text: "light"
+  }
+];
+
+const GEOLOGICAL_PERIODS = [
+  {
+    name: "Quaternary",
+    younger: 0,
+    older: 0.0258,
+    color: "#fff2a8"
+  },
+  {
+    name: "Neogene",
+    younger: 0.0258,
+    older: 0.2303,
+    color: "#ffe619"
+  },
+  {
+    name: "Paleogene",
+    younger: 0.2303,
+    older: 0.66,
+    color: "#fd9a52"
+  },
+  {
+    name: "Cretaceous",
+    younger: 0.66,
+    older: 1.45,
+    color: "#7fc64a"
+  },
+  {
+    name: "Jurassic",
+    younger: 1.45,
+    older: 2.014,
+    color: "#34b2c9"
+  },
+  {
+    name: "Triassic",
+    younger: 2.014,
+    older: 2.51902,
+    color: "#812b92",
+    text: "light"
+  },
+  {
+    name: "Permian",
+    younger: 2.51902,
+    older: 2.989,
+    color: "#ef5845"
+  },
+  {
+    name: "Carboniferous",
+    younger: 2.989,
+    older: 3.589,
+    color: "#67a6a3"
+  },
+  {
+    name: "Devonian",
+    younger: 3.589,
+    older: 4.192,
+    color: "#cb8c37"
+  },
+  {
+    name: "Silurian",
+    younger: 4.192,
+    older: 4.438,
+    color: "#b5d9a7"
+  },
+  {
+    name: "Ordovician",
+    younger: 4.438,
+    older: 4.8685,
+    color: "#009270",
+    text: "light"
+  },
+  {
+    name: "Cambrian",
+    younger: 4.8685,
+    older: 5.388,
+    color: "#7fa056"
+  },
+  {
+    name: "Ediacaran",
+    younger: 5.388,
+    older: 6.35,
+    color: "#f4b6c2"
+  },
+  {
+    name: "Cryogenian",
+    younger: 6.35,
+    older: 7.2,
+    color: "#82a5d8"
+  },
+  {
+    name: "Tonian",
+    younger: 7.2,
+    older: 10,
+    color: "#f0a7b7"
+  },
+  {
+    name: "Mesoproterozoic",
+    younger: 10,
+    older: 16,
+    color: "#f5c2ce"
+  },
+  {
+    name: "Paleoproterozoic",
+    younger: 16,
+    older: 25,
+    color: "#ef93ad"
+  },
+  {
+    name: "Archean",
+    younger: 25,
+    older: 40.31,
+    color: "#d95b91",
+    text: "light"
+  },
+  {
+    name: "Hadean",
+    younger: 40.31,
+    older: 45.673,
+    color: "#984779",
+    text: "light"
+  }
+];
 
     const fileInput = document.getElementById("tree-file");
     const treeChoice = document.getElementById("tree-choice");
     const sortClades = document.getElementById("sort-clades");
     const timelineUnits = document.getElementById("timeline-units");
+    const tickIntervalInput = document.getElementById("tick-interval");
+    const showGeologyInput = document.getElementById("show-geology");
 
     const treeContainer = document.getElementById("tree-container");
     const treeSvg = document.getElementById("tree-svg");
@@ -699,7 +938,9 @@
     const tipEditorInput = document.getElementById(
       "tip-editor-input"
     );
-    const tipEditorSave = document.getElementById("tip-editor-save");
+    const tipEditorSave = document.getElementById(
+      "tip-editor-save"
+    );
     const tipEditorCancel = document.getElementById(
       "tip-editor-cancel"
     );
@@ -719,19 +960,11 @@
     let zoomScale = 1;
 
     let lastLayoutById = new Map();
-
-    /*
-     * Pending single-click timer.
-     *
-     * The previous implementation rendered the SVG immediately after the
-     * first click. That destroyed the clicked SVG element, so the browser
-     * could not dispatch a double-click to that same element.
-     */
     let pendingSvgClickTimer = null;
 
     function cancelPendingSvgClick() {
       if (pendingSvgClickTimer !== null) {
-        window.clearTimeout(pendingSvgClickTimer);
+        clearTimeout(pendingSvgClickTimer);
         pendingSvgClickTimer = null;
       }
     }
@@ -739,7 +972,7 @@
     function scheduleSvgSingleClick(callback) {
       cancelPendingSvgClick();
 
-      pendingSvgClickTimer = window.setTimeout(() => {
+      pendingSvgClickTimer = setTimeout(() => {
         pendingSvgClickTimer = null;
         callback();
       }, DOUBLE_CLICK_DELAY);
@@ -769,11 +1002,11 @@
       }
 
       if (Math.abs(value) >= 1000) {
-        return value.toFixed(1);
+        return value.toFixed(1).replace(/\.0$/, "");
       }
 
       if (Math.abs(value) >= 100) {
-        return value.toFixed(2);
+        return value.toFixed(2).replace(/\.?0+$/, "");
       }
 
       return value
@@ -790,9 +1023,7 @@
         text.startsWith("'") &&
         text.endsWith("'")
       ) {
-        return text
-          .slice(1, -1)
-          .replaceAll("''", "'");
+        return text.slice(1, -1).replaceAll("''", "'");
       }
 
       if (
@@ -845,7 +1076,10 @@
         } else if (character === "(") {
           parenthesisDepth += 1;
         } else if (character === ")") {
-          parenthesisDepth = Math.max(0, parenthesisDepth - 1);
+          parenthesisDepth = Math.max(
+            0,
+            parenthesisDepth - 1
+          );
         }
 
         if (
@@ -869,36 +1103,25 @@
 
     function extractTranslations(text) {
       const map = new Map();
-
-      const match = text.match(
-        /\bTRANSLATE\b([\s\S]*?);/i
-      );
+      const match = text.match(/\bTRANSLATE\b([\s\S]*?);/i);
 
       if (!match) {
         return map;
       }
 
-      const entries = splitOutsideQuotes(match[1], ",");
-
-      for (const entry of entries) {
-        const trimmed = entry.trim();
-
-        if (!trimmed) {
-          continue;
-        }
-
-        const itemMatch = trimmed.match(
-          /^(\S+)\s+([\s\S]+)$/
-        );
+      for (const entry of splitOutsideQuotes(match[1], ",")) {
+        const itemMatch = entry
+          .trim()
+          .match(/^(\S+)\s+([\s\S]+)$/);
 
         if (!itemMatch) {
           continue;
         }
 
-        const key = stripOuterQuotes(itemMatch[1]);
-        const value = stripOuterQuotes(itemMatch[2].trim());
-
-        map.set(key, value);
+        map.set(
+          stripOuterQuotes(itemMatch[1]),
+          stripOuterQuotes(itemMatch[2].trim())
+        );
       }
 
       return map;
@@ -906,7 +1129,6 @@
 
     function extractTrees(text) {
       const trees = [];
-
       const declarationPattern =
         /\b(UTREE|TREE)\b\s+([^=;]+?)\s*=/ig;
 
@@ -955,10 +1177,7 @@
             continue;
           }
 
-          if (
-            character === ";" &&
-            bracketDepth === 0
-          ) {
+          if (character === ";" && bracketDepth === 0) {
             end = index;
             break;
           }
@@ -1065,11 +1284,6 @@
 
       parseQuotedName() {
         const quote = this.peek();
-
-        if (quote !== "'" && quote !== '"') {
-          return "";
-        }
-
         this.position += 1;
 
         let result = "";
@@ -1125,29 +1339,24 @@
           this.position += 1;
         }
 
-        return this.text
-          .slice(start, this.position)
-          .trim();
+        return this.text.slice(start, this.position).trim();
       }
 
       parseNumber() {
         this.skipWhitespace();
 
         const remaining = this.text.slice(this.position);
-
         const match = remaining.match(
           /^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?/
         );
 
         if (!match) {
           throw new Error(
-            "Expected a branch length near " +
-            `position ${this.position}.`
+            `Expected a branch length near position ${this.position}.`
           );
         }
 
         this.position += match[0].length;
-
         return Number(match[0]);
       }
 
@@ -1176,7 +1385,7 @@
         node.comments = comments.join(" ");
 
         const hpdMatch = node.comments.match(
-          /95%\s*HPD\s*=\s*\{\s*([+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?)\s*,\s*([+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?)\s*\}/i
+          /(?:95%\s*HPD|height_95%\s*HPD|height_95%_HPD)\s*=\s*\{\s*([+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?)\s*,\s*([+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?)\s*\}/i
         );
 
         if (hpdMatch) {
@@ -1217,7 +1426,6 @@
             childIndex += 1;
 
             node.children.push(child);
-
             this.skipWhitespace();
 
             if (this.peek() === ",") {
@@ -1231,8 +1439,7 @@
             }
 
             throw new Error(
-              'Expected "," or ")" near ' +
-              `position ${this.position}.`
+              `Expected "," or ")" near position ${this.position}.`
             );
           }
 
@@ -1243,8 +1450,7 @@
 
           if (!node.name) {
             throw new Error(
-              "Expected a tip name near " +
-              `position ${this.position}.`
+              `Expected a tip name near position ${this.position}.`
             );
           }
 
@@ -1295,16 +1501,13 @@
       let age = 0;
 
       for (const child of node.children) {
-        const childAge = calculateAges(child);
-
         age = Math.max(
           age,
-          childAge + (child.length || 0)
+          calculateAges(child) + (child.length || 0)
         );
       }
 
       node.age = age;
-
       return age;
     }
 
@@ -1318,9 +1521,7 @@
       }
 
       return node.children.reduce(
-        (sum, child) => {
-          return sum + countTips(child, visibleOnly);
-        },
+        (sum, child) => sum + countTips(child, visibleOnly),
         0
       );
     }
@@ -1335,6 +1536,16 @@
       });
 
       return maximum || 1;
+    }
+
+    function getTickInterval() {
+      const value = Number(tickIntervalInput.value);
+
+      if (!Number.isFinite(value) || value <= 0) {
+        return 100;
+      }
+
+      return value;
     }
 
     function orderedChildren(node) {
@@ -1360,9 +1571,9 @@
           );
         });
       } else {
-        children.sort((a, b) => {
-          return a.originalIndex - b.originalIndex;
-        });
+        children.sort(
+          (a, b) => a.originalIndex - b.originalIndex
+        );
       }
 
       return children;
@@ -1404,13 +1615,14 @@
         return null;
       }
 
-      const firstY = childLayouts[0].y;
-      const lastY = childLayouts[childLayouts.length - 1].y;
-
       return {
         node,
         x: 0,
-        y: (firstY + lastY) / 2,
+        y:
+          (
+            childLayouts[0].y +
+            childLayouts[childLayouts.length - 1].y
+          ) / 2,
         children: childLayouts
       };
     }
@@ -1478,55 +1690,6 @@
       return result;
     }
 
-    function niceTickStep(maximum, desiredTicks = 8) {
-      const roughStep = maximum / desiredTicks;
-
-      if (
-        !Number.isFinite(roughStep) ||
-        roughStep <= 0
-      ) {
-        return 1;
-      }
-
-      const power =
-        10 ** Math.floor(Math.log10(roughStep));
-
-      const fraction = roughStep / power;
-
-      let niceFraction;
-
-      if (fraction <= 1) {
-        niceFraction = 1;
-      } else if (fraction <= 2) {
-        niceFraction = 2;
-      } else if (fraction <= 5) {
-        niceFraction = 5;
-      } else {
-        niceFraction = 10;
-      }
-
-      return niceFraction * power;
-    }
-
-    function makeTimelineTicks(maximum) {
-      const step = niceTickStep(maximum);
-      const top = Math.ceil(maximum / step) * step;
-      const ticks = [];
-
-      for (
-        let value = 0;
-        value <= top + step / 2;
-        value += step
-      ) {
-        ticks.push(Number(value.toFixed(12)));
-      }
-
-      return {
-        ticks,
-        maximum: top
-      };
-    }
-
     function longestVisibleLabel(node) {
       let longest = 15;
 
@@ -1535,14 +1698,99 @@
           !item.hidden &&
           item.children.length === 0
         ) {
-          longest = Math.max(
-            longest,
-            item.name.length
-          );
+          longest = Math.max(longest, item.name.length);
         }
       });
 
       return longest;
+    }
+
+    function renderGeologyRow({
+      ranges,
+      y,
+      height,
+      xScale,
+      timelineMaximum,
+      rowName
+    }) {
+      let markup = `
+        <text
+          class="geology-row-label"
+          x="${xScale(timelineMaximum) - 7}"
+          y="${y + height / 2}"
+        >${escapeXml(rowName)}</text>
+      `;
+
+      ranges.forEach((range, index) => {
+        const visibleYounger = Math.max(0, range.younger);
+        const visibleOlder = Math.min(
+          timelineMaximum,
+          range.older
+        );
+
+        if (visibleOlder <= visibleYounger) {
+          return;
+        }
+
+        const left = xScale(visibleOlder);
+        const right = xScale(visibleYounger);
+        const width = Math.max(0, right - left);
+        const labelWidth = range.name.length * 6.2;
+        const showLabel = width >= labelWidth + 8;
+
+        markup += `
+          <g>
+            <rect
+              class="geology-range"
+              x="${left}"
+              y="${y}"
+              width="${width}"
+              height="${height}"
+              fill="${range.color}"
+            >
+              <title>${
+                escapeXml(range.name)
+              }: ${
+                formatNumber(range.younger)
+              }–${
+                formatNumber(range.older)
+              } Ma</title>
+            </rect>
+        `;
+
+        if (showLabel) {
+          markup += `
+            <text
+              class="geology-label${
+                range.text === "light" ? " light" : ""
+              }"
+              x="${left + width / 2}"
+              y="${y + height / 2}"
+            >${escapeXml(range.name)}</text>
+          `;
+        }
+
+        markup += `</g>`;
+
+        if (
+          range.younger > 0 &&
+          range.younger < timelineMaximum
+        ) {
+          const boundaryX = xScale(range.younger);
+
+          markup += `
+            <line
+              class="geology-boundary"
+              x1="${boundaryX}"
+              y1="${y}"
+              x2="${boundaryX}"
+              y2="${y + height}"
+            ></line>
+          `;
+        }
+      });
+
+      return markup;
     }
 
     function renderTimeline({
@@ -1551,10 +1799,12 @@
       plotRight,
       axisY,
       treeBottom,
-      xScale
+      xScale,
+      timelineMaximum,
+      geologyEnabled
     }) {
-      const unitText =
-        timelineUnits.value.trim() || "tree units";
+      const units =
+  timelineUnits.value.trim() || "Million yrs ago";
 
       let markup = "";
 
@@ -1573,15 +1823,15 @@
           <line
             class="timeline-tick"
             x1="${x}"
-            y1="${axisY - 7}"
+            y1="${axisY - 6}"
             x2="${x}"
-            y2="${axisY + 7}"
+            y2="${axisY + 6}"
           ></line>
 
           <text
             class="timeline-label"
             x="${x}"
-            y="${axisY - 16}"
+            y="${axisY - 11}"
           >${escapeXml(formatNumber(tick))}</text>
         `;
       }
@@ -1598,29 +1848,45 @@
         <text
           class="timeline-title"
           x="${(plotLeft + plotRight) / 2}"
-          y="29"
+          y="25"
         >
-          Time before present (${escapeXml(unitText)})
+          Time before present (${escapeXml(units)})
         </text>
 
         <text
           class="timeline-direction-label"
           x="${plotLeft}"
-          y="${axisY + 27}"
+          y="${axisY + 17}"
           text-anchor="start"
-        >
-          Older
-        </text>
+        >Older</text>
 
         <text
           class="timeline-direction-label"
           x="${plotRight}"
-          y="${axisY + 27}"
+          y="${axisY + 17}"
           text-anchor="end"
-        >
-          Present
-        </text>
+        >Present</text>
       `;
+
+      if (geologyEnabled) {
+        markup += renderGeologyRow({
+          ranges: GEOLOGICAL_ERAS,
+          y: axisY + 27,
+          height: 25,
+          xScale,
+          timelineMaximum,
+          rowName: "Era/eon"
+        });
+
+        markup += renderGeologyRow({
+          ranges: GEOLOGICAL_PERIODS,
+          y: axisY + 53,
+          height: 29,
+          xScale,
+          timelineMaximum,
+          rowName: "Period"
+        });
+      }
 
       return markup;
     }
@@ -1629,15 +1895,12 @@
       let markup = "";
 
       if (layout.node.hpd) {
-        const hpdStart = xScale(layout.node.hpd[1]);
-        const hpdEnd = xScale(layout.node.hpd[0]);
-
         markup += `
           <line
             class="hpd-bar"
-            x1="${hpdStart}"
+            x1="${xScale(layout.node.hpd[1])}"
             y1="${layout.y}"
-            x2="${hpdEnd}"
+            x2="${xScale(layout.node.hpd[0])}"
             y2="${layout.y}"
           ></line>
         `;
@@ -1680,37 +1943,27 @@
         node.children.length > 0
       ) {
         const visibleTips = countTips(node, true);
-
         const triangleHeight = Math.min(
           22,
-          Math.max(
-            7,
-            4 + Math.log2(visibleTips + 1) * 3
-          )
+          Math.max(7, 4 + Math.log2(visibleTips + 1) * 3)
         );
-
-        const triangleEndX = plotRight;
 
         markup += `
           <polygon
-            class="collapsed-triangle${
-              selectedNode === node ? " selected" : ""
-            }"
+            class="collapsed-triangle"
             data-node-id="${node.id}"
             points="
               ${layout.x},${layout.y}
-              ${triangleEndX},${layout.y - triangleHeight}
-              ${triangleEndX},${layout.y + triangleHeight}
+              ${plotRight},${layout.y - triangleHeight}
+              ${plotRight},${layout.y + triangleHeight}
             "
           >
-            <title>
-              Double-click to expand this clade
-            </title>
+            <title>Double-click to expand this clade</title>
           </polygon>
 
           <text
             class="collapsed-label"
-            x="${triangleEndX + 7}"
+            x="${plotRight + 7}"
             y="${layout.y}"
           >
             Collapsed clade (${visibleTips} tips)
@@ -1721,13 +1974,9 @@
       }
 
       if (node.children.length === 0) {
-        const isSelected = selectedTips.includes(node);
-        const selectedClass = isSelected ? " selected" : "";
+        const selectedClass =
+          selectedTips.includes(node) ? " selected" : "";
 
-        /*
-         * Both the tip circle and tip label contain data-tip-id.
-         * Either can be double-clicked.
-         */
         markup += `
           <circle
             class="tip-point${selectedClass}"
@@ -1759,9 +2008,7 @@
             cy="${layout.y}"
             r="4.3"
           >
-            <title>
-              Double-click to collapse this clade
-            </title>
+            <title>Double-click to collapse this clade</title>
           </circle>
         `;
       }
@@ -1794,14 +2041,12 @@
         zoomScale = 1;
       }
 
+      const geologyEnabled = showGeologyInput.checked;
       const rowHeight = 22;
 
-      /*
-       * Additional space for the enlarged timeline text.
-       */
-      const topMargin = 126;
+      const topMargin = geologyEnabled ? 178 : 108;
       const bottomMargin = 35;
-      const plotLeft = 55;
+      const plotLeft = 80;
 
       const labelWidth = Math.min(
         760,
@@ -1811,16 +2056,29 @@
         )
       );
 
-      baseWidth = Math.max(
-        1100,
-        820 + labelWidth
-      );
+      baseWidth = Math.max(1150, 850 + labelWidth);
 
       const plotRight = baseWidth - labelWidth;
+      const interval = getTickInterval();
+      const rawMaximum = maximumTimelineAge(root);
 
-      const rawTimelineMaximum = maximumTimelineAge(root);
-      const tickInfo = makeTimelineTicks(rawTimelineMaximum);
-      const timelineMaximum = tickInfo.maximum;
+      /*
+       * At least one complete 100 Ma interval is shown by default.
+       */
+      const timelineMaximum = Math.max(
+        interval,
+        Math.ceil(rawMaximum / interval) * interval
+      );
+
+      const ticks = [];
+
+      for (
+        let value = 0;
+        value <= timelineMaximum + interval / 2;
+        value += interval
+      ) {
+        ticks.push(Number(value.toFixed(12)));
+      }
 
       const layoutState = {
         nextY: topMargin,
@@ -1834,14 +2092,13 @@
         treeSvg.innerHTML = "";
         emptyTreeMessage.hidden = false;
         emptyTreeMessage.textContent =
-          "All tips are hidden. Use “Restore hidden” to show the tree.";
-
+          "All tips are hidden. Use Restore hidden.";
         updateInformationPanels();
         return;
       }
 
       baseHeight = Math.max(
-        500,
+        540,
         layoutState.nextY + bottomMargin
       );
 
@@ -1862,20 +2119,20 @@
       lastLayoutById = new Map();
       indexLayout(layout);
 
-      const highlighted = highlightedBranchIds();
-
       const timeline = renderTimeline({
-        ticks: tickInfo.ticks,
+        ticks,
         plotLeft,
         plotRight,
-        axisY: 82,
+        axisY: 59,
         treeBottom: baseHeight - 20,
-        xScale
+        xScale,
+        timelineMaximum,
+        geologyEnabled
       });
 
       const branches = renderBranches(
         layout,
-        highlighted,
+        highlightedBranchIds(),
         xScale
       );
 
@@ -1885,16 +2142,8 @@
         "viewBox",
         `0 0 ${baseWidth} ${baseHeight}`
       );
-
-      treeSvg.setAttribute(
-        "width",
-        baseWidth * zoomScale
-      );
-
-      treeSvg.setAttribute(
-        "height",
-        baseHeight * zoomScale
-      );
+      treeSvg.setAttribute("width", baseWidth * zoomScale);
+      treeSvg.setAttribute("height", baseHeight * zoomScale);
 
       treeSvg.innerHTML = `
         <rect
@@ -1930,35 +2179,26 @@
           </p>
         `;
       } else {
-        const nodeName =
-          selectedNode.name || "unnamed internal node";
-
-        const branchLength =
-          selectedNode.parent
-            ? formatNumber(selectedNode.length)
-            : "root";
-
         const hpd = selectedNode.hpd
-          ? `${formatNumber(
-              selectedNode.hpd[0]
-            )}–${formatNumber(
-              selectedNode.hpd[1]
-            )}`
+          ? `${formatNumber(selectedNode.hpd[0])}–${
+              formatNumber(selectedNode.hpd[1])
+            } Ma`
           : "not provided";
 
         selectedNodeDetails.innerHTML = `
           <p class="compact-details">
             <span class="compact-item">
               <strong>Node:</strong>
-              ${escapeHtml(nodeName)}
+              ${escapeHtml(
+                selectedNode.name || "unnamed internal node"
+              )}
             </span>
 
             <span class="compact-separator">•</span>
 
             <span class="compact-item">
               <strong>Time:</strong>
-              ${formatNumber(selectedNode.age)}
-              before present
+              ${formatNumber(selectedNode.age)} Ma
             </span>
 
             <span class="compact-separator">•</span>
@@ -1966,14 +2206,6 @@
             <span class="compact-item">
               <strong>Clade:</strong>
               ${countTips(selectedNode)} tips
-              (${countTips(selectedNode, true)} visible)
-            </span>
-
-            <span class="compact-separator">•</span>
-
-            <span class="compact-item">
-              <strong>Branch:</strong>
-              ${branchLength}
             </span>
 
             <span class="compact-separator">•</span>
@@ -1987,16 +2219,15 @@
       }
 
       if (selectedTips.length !== 2) {
-        const selectedText =
-          selectedTips.length === 1
-            ? `Selected: ${escapeHtml(
-                selectedTips[0].name
-              )}. Select one more tip.`
-            : "Click two tip names to calculate their MRCA.";
-
         mrcaDetails.innerHTML = `
           <p class="empty-message">
-            ${selectedText}
+            ${
+              selectedTips.length === 1
+                ? `Selected: ${escapeHtml(
+                    selectedTips[0].name
+                  )}. Select one more tip.`
+                : "Click two tip names to calculate their MRCA."
+            }
           </p>
         `;
 
@@ -2011,17 +2242,8 @@
             The MRCA could not be calculated.
           </p>
         `;
-
         return;
       }
-
-      const hpd = mrca.hpd
-        ? `${formatNumber(
-            mrca.hpd[0]
-          )}–${formatNumber(
-            mrca.hpd[1]
-          )}`
-        : "not provided";
 
       mrcaDetails.innerHTML = `
         <p class="compact-details">
@@ -2036,8 +2258,7 @@
 
           <span class="compact-item">
             <strong>MRCA:</strong>
-            ${formatNumber(mrca.age)}
-            before present
+            ${formatNumber(mrca.age)} Ma
           </span>
 
           <span class="compact-separator">•</span>
@@ -2051,7 +2272,13 @@
 
           <span class="compact-item">
             <strong>95% HPD:</strong>
-            ${hpd}
+            ${
+              mrca.hpd
+                ? `${formatNumber(mrca.hpd[0])}–${
+                    formatNumber(mrca.hpd[1])
+                  } Ma`
+                : "not provided"
+            }
           </span>
         </p>
       `;
@@ -2073,12 +2300,6 @@
       return result;
     }
 
-    function clearSelections() {
-      selectedNode = null;
-      selectedTips = [];
-      renderTree();
-    }
-
     function selectTip(tip) {
       const existingIndex = selectedTips.indexOf(tip);
 
@@ -2097,9 +2318,7 @@
 
     function selectNode(node) {
       selectedNode =
-        selectedNode === node
-          ? null
-          : node;
+        selectedNode === node ? null : node;
 
       renderTree();
     }
@@ -2114,54 +2333,31 @@
     }
 
     function openTipEditor(tip, event) {
-      if (!tip) {
-        return;
-      }
-
       cancelPendingSvgClick();
 
       editingTip = tip;
       tipEditorInput.value = tip.name;
-
       tipEditor.classList.add("open");
 
-      /*
-       * Position after displaying the editor so its actual dimensions
-       * can be measured.
-       */
-      const editorRect = tipEditor.getBoundingClientRect();
+      const rect = tipEditor.getBoundingClientRect();
       const margin = 10;
 
       let left = event.clientX + margin;
       let top = event.clientY + margin;
 
-      if (
-        left + editorRect.width >
-        window.innerWidth - margin
-      ) {
-        left =
-          event.clientX -
-          editorRect.width -
-          margin;
+      if (left + rect.width > window.innerWidth - margin) {
+        left = event.clientX - rect.width - margin;
       }
 
-      if (
-        top + editorRect.height >
-        window.innerHeight - margin
-      ) {
-        top =
-          event.clientY -
-          editorRect.height -
-          margin;
+      if (top + rect.height > window.innerHeight - margin) {
+        top = event.clientY - rect.height - margin;
       }
 
       left = Math.max(
         margin,
         Math.min(
           left,
-          window.innerWidth -
-            editorRect.width -
-            margin
+          window.innerWidth - rect.width - margin
         )
       );
 
@@ -2169,9 +2365,7 @@
         margin,
         Math.min(
           top,
-          window.innerHeight -
-            editorRect.height -
-            margin
+          window.innerHeight - rect.height - margin
         )
       );
 
@@ -2194,12 +2388,10 @@
 
       if (!newName) {
         tipEditorInput.focus();
-        tipEditorInput.select();
         return;
       }
 
       editingTip.name = newName;
-
       closeTipEditor();
       renderTree();
     }
@@ -2207,43 +2399,6 @@
     function closeTipEditor() {
       tipEditor.classList.remove("open");
       editingTip = null;
-    }
-
-    function parseAndDisplayTree(treeRecord) {
-      nodeSequence = 0;
-
-      const parser = new NewickParser(treeRecord.newick);
-      const parsedRoot = parser.parse();
-
-      applyTranslations(parsedRoot, translations);
-      calculateAges(parsedRoot);
-
-      root = parsedRoot;
-      selectedNode = null;
-      selectedTips = [];
-      zoomScale = 1;
-
-      sortClades.value = "original";
-
-      renderTree({
-        preserveScroll: false,
-        preserveZoom: false
-      });
-
-      treeContainer.scrollLeft = 0;
-      treeContainer.scrollTop = 0;
-
-      const tipCount = countTips(root);
-
-      setStatus(
-        `<strong>${escapeHtml(
-          currentFileName
-        )}</strong> — ` +
-        `${escapeHtml(
-          treeRecord.name
-        )}, ${tipCount} tips`,
-        "success"
-      );
     }
 
     function populateTreeChoice() {
@@ -2261,6 +2416,36 @@
       treeChoice.disabled = loadedTrees.length <= 1;
     }
 
+    function parseAndDisplayTree(treeRecord) {
+      nodeSequence = 0;
+
+      const parser = new NewickParser(treeRecord.newick);
+      const parsedRoot = parser.parse();
+
+      applyTranslations(parsedRoot, translations);
+      calculateAges(parsedRoot);
+
+      root = parsedRoot;
+      selectedNode = null;
+      selectedTips = [];
+      zoomScale = 1;
+
+      renderTree({
+        preserveScroll: false,
+        preserveZoom: false
+      });
+
+      treeContainer.scrollLeft = 0;
+      treeContainer.scrollTop = 0;
+
+      setStatus(
+        `<strong>${escapeHtml(currentFileName)}</strong> — ` +
+        `${escapeHtml(treeRecord.name)}, ` +
+        `${countTips(root)} tips`,
+        "success"
+      );
+    }
+
     function loadTreeText(text, fileName) {
       try {
         translations = extractTranslations(text);
@@ -2275,9 +2460,7 @@
         currentFileName = fileName || "Uploaded tree";
 
         populateTreeChoice();
-
         treeChoice.value = "0";
-
         parseAndDisplayTree(loadedTrees[0]);
       } catch (error) {
         console.error(error);
@@ -2287,14 +2470,12 @@
         translations = new Map();
 
         treeSvg.innerHTML = "";
-
         emptyTreeMessage.hidden = false;
         emptyTreeMessage.textContent =
-          "The tree could not be displayed. Check the file format.";
+          "The tree could not be displayed.";
 
         treeChoice.innerHTML =
           "<option>No tree loaded</option>";
-
         treeChoice.disabled = true;
 
         setStatus(
@@ -2313,16 +2494,12 @@
       }
 
       setStatus(
-        `Loading <strong>${escapeHtml(
-          file.name
-        )}</strong>...`,
+        `Loading <strong>${escapeHtml(file.name)}</strong>...`,
         "loading"
       );
 
       try {
-        const text = await file.text();
-
-        loadTreeText(text, file.name);
+        loadTreeText(await file.text(), file.name);
       } catch (error) {
         setStatus(
           "<strong>Could not read the file:</strong> " +
@@ -2333,13 +2510,6 @@
     }
 
     async function loadDefaultTree() {
-      setStatus(
-        `Loading <strong>${escapeHtml(
-          DEFAULT_TREE_FILE
-        )}</strong>...`,
-        "loading"
-      );
-
       try {
         const response = await fetch(DEFAULT_TREE_FILE, {
           cache: "no-store"
@@ -2349,25 +2519,21 @@
           throw new Error(`HTTP ${response.status}`);
         }
 
-        const text = await response.text();
-
-        loadTreeText(text, DEFAULT_TREE_FILE);
-      } catch (error) {
-        console.warn(
-          "Automatic tree loading failed.",
-          error
+        loadTreeText(
+          await response.text(),
+          DEFAULT_TREE_FILE
         );
+      } catch (error) {
+        console.warn("Automatic tree loading failed.", error);
 
         root = null;
         treeSvg.innerHTML = "";
         emptyTreeMessage.hidden = false;
 
         setStatus(
-          "Could not automatically load " +
-          `<strong>${escapeHtml(
-            DEFAULT_TREE_FILE
-          )}</strong>. ` +
-          "Use “Upload NEXUS / Newick” or drop the file into the viewer.",
+          `Could not automatically load <strong>${
+            escapeHtml(DEFAULT_TREE_FILE)
+          }</strong>. Upload or drop the file into the viewer.`,
           "error"
         );
       }
@@ -2392,15 +2558,8 @@
         Math.min(3.5, nextZoom)
       );
 
-      treeSvg.setAttribute(
-        "width",
-        baseWidth * zoomScale
-      );
-
-      treeSvg.setAttribute(
-        "height",
-        baseHeight * zoomScale
-      );
+      treeSvg.setAttribute("width", baseWidth * zoomScale);
+      treeSvg.setAttribute("height", baseHeight * zoomScale);
 
       const ratio = zoomScale / oldZoom;
 
@@ -2434,48 +2593,26 @@
         }
       }
 
-      const mrca = findSelectedMrca();
-
-      if (mrca) {
-        const layout = lastLayoutById.get(mrca.id);
-
-        if (layout) {
-          targets.push(layout);
-        }
-      }
-
       if (targets.length === 0) {
         return;
       }
 
-      if (zoomScale < 1.25) {
-        setZoom(1.25);
-      }
+      const averageX =
+        targets.reduce((sum, item) => sum + item.x, 0) /
+        targets.length;
 
-      requestAnimationFrame(() => {
-        const averageX =
-          targets.reduce(
-            (sum, item) => sum + item.x,
-            0
-          ) / targets.length;
+      const averageY =
+        targets.reduce((sum, item) => sum + item.y, 0) /
+        targets.length;
 
-        const averageY =
-          targets.reduce(
-            (sum, item) => sum + item.y,
-            0
-          ) / targets.length;
-
-        treeContainer.scrollTo({
-          left:
-            averageX * zoomScale -
-            treeContainer.clientWidth / 2,
-
-          top:
-            averageY * zoomScale -
-            treeContainer.clientHeight / 2,
-
-          behavior: "smooth"
-        });
+      treeContainer.scrollTo({
+        left:
+          averageX * zoomScale -
+          treeContainer.clientWidth / 2,
+        top:
+          averageY * zoomScale -
+          treeContainer.clientHeight / 2,
+        behavior: "smooth"
       });
     }
 
@@ -2484,18 +2621,11 @@
         return;
       }
 
-      cancelPendingSvgClick();
-      closeTipEditor();
-
       const clone = treeSvg.cloneNode(true);
 
       clone.setAttribute("xmlns", SVG_NS);
       clone.setAttribute("width", baseWidth);
       clone.setAttribute("height", baseHeight);
-      clone.setAttribute(
-        "viewBox",
-        `0 0 ${baseWidth} ${baseHeight}`
-      );
 
       const styleText = Array.from(document.styleSheets)
         .map(sheet => {
@@ -2509,17 +2639,13 @@
         })
         .join("\n");
 
-      const styleElement = document.createElementNS(
+      const style = document.createElementNS(
         SVG_NS,
         "style"
       );
 
-      styleElement.textContent = styleText;
-
-      clone.insertBefore(
-        styleElement,
-        clone.firstChild
-      );
+      style.textContent = styleText;
+      clone.insertBefore(style, clone.firstChild);
 
       const source =
         '<?xml version="1.0" encoding="UTF-8"?>\n' +
@@ -2532,35 +2658,32 @@
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
 
-      const baseName = currentFileName
-        .replace(/\.[^.]+$/, "")
-        .replace(/[^\w.-]+/g, "_");
-
       link.href = url;
       link.download =
-        `${baseName || "timetree"}_viewer.svg`;
+        `${
+          currentFileName
+            .replace(/\.[^.]+$/, "")
+            .replace(/[^\w.-]+/g, "_") ||
+          "timetree"
+        }_geological.svg`;
 
       document.body.appendChild(link);
-
       link.click();
       link.remove();
 
       URL.revokeObjectURL(url);
     }
 
-    /*
-     * File controls.
-     */
     fileInput.addEventListener("change", event => {
       loadFile(event.target.files[0]);
       event.target.value = "";
     });
 
     treeChoice.addEventListener("change", () => {
-      const index = Number(treeChoice.value);
+      const tree = loadedTrees[Number(treeChoice.value)];
 
-      if (loadedTrees[index]) {
-        parseAndDisplayTree(loadedTrees[index]);
+      if (tree) {
+        parseAndDisplayTree(tree);
       }
     });
 
@@ -2572,26 +2695,28 @@
       renderTree();
     });
 
-    /*
-     * Single-click handling.
-     *
-     * Selection is delayed. If a double-click arrives before the timer
-     * completes, the selection is canceled and the edit dialog opens.
-     */
+    tickIntervalInput.addEventListener("change", () => {
+      if (getTickInterval() !== Number(tickIntervalInput.value)) {
+        tickIntervalInput.value = "100";
+      }
+
+      renderTree();
+    });
+
+    showGeologyInput.addEventListener("change", () => {
+      renderTree();
+    });
+
     treeSvg.addEventListener("click", event => {
       const tipElement = event.target.closest?.(
         "[data-tip-id]"
       );
 
       if (tipElement) {
-        const tip = findNodeById(
-          tipElement.dataset.tipId
-        );
+        const tip = findNodeById(tipElement.dataset.tipId);
 
         if (tip) {
-          scheduleSvgSingleClick(() => {
-            selectTip(tip);
-          });
+          scheduleSvgSingleClick(() => selectTip(tip));
         }
 
         return;
@@ -2607,19 +2732,11 @@
         );
 
         if (node) {
-          scheduleSvgSingleClick(() => {
-            selectNode(node);
-          });
+          scheduleSvgSingleClick(() => selectNode(node));
         }
       }
     });
 
-    /*
-     * Double-click handling.
-     *
-     * This now works because the first click does not immediately
-     * re-render and destroy the SVG element.
-     */
     treeSvg.addEventListener("dblclick", event => {
       cancelPendingSvgClick();
 
@@ -2631,9 +2748,7 @@
       );
 
       if (tipElement) {
-        const tip = findNodeById(
-          tipElement.dataset.tipId
-        );
+        const tip = findNodeById(tipElement.dataset.tipId);
 
         if (tip) {
           openTipEditor(tip, event);
@@ -2651,22 +2766,14 @@
           nodeElement.dataset.nodeId
         );
 
-        if (
-          node &&
-          node.children.length > 0
-        ) {
+        if (node && node.children.length > 0) {
           node.collapsed = !node.collapsed;
           selectedNode = node;
-
           renderTree();
         }
       }
     });
 
-    /*
-     * Prevent the browser's default text selection behavior when
-     * double-clicking SVG tip labels.
-     */
     treeSvg.addEventListener("mousedown", event => {
       if (
         event.detail > 1 &&
@@ -2678,18 +2785,8 @@
       }
     });
 
-    /*
-     * Tip editor controls.
-     */
-    tipEditorSave.addEventListener(
-      "click",
-      saveTipName
-    );
-
-    tipEditorCancel.addEventListener(
-      "click",
-      closeTipEditor
-    );
+    tipEditorSave.addEventListener("click", saveTipName);
+    tipEditorCancel.addEventListener("click", closeTipEditor);
 
     tipEditorInput.addEventListener("keydown", event => {
       if (event.key === "Enter") {
@@ -2711,9 +2808,6 @@
       }
     });
 
-    /*
-     * Zoom controls.
-     */
     document
       .getElementById("zoom-in")
       .addEventListener("click", () => {
@@ -2734,14 +2828,10 @@
         }
 
         const widthScale =
-          (treeContainer.clientWidth - 4) /
-          baseWidth;
+          (treeContainer.clientWidth - 4) / baseWidth;
 
         setZoom(
-          Math.min(
-            1,
-            Math.max(0.4, widthScale)
-          )
+          Math.min(1, Math.max(0.4, widthScale))
         );
 
         treeContainer.scrollTo({
@@ -2753,14 +2843,8 @@
 
     document
       .getElementById("focus-selection")
-      .addEventListener(
-        "click",
-        focusSelection
-      );
+      .addEventListener("click", focusSelection);
 
-    /*
-     * Reset controls.
-     */
     document
       .getElementById("reset-tree")
       .addEventListener("click", () => {
@@ -2772,9 +2856,12 @@
 
         selectedNode = null;
         selectedTips = [];
+        zoomScale = 1;
 
         sortClades.value = "original";
-        zoomScale = 1;
+        timelineUnits.value = "100 Ma";
+        tickIntervalInput.value = "100";
+        showGeologyInput.checked = true;
 
         renderTree({
           preserveScroll: false,
@@ -2787,14 +2874,12 @@
 
     document
       .getElementById("clear-selections")
-      .addEventListener(
-        "click",
-        clearSelections
-      );
+      .addEventListener("click", () => {
+        selectedNode = null;
+        selectedTips = [];
+        renderTree();
+      });
 
-    /*
-     * Hide and restore controls.
-     */
     document
       .getElementById("hide-selected-tips")
       .addEventListener("click", () => {
@@ -2802,28 +2887,23 @@
           return;
         }
 
-        for (const tip of selectedTips) {
+        selectedTips.forEach(tip => {
           tip.hidden = true;
-        }
+        });
 
         selectedTips = [];
-
         renderTree();
       });
 
     document
       .getElementById("hide-selected-clade")
       .addEventListener("click", () => {
-        if (
-          !selectedNode ||
-          selectedNode === root
-        ) {
+        if (!selectedNode || selectedNode === root) {
           return;
         }
 
         selectedNode.hidden = true;
         selectedNode = null;
-
         renderTree();
       });
 
@@ -2841,9 +2921,6 @@
         renderTree();
       });
 
-    /*
-     * Collapse controls.
-     */
     document
       .getElementById("collapse-selected-clade")
       .addEventListener("click", () => {
@@ -2872,17 +2949,9 @@
 
     document
       .getElementById("download-svg")
-      .addEventListener(
-        "click",
-        downloadSvg
-      );
+      .addEventListener("click", downloadSvg);
 
-    /*
-     * Drag-and-drop file loading.
-     */
-    treeContainer.addEventListener("scroll", () => {
-      closeTipEditor();
-    });
+    treeContainer.addEventListener("scroll", closeTipEditor);
 
     treeContainer.addEventListener("dragover", event => {
       event.preventDefault();
@@ -2890,16 +2959,13 @@
     });
 
     treeContainer.addEventListener("dragleave", event => {
-      if (
-        !treeContainer.contains(event.relatedTarget)
-      ) {
+      if (!treeContainer.contains(event.relatedTarget)) {
         treeContainer.classList.remove("dragover");
       }
     });
 
     treeContainer.addEventListener("drop", event => {
       event.preventDefault();
-
       treeContainer.classList.remove("dragover");
 
       const file = event.dataTransfer.files[0];
@@ -2909,13 +2975,8 @@
       }
     });
 
-    window.addEventListener("resize", () => {
-      closeTipEditor();
-    });
+    window.addEventListener("resize", closeTipEditor);
 
-    /*
-     * Attempt to load the default tree at startup.
-     */
     loadDefaultTree();
   </script>
 </body>
