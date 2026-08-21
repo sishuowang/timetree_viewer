@@ -1,2202 +1,2922 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Interactive Timetree Viewer</title>
+  <meta charset="UTF-8">
 
-<script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1"
+  >
 
-<style>
-:root {
-    --text: #243447;
-    --muted: #667085;
-    --accent: #087f8c;
-    --accent-dark: #075f69;
-    --tip: #d9480f;
-    --mrca: #7b2cbf;
-    --internal: #e8590c;
-    --path: #9c36c7;
-    --branch: #7d8a99;
-    --ci: #e67700;
-    --border: #d7dce2;
-    --root: #6f42c1;
-    --triangle: #dbeafe;
-    --triangle-stroke: #2563eb;
-}
+  <title>Interactive Timetree Viewer</title>
 
-* {
-    box-sizing: border-box;
-}
+  <style>
+    * {
+      box-sizing: border-box;
+    }
 
-body {
-    margin: 0;
-    color: var(--text);
-    background: #f7f9fb;
-    font-family: Arial, Helvetica, sans-serif;
-}
+    :root {
+      --background: #f5f6f8;
+      --panel: #ffffff;
+      --border: #d9dde3;
+      --text: #222222;
+      --muted: #68717d;
+      --branch: #4d5968;
+      --blue: #2f6fdb;
+      --orange: #e26f30;
+      --grid: #e8ebef;
+      --danger: #c74343;
+      --success: #2f9d50;
+      --warning: #d89a22;
+    }
 
-header {
-    padding: 16px 22px;
-    color: white;
-    background: #123b4a;
-}
+    body {
+      margin: 0;
+      padding: 20px;
+      color: var(--text);
+      background: var(--background);
+      font-family: Arial, Helvetica, sans-serif;
+      font-size: 14px;
+      line-height: 1.4;
+    }
 
-header h1 {
-    margin: 0 0 5px;
-    font-size: 23px;
-}
+    .container {
+      max-width: 1600px;
+      margin: 0 auto;
+    }
 
-header p {
-    margin: 0;
-    color: #d9eef2;
-    font-size: 14px;
-}
+    h1 {
+      margin: 0 0 5px;
+      font-size: 24px;
+    }
 
-.toolbar {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 8px;
-    padding: 10px 16px;
-    background: white;
-    border-bottom: 1px solid var(--border);
-}
+    .description {
+      margin: 0 0 14px;
+      color: var(--muted);
+    }
 
-button,
-input,
-select {
-    font: inherit;
-}
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 7px;
+      margin-bottom: 10px;
+      padding: 10px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+    }
 
-button {
-    padding: 7px 11px;
-    color: white;
-    background: var(--accent);
-    border: 0;
-    border-radius: 4px;
-    cursor: pointer;
-}
+    .toolbar label {
+      font-weight: 600;
+    }
 
-button:hover {
-    background: var(--accent-dark);
-}
+    button,
+    select,
+    input[type="text"] {
+      min-height: 32px;
+      padding: 5px 10px;
+      color: var(--text);
+      background: #ffffff;
+      border: 1px solid #bfc5ce;
+      border-radius: 4px;
+      font: inherit;
+    }
 
-button.secondary {
-    background: #64748b;
-}
+    button {
+      cursor: pointer;
+    }
 
-button.warning {
-    background: #c2410c;
-}
+    button:hover,
+    select:hover,
+    input[type="text"]:hover {
+      border-color: #75869c;
+      background: #f7f9fb;
+    }
 
-button.purple {
-    background: var(--mrca);
-}
+    button:focus-visible,
+    select:focus-visible,
+    input:focus-visible {
+      outline: 2px solid var(--blue);
+      outline-offset: 1px;
+    }
 
-input[type="text"] {
-    width: 235px;
-    padding: 7px 9px;
-    border: 1px solid #b8c1cc;
-    border-radius: 4px;
-}
+    button:disabled,
+    select:disabled {
+      color: #999999;
+      background: #f1f1f1;
+      cursor: not-allowed;
+    }
 
-input[type="file"] {
-    max-width: 280px;
-}
+    input[type="file"] {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+    }
 
-select {
-    padding: 7px 9px;
-    color: var(--text);
-    background: white;
-    border: 1px solid #b8c1cc;
-    border-radius: 4px;
-}
+    .file-button {
+      display: inline-flex;
+      align-items: center;
+      min-height: 32px;
+      padding: 5px 10px;
+      color: #ffffff;
+      background: var(--blue);
+      border: 1px solid var(--blue);
+      border-radius: 4px;
+      font-weight: 600;
+      cursor: pointer;
+    }
 
-.status {
-    margin-left: auto;
-    color: var(--muted);
-    font-size: 13px;
-}
+    .file-button:hover {
+      background: #245fbe;
+    }
 
-.info-layout {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
-    padding: 10px 16px;
-    background: #f8fafc;
-    border-bottom: 1px solid var(--border);
-}
+    .toolbar-divider {
+      width: 1px;
+      height: 24px;
+      margin: 0 2px;
+      background: var(--border);
+    }
 
-.info-panel {
-    min-height: 64px;
-    padding: 10px 13px;
-    background: white;
-    border: 1px solid #cbd5e1;
-    border-radius: 5px;
-    font-size: 13px;
-    line-height: 1.5;
-}
+    #tree-choice {
+      max-width: 240px;
+    }
 
-.info-panel h3 {
-    margin: 0 0 4px;
-    color: var(--accent-dark);
-    font-size: 14px;
-}
+    #timeline-units {
+      width: 120px;
+    }
 
-.mrca-time {
-    color: var(--tip);
-    font-size: 16px;
-    font-weight: bold;
-}
+    .file-status {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      min-width: 0;
+      margin: 0 0 10px;
+      padding: 7px 10px;
+      color: var(--muted);
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 5px;
+    }
 
-.viewer {
-    height: 70vh;
-    min-height: 560px;
-    overflow: hidden;
-    background: white;
-}
+    .file-status strong {
+      color: var(--text);
+    }
 
-svg {
-    display: block;
-    width: 100%;
-    height: 100%;
-    cursor: grab;
-}
+    .status-text {
+      min-width: 0;
+      overflow-wrap: anywhere;
+    }
 
-svg:active {
-    cursor: grabbing;
-}
+    .status-dot {
+      flex: 0 0 auto;
+      width: 8px;
+      height: 8px;
+      background: #999999;
+      border-radius: 50%;
+    }
 
-.branch {
-    fill: none;
-    stroke: var(--branch);
-    stroke-width: 1.2;
-}
+    .status-dot.loading {
+      background: var(--warning);
+    }
 
-.branch.selected-path {
-    stroke: var(--path);
-    stroke-width: 3;
-}
+    .status-dot.success {
+      background: var(--success);
+    }
 
-.node-hit-area {
-    fill: transparent;
-    stroke: transparent;
-    pointer-events: all;
-    cursor: pointer;
-}
+    .status-dot.error {
+      background: var(--danger);
+    }
 
-.node circle.visible-node {
-    fill: white;
-    stroke: var(--accent);
-    stroke-width: 1.8;
-    pointer-events: none;
-}
+    .tree-container {
+      position: relative;
+      min-height: 500px;
+      max-height: 74vh;
+      overflow: auto;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+    }
 
-.node.internal-node circle.visible-node {
-    fill: #f8ffff;
-}
+    .tree-container.dragover {
+      outline: 3px solid rgba(47, 111, 219, 0.35);
+      outline-offset: -3px;
+      background: #f5f9ff;
+    }
 
-.node.root-node circle.visible-node {
-    fill: #f1eaff;
-    stroke: var(--root);
-    stroke-width: 2.8;
-}
+    #tree-svg {
+      display: block;
+      background: #ffffff;
+      user-select: none;
+      -webkit-user-select: none;
+    }
 
-.node.leaf-node circle.visible-node {
-    fill: var(--accent);
-    stroke: var(--accent-dark);
-}
+    .empty-tree-message {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-content: center;
+      padding: 30px;
+      color: var(--muted);
+      text-align: center;
+      pointer-events: none;
+    }
 
-.node.selected-tip circle.visible-node {
-    fill: var(--tip);
-    stroke: #8a2100;
-    stroke-width: 3;
-}
+    .empty-tree-message[hidden] {
+      display: none;
+    }
 
-.node.mrca-node circle.visible-node {
-    fill: var(--mrca);
-    stroke: #4a1475;
-    stroke-width: 4;
-}
+    .information {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 10px;
+    }
 
-.node.internal-selected circle.visible-node {
-    fill: var(--internal);
-    stroke: #9c2c00;
-    stroke-width: 4;
-}
+    .info-panel {
+      min-width: 0;
+      padding: 9px 11px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+    }
 
-.node.mrca-node.internal-selected circle.visible-node {
-    fill: #9c36c7;
-    stroke: #4a1475;
-    stroke-width: 4.5;
-}
+    .info-panel h2 {
+      margin: 0 0 4px;
+      font-size: 15px;
+    }
 
-.label {
-    font-size: 10.5px;
-    dominant-baseline: middle;
-    pointer-events: none;
-}
+    .compact-details {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 2px 7px;
+      margin: 0;
+    }
 
-.leaf-label {
-    pointer-events: auto;
-    cursor: pointer;
-}
+    .compact-item {
+      white-space: nowrap;
+    }
 
-.leaf-label:hover {
-    text-decoration: underline;
-}
+    .compact-separator {
+      color: #9aa1aa;
+    }
 
-.label.selected-label {
-    fill: var(--tip);
-    font-weight: bold;
-}
+    .empty-message {
+      margin: 0;
+      color: var(--muted);
+    }
 
-.label.mrca-label {
-    fill: var(--mrca);
-    font-weight: bold;
-}
+    .instructions {
+      margin: 9px 2px 0;
+      color: var(--muted);
+      font-size: 13px;
+    }
 
-.label.internal-selected-label {
-    fill: var(--internal);
-    font-weight: bold;
-}
+    /*
+     * Larger timeline text.
+     */
+    .timeline-label {
+      fill: #4d5662;
+      font-size: 22px;
+      text-anchor: middle;
+      pointer-events: none;
+    }
 
-.root-label {
-    fill: var(--root);
-    font-size: 11px;
-    font-weight: bold;
-    pointer-events: none;
-}
+    .timeline-direction-label {
+      fill: #4d5662;
+      font-size: 17px;
+      pointer-events: none;
+    }
 
-.hpd-line {
-    stroke: var(--ci);
-    stroke-width: 2;
-}
+    .timeline-title {
+      fill: #222222;
+      font-size: 24px;
+      font-weight: 700;
+      text-anchor: middle;
+      pointer-events: none;
+    }
 
-.hpd-cap {
-    stroke: var(--ci);
-    stroke-width: 1.2;
-}
+    .timeline-axis {
+      stroke: #4c5664;
+      stroke-width: 1.5;
+      vector-effect: non-scaling-stroke;
+    }
 
-.collapsed-triangle {
-    fill: var(--triangle);
-    stroke: var(--triangle-stroke);
-    stroke-width: 1.5;
-    cursor: pointer;
-}
+    .timeline-tick {
+      stroke: #68717d;
+      stroke-width: 1.2;
+      vector-effect: non-scaling-stroke;
+    }
 
-.collapsed-triangle:hover {
-    fill: #bfdbfe;
-}
+    .grid-line {
+      stroke: var(--grid);
+      stroke-width: 1;
+      pointer-events: none;
+      vector-effect: non-scaling-stroke;
+    }
 
-.collapsed-label {
-    fill: #1d4ed8;
-    font-size: 10px;
-    font-weight: bold;
-    pointer-events: none;
-}
+    .branch {
+      fill: none;
+      stroke: var(--branch);
+      stroke-width: 1.5;
+      vector-effect: non-scaling-stroke;
+    }
 
-.axis path,
-.axis line {
-    stroke: #87909b;
-}
+    .branch.highlighted {
+      stroke: var(--orange);
+      stroke-width: 3;
+    }
 
-.axis text {
-    fill: #4b5563;
-    font-size: 10px;
-}
+    .hpd-bar {
+      stroke: var(--blue);
+      stroke-width: 6;
+      stroke-linecap: round;
+      opacity: 0.23;
+      pointer-events: none;
+      vector-effect: non-scaling-stroke;
+    }
 
-.axis-title {
-    fill: #4b5563;
-    font-size: 11px;
-}
+    .internal-node {
+      fill: #ffffff;
+      stroke: #315f9c;
+      stroke-width: 1.8;
+      cursor: pointer;
+      vector-effect: non-scaling-stroke;
+    }
 
-.tooltip {
-    position: fixed;
-    z-index: 30;
-    display: none;
-    max-width: 410px;
-    padding: 9px 11px;
-    color: #17212b;
-    background: white;
-    border: 1px solid #aeb7c2;
-    border-radius: 5px;
-    box-shadow: 0 3px 14px rgba(0,0,0,.15);
-    font-size: 12px;
-    line-height: 1.45;
-    pointer-events: none;
-}
+    .internal-node:hover {
+      fill: #dbe8ff;
+    }
 
-.help {
-    padding: 9px 18px;
-    color: var(--muted);
-    background: white;
-    border-top: 1px solid var(--border);
-    font-size: 12px;
-}
+    .internal-node.selected {
+      fill: var(--blue);
+      stroke: #174a91;
+    }
 
-.error {
-    color: #b42318;
-}
+    .tip-point {
+      fill: #ffffff;
+      stroke: #485666;
+      stroke-width: 1.5;
+      cursor: text;
+      pointer-events: all;
+      vector-effect: non-scaling-stroke;
+    }
 
-@media (max-width: 900px) {
-    .info-layout {
+    .tip-point:hover {
+      fill: #fff0e8;
+      stroke: var(--orange);
+      stroke-width: 2.5;
+    }
+
+    .tip-point.selected {
+      fill: var(--orange);
+      stroke: #a94715;
+    }
+
+    .tip-label {
+      fill: #222222;
+      font-size: 12px;
+      dominant-baseline: middle;
+      cursor: text;
+      pointer-events: all;
+    }
+
+    .tip-label:hover {
+      fill: #1f64d0;
+      font-weight: 700;
+      text-decoration: underline;
+    }
+
+    .tip-label.selected {
+      fill: #1f64d0;
+      font-weight: 700;
+    }
+
+    .collapsed-triangle {
+      fill: rgba(47, 111, 219, 0.15);
+      stroke: #315f9c;
+      stroke-width: 1.5;
+      cursor: pointer;
+      vector-effect: non-scaling-stroke;
+    }
+
+    .collapsed-triangle:hover {
+      fill: rgba(47, 111, 219, 0.28);
+    }
+
+    .collapsed-label {
+      fill: #344252;
+      font-size: 11px;
+      dominant-baseline: middle;
+      pointer-events: none;
+    }
+
+    /*
+     * Tip-name editor.
+     */
+    .tip-editor {
+      position: fixed;
+      z-index: 1000;
+      display: none;
+      width: min(390px, calc(100vw - 20px));
+      padding: 10px;
+      background: #ffffff;
+      border: 1px solid #8795a8;
+      border-radius: 6px;
+      box-shadow: 0 7px 24px rgba(0, 0, 0, 0.22);
+    }
+
+    .tip-editor.open {
+      display: block;
+    }
+
+    .tip-editor-label {
+      display: block;
+      margin-bottom: 6px;
+      color: #465364;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .tip-editor-row {
+      display: flex;
+      gap: 5px;
+    }
+
+    .tip-editor input {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .tip-editor button {
+      flex: 0 0 auto;
+      min-width: auto;
+      padding-right: 9px;
+      padding-left: 9px;
+    }
+
+    @media (max-width: 900px) {
+      body {
+        padding: 10px;
+      }
+
+      .information {
         grid-template-columns: 1fr;
+      }
+
+      .toolbar-divider {
+        display: none;
+      }
+
+      .tree-container {
+        max-height: 70vh;
+      }
     }
 
-    .status {
-        width: 100%;
-        margin-left: 0;
+    @media (max-width: 500px) {
+      .tip-editor-row {
+        flex-wrap: wrap;
+      }
+
+      .tip-editor input {
+        flex-basis: 100%;
+      }
     }
-}
-</style>
+  </style>
 </head>
 
 <body>
-
-<header>
+  <main class="container">
     <h1>Interactive Timetree Viewer</h1>
-    <p>
-        Explore a Newick or NEXUS timetree with confidence intervals,
-        MRCA timing, clade sorting, and editable tip names.
+
+    <p class="description">
+      Explore a Newick or NEXUS timetree with confidence intervals,
+      MRCA timing, clade sorting, editable tip names, and a timeline.
     </p>
-</header>
 
-<div class="toolbar">
-    <input
+    <section class="toolbar" aria-label="Timetree controls">
+      <input
+        id="tree-file"
         type="file"
-        id="fileInput"
-        accept=".tre,.tree,.nex,.nexus,.txt"
-    >
+        accept=".tre,.tree,.trees,.nex,.nexus,.nwk,.newick,text/plain"
+      >
 
-    <input
-        type="text"
-        id="searchInput"
-        placeholder="Search taxon name..."
-    >
+      <label class="file-button" for="tree-file">
+        Upload NEXUS / Newick
+      </label>
 
-    <label for="tipSort">Sort clades:</label>
+      <label for="tree-choice">Tree:</label>
 
-    <select id="tipSort">
+      <select id="tree-choice" disabled>
+        <option>No tree loaded</option>
+      </select>
+
+      <span class="toolbar-divider" aria-hidden="true"></span>
+
+      <label for="sort-clades">Sort clades:</label>
+
+      <select id="sort-clades">
         <option value="original">Original tree order</option>
-        <option value="ascending">Increasing clade size</option>
-        <option value="descending">Decreasing clade size</option>
-    </select>
+        <option value="increasing">Increasing clade size</option>
+        <option value="decreasing">Decreasing clade size</option>
+      </select>
 
-    <button id="zoomInButton">Zoom in</button>
-    <button id="zoomOutButton">Zoom out</button>
-    <button id="focusButton" class="purple">Focus selection</button>
-    <button id="fitButton">Fit tree</button>
-    <button id="resetButton">Reset</button>
-    <button id="clearSelectionButton">Clear selections</button>
-    <button id="hideTipsButton" class="warning">Hide selected tips</button>
-    <button id="hideCladeButton" class="warning">Hide selected clade</button>
-    <button id="restoreHiddenButton" class="secondary">Restore hidden</button>
-    <button id="collapseButton" class="secondary">Collapse selected clade</button>
-    <button id="expandButton" class="secondary">Expand all clades</button>
-    <button id="downloadButton">Download SVG</button>
+      <label for="timeline-units">Timeline units:</label>
 
-    <span class="status" id="status">
-        Loading Wang_Luo_2025_FigTree.tre...
-    </span>
-</div>
+      <input
+        id="timeline-units"
+        type="text"
+        value="tree units"
+        maxlength="30"
+        title="For example: Ma, Ga, years, or substitutions"
+      >
 
-<div class="info-layout">
-    <div id="mrcaPanel" class="info-panel">
-        <h3>MRCA / selected tips</h3>
-        Click two tip names to calculate their MRCA.
+      <span class="toolbar-divider" aria-hidden="true"></span>
+
+      <button type="button" id="zoom-in">Zoom in</button>
+      <button type="button" id="zoom-out">Zoom out</button>
+      <button type="button" id="focus-selection">Focus selection</button>
+      <button type="button" id="fit-tree">Fit tree</button>
+      <button type="button" id="reset-tree">Reset</button>
+
+      <span class="toolbar-divider" aria-hidden="true"></span>
+
+      <button type="button" id="clear-selections">
+        Clear selections
+      </button>
+
+      <button type="button" id="hide-selected-tips">
+        Hide selected tips
+      </button>
+
+      <button type="button" id="hide-selected-clade">
+        Hide selected clade
+      </button>
+
+      <button type="button" id="restore-hidden">
+        Restore hidden
+      </button>
+
+      <button type="button" id="collapse-selected-clade">
+        Collapse selected clade
+      </button>
+
+      <button type="button" id="expand-all-clades">
+        Expand all clades
+      </button>
+
+      <span class="toolbar-divider" aria-hidden="true"></span>
+
+      <button type="button" id="download-svg">
+        Download SVG
+      </button>
+    </section>
+
+    <div class="file-status" role="status" aria-live="polite">
+      <span id="status-dot" class="status-dot loading"></span>
+
+      <span id="status-text" class="status-text">
+        Loading <strong>Wang_Luo_2025_FigTree.tre</strong>...
+      </span>
     </div>
 
-    <div id="nodePanel" class="info-panel">
-        <h3>Selected node</h3>
-        Click an internal node to view its timing and clade size.
+    <section
+      id="tree-container"
+      class="tree-container"
+      aria-label="Timetree display"
+    >
+      <svg
+        id="tree-svg"
+        role="img"
+        aria-label="Interactive timetree with timeline"
+      ></svg>
+
+      <div id="empty-tree-message" class="empty-tree-message">
+        Upload a NEXUS or Newick tree file, or drop it here.
+      </div>
+    </section>
+
+    <section class="information">
+      <article class="info-panel" aria-live="polite">
+        <h2>MRCA / selected tips</h2>
+
+        <div id="mrca-details">
+          <p class="empty-message">
+            Click two tip names to calculate their MRCA.
+          </p>
+        </div>
+      </article>
+
+      <article class="info-panel" aria-live="polite">
+        <h2>Selected node</h2>
+
+        <div id="selected-node-details">
+          <p class="empty-message">
+            Click an internal node to view its timing and clade size.
+          </p>
+        </div>
+      </article>
+    </section>
+
+    <p class="instructions">
+      Click a tip once to select it.
+      <strong>Double-click a tip name or tip circle to rename it.</strong>
+      Press Enter or click Save to apply the new name. Press Escape to cancel.
+      Double-click an internal node to collapse or expand its clade.
+    </p>
+  </main>
+
+  <aside
+    id="tip-editor"
+    class="tip-editor"
+    role="dialog"
+    aria-modal="false"
+    aria-labelledby="tip-editor-label"
+  >
+    <label
+      id="tip-editor-label"
+      class="tip-editor-label"
+      for="tip-editor-input"
+    >
+      Edit tip name
+    </label>
+
+    <div class="tip-editor-row">
+      <input
+        id="tip-editor-input"
+        type="text"
+        autocomplete="off"
+        spellcheck="false"
+      >
+
+      <button type="button" id="tip-editor-save">
+        Save
+      </button>
+
+      <button type="button" id="tip-editor-cancel">
+        Cancel
+      </button>
     </div>
-</div>
+  </aside>
 
-<div class="viewer" id="viewer">
-    <svg id="treeSvg"></svg>
-</div>
+  <script>
+    "use strict";
 
-<div class="help">
-    Click a tip or tip label to select it. Select two tips to display the
-    MRCA and highlight the connecting paths. Double-click an internal node
-    to collapse or expand it as a triangle. The triangle ends at the date
-    of the most recent descendant tip. Double-click a tip name to edit it.
-</div>
+    const DEFAULT_TREE_FILE = "Wang_Luo_2025_FigTree.tre";
+    const SVG_NS = "http://www.w3.org/2000/svg";
 
-<div class="tooltip" id="tooltip"></div>
+    /*
+     * The delay allows the browser to distinguish between:
+     * 1. A single click for selection.
+     * 2. A double-click for editing or collapsing.
+     */
+    const DOUBLE_CLICK_DELAY = 280;
 
-<script>
-"use strict";
+    const fileInput = document.getElementById("tree-file");
+    const treeChoice = document.getElementById("tree-choice");
+    const sortClades = document.getElementById("sort-clades");
+    const timelineUnits = document.getElementById("timeline-units");
 
-const svg = d3.select("#treeSvg");
-const viewer = document.getElementById("viewer");
-const tooltip = document.getElementById("tooltip");
-const status = document.getElementById("status");
-const mrcaPanel = document.getElementById("mrcaPanel");
-const nodePanel = document.getElementById("nodePanel");
-
-const DEFAULT_TREE_FILE = "Wang_Luo_2025_FigTree.tre";
-const MIN_ZOOM = 0.01;
-const MAX_ZOOM = 1000;
-
-let root = null;
-let zoomBehavior = null;
-let selectedTips = [];
-let selectedMRCA = null;
-let selectedInternalNode = null;
-let tipSort = "original";
-
-const margin = {
-    top: 55,
-    right: 300,
-    bottom: 70,
-    left: 70
-};
-
-/* ============================================================
-   Parsing
-   ============================================================ */
-
-function extractNewick(text) {
-    text = text.trim().replace(/#NEXUS/ig, "");
-
-    const treeMatch = text.match(
-        /(?:UTREE|TREE)\s+[^=]*=\s*([\s\S]*)/i
+    const treeContainer = document.getElementById("tree-container");
+    const treeSvg = document.getElementById("tree-svg");
+    const emptyTreeMessage = document.getElementById(
+      "empty-tree-message"
     );
 
-    if (treeMatch) {
-        text = treeMatch[1];
-    } else {
-        const equalIndex = text.indexOf("=");
+    const statusDot = document.getElementById("status-dot");
+    const statusText = document.getElementById("status-text");
 
-        if (equalIndex !== -1) {
-            text = text.slice(equalIndex + 1);
-        }
+    const mrcaDetails = document.getElementById("mrca-details");
+    const selectedNodeDetails = document.getElementById(
+      "selected-node-details"
+    );
+
+    const tipEditor = document.getElementById("tip-editor");
+    const tipEditorInput = document.getElementById(
+      "tip-editor-input"
+    );
+    const tipEditorSave = document.getElementById("tip-editor-save");
+    const tipEditorCancel = document.getElementById(
+      "tip-editor-cancel"
+    );
+
+    let loadedTrees = [];
+    let translations = new Map();
+    let root = null;
+    let currentFileName = "";
+    let nodeSequence = 0;
+
+    let selectedNode = null;
+    let selectedTips = [];
+    let editingTip = null;
+
+    let baseWidth = 1200;
+    let baseHeight = 600;
+    let zoomScale = 1;
+
+    let lastLayoutById = new Map();
+
+    /*
+     * Pending single-click timer.
+     *
+     * The previous implementation rendered the SVG immediately after the
+     * first click. That destroyed the clicked SVG element, so the browser
+     * could not dispatch a double-click to that same element.
+     */
+    let pendingSvgClickTimer = null;
+
+    function cancelPendingSvgClick() {
+      if (pendingSvgClickTimer !== null) {
+        window.clearTimeout(pendingSvgClickTimer);
+        pendingSvgClickTimer = null;
+      }
     }
 
-    const semicolonIndex = text.lastIndexOf(";");
+    function scheduleSvgSingleClick(callback) {
+      cancelPendingSvgClick();
 
-    if (semicolonIndex !== -1) {
-        text = text.slice(0, semicolonIndex);
+      pendingSvgClickTimer = window.setTimeout(() => {
+        pendingSvgClickTimer = null;
+        callback();
+      }, DOUBLE_CLICK_DELAY);
     }
 
-    return text.trim();
-}
-
-function parseNewick(input) {
-    let index = 0;
-
-    function skipWhitespace() {
-        while (index < input.length && /\s/.test(input[index])) {
-            index++;
-        }
+    function setStatus(message, type = "") {
+      statusText.innerHTML = message;
+      statusDot.className = `status-dot ${type}`.trim();
     }
 
-    function readUntil(stopCharacters) {
-        const start = index;
-
-        while (
-            index < input.length &&
-            !stopCharacters.includes(input[index])
-        ) {
-            index++;
-        }
-
-        return input.slice(start, index).trim();
-    }
-
-    function readComment() {
-        if (input[index] !== "[") {
-            return "";
-        }
-
-        const start = index;
-        let depth = 0;
-
-        while (index < input.length) {
-            if (input[index] === "[") {
-                depth++;
-            }
-
-            if (input[index] === "]") {
-                depth--;
-
-                if (depth === 0) {
-                    index++;
-                    break;
-                }
-            }
-
-            index++;
-        }
-
-        return input.slice(start, index);
-    }
-
-    function parseHPDComment(comment) {
-        const match = comment && comment.match(
-            /95%HPD\s*=\s*\{\s*([^,]+)\s*,\s*([^}]+)\s*\}/i
-        );
-
-        if (!match) {
-            return {
-                hpdLow: null,
-                hpdHigh: null
-            };
-        }
-
-        return {
-            hpdLow: parseFloat(match[1]),
-            hpdHigh: parseFloat(match[2])
-        };
-    }
-
-    function parseBareHPD(text) {
-        const match = text.match(
-            /^\s*([+-]?(?:\d+(?:\.\d*)?|\.\d+))\s*-\s*([+-]?(?:\d+(?:\.\d*)?|\.\d+))\s*$/
-        );
-
-        if (!match) {
-            return null;
-        }
-
-        return {
-            hpdLow: parseFloat(match[1]),
-            hpdHigh: parseFloat(match[2])
-        };
-    }
-
-    function parseNode() {
-        skipWhitespace();
-
-        const node = {
-            name: "",
-            length: 0,
-            comment: "",
-            hpdLow: null,
-            hpdHigh: null,
-            children: []
-        };
-
-        if (input[index] === "(") {
-            index++;
-
-            while (true) {
-                node.children.push(parseNode());
-                skipWhitespace();
-
-                if (input[index] === ",") {
-                    index++;
-                    continue;
-                }
-
-                if (input[index] === ")") {
-                    index++;
-                    break;
-                }
-
-                throw new Error(
-                    "Invalid Newick format near character " + index
-                );
-            }
-
-            skipWhitespace();
-
-            if (
-                input[index] !== ":" &&
-                input[index] !== "[" &&
-                input[index] !== "," &&
-                input[index] !== ")" &&
-                index < input.length
-            ) {
-                const internalText = readUntil(":,[)]");
-                const bareHPD = parseBareHPD(internalText);
-
-                if (bareHPD) {
-                    node.hpdLow = bareHPD.hpdLow;
-                    node.hpdHigh = bareHPD.hpdHigh;
-                } else {
-                    node.name = internalText;
-                }
-            }
-        } else {
-            node.name = readUntil(":,[)]");
-        }
-
-        skipWhitespace();
-
-        if (input[index] === "[") {
-            node.comment = readComment();
-
-            const hpd = parseHPDComment(node.comment);
-            node.hpdLow = hpd.hpdLow;
-            node.hpdHigh = hpd.hpdHigh;
-        }
-
-        skipWhitespace();
-
-        if (input[index] === ":") {
-            index++;
-
-            const branchLength = readUntil(",[)]");
-            node.length = parseFloat(branchLength);
-
-            if (!Number.isFinite(node.length)) {
-                node.length = 0;
-            }
-        }
-
-        skipWhitespace();
-
-        if (input[index] === "[") {
-            node.comment = readComment();
-
-            const hpd = parseHPDComment(node.comment);
-            node.hpdLow = hpd.hpdLow;
-            node.hpdHigh = hpd.hpdHigh;
-        }
-
-        return node;
-    }
-
-    return parseNode();
-}
-
-/* ============================================================
-   Utilities
-   ============================================================ */
-
-function cleanLabel(label) {
-    return String(label || "").replaceAll("_", " ");
-}
-
-function formatNumber(value) {
-    if (
-        value === null ||
-        value === undefined ||
-        !Number.isFinite(Number(value))
-    ) {
-        return "NA";
-    }
-
-    return Number(value).toFixed(4);
-}
-
-function escapeHtml(value) {
-    return String(value)
+    function escapeHtml(value) {
+      return String(value)
         .replaceAll("&", "&amp;")
         .replaceAll("<", "&lt;")
         .replaceAll(">", "&gt;")
         .replaceAll('"', "&quot;")
         .replaceAll("'", "&#039;");
-}
-
-function getChildren(node) {
-    return node.children || node._children || [];
-}
-
-function getVisibleChildren(node) {
-    return (node.children || [])
-        .filter(child => !child.data.hidden);
-}
-
-function assignDistances(node, distanceFromRoot = 0) {
-    node.data.distanceFromRoot = distanceFromRoot;
-
-    (node.children || []).forEach(child => {
-        assignDistances(
-            child,
-            distanceFromRoot + (child.data.length || 0)
-        );
-    });
-
-    /*
-     * Also calculate distances through collapsed clades.
-     * This is essential for positioning collapsed triangles
-     * according to the dates of their hidden descendant tips.
-     */
-    (node._children || []).forEach(child => {
-        assignDistances(
-            child,
-            distanceFromRoot + (child.data.length || 0)
-        );
-    });
-}
-
-function getTipCount(node) {
-    const children = getChildren(node);
-
-    if (!children.length) {
-        return 1;
     }
 
-    return children.reduce(
-        (total, child) => total + getTipCount(child),
-        0
-    );
-}
-
-function getVisibleTipCount(node) {
-    const children = getVisibleChildren(node);
-
-    if (!children.length) {
-        return node.data.hidden ? 0 : 1;
+    function escapeXml(value) {
+      return escapeHtml(value);
     }
 
-    return children.reduce(
-        (total, child) => total + getVisibleTipCount(child),
-        0
-    );
-}
+    function formatNumber(value) {
+      if (!Number.isFinite(value)) {
+        return "—";
+      }
 
-function getTipCountLabel(node) {
-    const count = getTipCount(node);
-    return count === 1 ? "1 tip" : `${count} tips`;
-}
+      if (Math.abs(value) >= 1000) {
+        return value.toFixed(1);
+      }
 
-function collectAllTips(node, result = []) {
-    const children = getChildren(node);
+      if (Math.abs(value) >= 100) {
+        return value.toFixed(2);
+      }
 
-    if (!children.length) {
-        if (!node.data.hidden) {
-            result.push(node);
+      return value
+        .toFixed(4)
+        .replace(/0+$/, "")
+        .replace(/\.$/, "");
+    }
+
+    function stripOuterQuotes(value) {
+      const text = value.trim();
+
+      if (
+        text.length >= 2 &&
+        text.startsWith("'") &&
+        text.endsWith("'")
+      ) {
+        return text
+          .slice(1, -1)
+          .replaceAll("''", "'");
+      }
+
+      if (
+        text.length >= 2 &&
+        text.startsWith('"') &&
+        text.endsWith('"')
+      ) {
+        return text.slice(1, -1);
+      }
+
+      return text;
+    }
+
+    function splitOutsideQuotes(text, delimiter = ",") {
+      const parts = [];
+
+      let buffer = "";
+      let quote = null;
+      let bracketDepth = 0;
+      let parenthesisDepth = 0;
+
+      for (let index = 0; index < text.length; index += 1) {
+        const character = text[index];
+
+        if (quote) {
+          buffer += character;
+
+          if (character === quote) {
+            if (quote === "'" && text[index + 1] === "'") {
+              buffer += text[index + 1];
+              index += 1;
+            } else {
+              quote = null;
+            }
+          }
+
+          continue;
+        }
+
+        if (character === "'" || character === '"') {
+          quote = character;
+          buffer += character;
+          continue;
+        }
+
+        if (character === "[") {
+          bracketDepth += 1;
+        } else if (character === "]") {
+          bracketDepth = Math.max(0, bracketDepth - 1);
+        } else if (character === "(") {
+          parenthesisDepth += 1;
+        } else if (character === ")") {
+          parenthesisDepth = Math.max(0, parenthesisDepth - 1);
+        }
+
+        if (
+          character === delimiter &&
+          bracketDepth === 0 &&
+          parenthesisDepth === 0
+        ) {
+          parts.push(buffer.trim());
+          buffer = "";
+        } else {
+          buffer += character;
+        }
+      }
+
+      if (buffer.trim()) {
+        parts.push(buffer.trim());
+      }
+
+      return parts;
+    }
+
+    function extractTranslations(text) {
+      const map = new Map();
+
+      const match = text.match(
+        /\bTRANSLATE\b([\s\S]*?);/i
+      );
+
+      if (!match) {
+        return map;
+      }
+
+      const entries = splitOutsideQuotes(match[1], ",");
+
+      for (const entry of entries) {
+        const trimmed = entry.trim();
+
+        if (!trimmed) {
+          continue;
+        }
+
+        const itemMatch = trimmed.match(
+          /^(\S+)\s+([\s\S]+)$/
+        );
+
+        if (!itemMatch) {
+          continue;
+        }
+
+        const key = stripOuterQuotes(itemMatch[1]);
+        const value = stripOuterQuotes(itemMatch[2].trim());
+
+        map.set(key, value);
+      }
+
+      return map;
+    }
+
+    function extractTrees(text) {
+      const trees = [];
+
+      const declarationPattern =
+        /\b(UTREE|TREE)\b\s+([^=;]+?)\s*=/ig;
+
+      let match;
+
+      while (
+        (match = declarationPattern.exec(text)) !== null
+      ) {
+        const name = stripOuterQuotes(match[2].trim());
+        const start = declarationPattern.lastIndex;
+
+        let quote = null;
+        let bracketDepth = 0;
+        let end = -1;
+
+        for (let index = start; index < text.length; index += 1) {
+          const character = text[index];
+
+          if (quote) {
+            if (character === quote) {
+              if (
+                quote === "'" &&
+                text[index + 1] === "'"
+              ) {
+                index += 1;
+              } else {
+                quote = null;
+              }
+            }
+
+            continue;
+          }
+
+          if (character === "'" || character === '"') {
+            quote = character;
+            continue;
+          }
+
+          if (character === "[") {
+            bracketDepth += 1;
+            continue;
+          }
+
+          if (character === "]") {
+            bracketDepth = Math.max(0, bracketDepth - 1);
+            continue;
+          }
+
+          if (
+            character === ";" &&
+            bracketDepth === 0
+          ) {
+            end = index;
+            break;
+          }
+        }
+
+        if (end >= 0) {
+          trees.push({
+            name: name || `Tree ${trees.length + 1}`,
+            newick: text.slice(start, end).trim()
+          });
+
+          declarationPattern.lastIndex = end + 1;
+        }
+      }
+
+      if (trees.length === 0) {
+        const trimmed = text.trim();
+
+        if (trimmed.includes("(")) {
+          trees.push({
+            name: "Tree 1",
+            newick: trimmed.replace(/;\s*$/, "")
+          });
+        }
+      }
+
+      return trees;
+    }
+
+    class NewickParser {
+      constructor(text) {
+        this.text = text.trim();
+        this.position = 0;
+      }
+
+      peek() {
+        return this.text[this.position];
+      }
+
+      skipWhitespace() {
+        while (
+          this.position < this.text.length &&
+          /\s/.test(this.text[this.position])
+        ) {
+          this.position += 1;
+        }
+      }
+
+      parseComment() {
+        this.skipWhitespace();
+
+        if (this.peek() !== "[") {
+          return "";
+        }
+
+        const start = this.position;
+
+        let depth = 0;
+        let quote = null;
+
+        while (this.position < this.text.length) {
+          const character = this.text[this.position];
+
+          if (quote) {
+            if (character === quote) {
+              quote = null;
+            }
+
+            this.position += 1;
+            continue;
+          }
+
+          if (character === "'" || character === '"') {
+            quote = character;
+            this.position += 1;
+            continue;
+          }
+
+          if (character === "[") {
+            depth += 1;
+          } else if (character === "]") {
+            depth -= 1;
+
+            if (depth === 0) {
+              this.position += 1;
+              break;
+            }
+          }
+
+          this.position += 1;
+        }
+
+        return this.text.slice(start, this.position);
+      }
+
+      skipLeadingComments() {
+        this.skipWhitespace();
+
+        while (this.peek() === "[") {
+          this.parseComment();
+          this.skipWhitespace();
+        }
+      }
+
+      parseQuotedName() {
+        const quote = this.peek();
+
+        if (quote !== "'" && quote !== '"') {
+          return "";
+        }
+
+        this.position += 1;
+
+        let result = "";
+
+        while (this.position < this.text.length) {
+          const character = this.text[this.position];
+
+          if (character === quote) {
+            if (
+              quote === "'" &&
+              this.text[this.position + 1] === "'"
+            ) {
+              result += "'";
+              this.position += 2;
+              continue;
+            }
+
+            this.position += 1;
+            break;
+          }
+
+          result += character;
+          this.position += 1;
         }
 
         return result;
-    }
+      }
 
-    children.forEach(child => {
-        collectAllTips(child, result);
-    });
+      parseName() {
+        this.skipWhitespace();
 
-    return result;
-}
+        if (this.peek() === "'" || this.peek() === '"') {
+          return this.parseQuotedName();
+        }
 
-function collectAllDescendantNodes(node, result = []) {
-    result.push(node);
+        const start = this.position;
 
-    getChildren(node).forEach(child => {
-        collectAllDescendantNodes(child, result);
-    });
+        while (this.position < this.text.length) {
+          const character = this.text[this.position];
 
-    return result;
-}
+          if (
+            character === ":" ||
+            character === "," ||
+            character === "(" ||
+            character === ")" ||
+            character === "[" ||
+            character === ";" ||
+            /\s/.test(character)
+          ) {
+            break;
+          }
 
-/* ============================================================
-   Sorting
-   ============================================================ */
+          this.position += 1;
+        }
 
-function saveOriginalChildOrder(node) {
-    if (node.children) {
-        node._originalChildren = node.children.slice();
+        return this.text
+          .slice(start, this.position)
+          .trim();
+      }
 
-        node.children.forEach(child => {
-            saveOriginalChildOrder(child);
-        });
-    }
-}
+      parseNumber() {
+        this.skipWhitespace();
 
-function restoreOriginalChildOrder(node) {
-    if (!node._originalChildren) {
-        return;
-    }
+        const remaining = this.text.slice(this.position);
 
-    const currentChildren =
-        node.children || node._children || [];
-
-    const ordered = node._originalChildren.filter(
-        child => currentChildren.includes(child)
-    );
-
-    if (node.children) {
-        node.children = ordered;
-    } else if (node._children) {
-        node._children = ordered;
-    }
-
-    node._originalChildren.forEach(child => {
-        restoreOriginalChildOrder(child);
-    });
-}
-
-function sortChildrenRecursively(node) {
-    const children = getChildren(node);
-
-    children.forEach(child => {
-        sortChildrenRecursively(child);
-    });
-
-    if (
-        tipSort !== "ascending" &&
-        tipSort !== "descending"
-    ) {
-        return;
-    }
-
-    const direction =
-        tipSort === "ascending" ? 1 : -1;
-
-    children.sort((a, b) =>
-        direction * (getTipCount(a) - getTipCount(b))
-    );
-
-    if (node.children) {
-        node.children = children;
-    } else if (node._children) {
-        node._children = children;
-    }
-}
-
-function applyTipSort() {
-    if (!root) {
-        return;
-    }
-
-    if (tipSort === "original") {
-        restoreOriginalChildOrder(root);
-    } else {
-        sortChildrenRecursively(root);
-    }
-}
-
-function assignYPositions(node, yScale) {
-    const visibleChildren = getVisibleChildren(node);
-
-    if (visibleChildren.length) {
-        visibleChildren.forEach(child => {
-            assignYPositions(child, yScale);
-        });
-
-        node.y = d3.mean(
-            visibleChildren,
-            child => child.y
+        const match = remaining.match(
+          /^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?/
         );
 
-        return node.y;
+        if (!match) {
+          throw new Error(
+            "Expected a branch length near " +
+            `position ${this.position}.`
+          );
+        }
+
+        this.position += match[0].length;
+
+        return Number(match[0]);
+      }
+
+      parseMetadata(node) {
+        this.skipWhitespace();
+
+        const comments = [];
+
+        while (this.peek() === "[") {
+          comments.push(this.parseComment());
+          this.skipWhitespace();
+        }
+
+        if (this.peek() === ":") {
+          this.position += 1;
+          node.length = this.parseNumber();
+
+          this.skipWhitespace();
+
+          while (this.peek() === "[") {
+            comments.push(this.parseComment());
+            this.skipWhitespace();
+          }
+        }
+
+        node.comments = comments.join(" ");
+
+        const hpdMatch = node.comments.match(
+          /95%\s*HPD\s*=\s*\{\s*([+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?)\s*,\s*([+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?)\s*\}/i
+        );
+
+        if (hpdMatch) {
+          node.hpd = [
+            Number(hpdMatch[1]),
+            Number(hpdMatch[2])
+          ].sort((a, b) => a - b);
+        }
+      }
+
+      parseSubtree(parent = null) {
+        this.skipLeadingComments();
+        this.skipWhitespace();
+
+        const node = {
+          id: `node-${++nodeSequence}`,
+          name: "",
+          length: 0,
+          comments: "",
+          hpd: null,
+          children: [],
+          parent,
+          hidden: false,
+          collapsed: false,
+          originalIndex: 0,
+          age: 0
+        };
+
+        if (this.peek() === "(") {
+          this.position += 1;
+
+          let childIndex = 0;
+
+          while (true) {
+            const child = this.parseSubtree(node);
+
+            child.originalIndex = childIndex;
+            childIndex += 1;
+
+            node.children.push(child);
+
+            this.skipWhitespace();
+
+            if (this.peek() === ",") {
+              this.position += 1;
+              continue;
+            }
+
+            if (this.peek() === ")") {
+              this.position += 1;
+              break;
+            }
+
+            throw new Error(
+              'Expected "," or ")" near ' +
+              `position ${this.position}.`
+            );
+          }
+
+          node.name = this.parseName();
+          this.parseMetadata(node);
+        } else {
+          node.name = this.parseName();
+
+          if (!node.name) {
+            throw new Error(
+              "Expected a tip name near " +
+              `position ${this.position}.`
+            );
+          }
+
+          this.parseMetadata(node);
+        }
+
+        return node;
+      }
+
+      parse() {
+        const parsedRoot = this.parseSubtree(null);
+
+        this.skipWhitespace();
+
+        if (this.peek() === ";") {
+          this.position += 1;
+        }
+
+        return parsedRoot;
+      }
     }
 
-    const tips = collectAllTips(node);
+    function walk(node, callback) {
+      callback(node);
 
-    node.y = tips.length
-        ? d3.mean(tips, tip => yScale(tip.data.name))
-        : 0;
+      for (const child of node.children) {
+        walk(child, callback);
+      }
+    }
 
-    return node.y;
-}
+    function applyTranslations(treeRoot, translationMap) {
+      walk(treeRoot, node => {
+        if (
+          node.children.length === 0 &&
+          translationMap.has(node.name)
+        ) {
+          node.name = translationMap.get(node.name);
+        }
+      });
+    }
 
-/* ============================================================
-   MRCA and path highlighting
-   ============================================================ */
+    function calculateAges(node) {
+      if (node.children.length === 0) {
+        node.age = 0;
+        return 0;
+      }
 
-function findMRCA(nodeA, nodeB) {
-    const ancestorsA = new Set();
-    let current = nodeA;
+      let age = 0;
 
-    while (current) {
-        ancestorsA.add(current);
+      for (const child of node.children) {
+        const childAge = calculateAges(child);
+
+        age = Math.max(
+          age,
+          childAge + (child.length || 0)
+        );
+      }
+
+      node.age = age;
+
+      return age;
+    }
+
+    function countTips(node, visibleOnly = false) {
+      if (visibleOnly && node.hidden) {
+        return 0;
+      }
+
+      if (node.children.length === 0) {
+        return 1;
+      }
+
+      return node.children.reduce(
+        (sum, child) => {
+          return sum + countTips(child, visibleOnly);
+        },
+        0
+      );
+    }
+
+    function maximumTimelineAge(treeRoot) {
+      let maximum = treeRoot.age || 0;
+
+      walk(treeRoot, node => {
+        if (node.hpd) {
+          maximum = Math.max(maximum, node.hpd[1]);
+        }
+      });
+
+      return maximum || 1;
+    }
+
+    function orderedChildren(node) {
+      const children = [...node.children];
+      const mode = sortClades.value;
+
+      if (mode === "increasing") {
+        children.sort((a, b) => {
+          return (
+            countTips(a, true) -
+              countTips(b, true) ||
+            a.originalIndex -
+              b.originalIndex
+          );
+        });
+      } else if (mode === "decreasing") {
+        children.sort((a, b) => {
+          return (
+            countTips(b, true) -
+              countTips(a, true) ||
+            a.originalIndex -
+              b.originalIndex
+          );
+        });
+      } else {
+        children.sort((a, b) => {
+          return a.originalIndex - b.originalIndex;
+        });
+      }
+
+      return children;
+    }
+
+    function buildVisibleLayout(node, state) {
+      if (node.hidden) {
+        return null;
+      }
+
+      if (
+        node.children.length === 0 ||
+        node.collapsed
+      ) {
+        const layout = {
+          node,
+          x: 0,
+          y: state.nextY,
+          children: []
+        };
+
+        state.nextY += state.rowHeight;
+        state.items += 1;
+
+        return layout;
+      }
+
+      const childLayouts = [];
+
+      for (const child of orderedChildren(node)) {
+        const childLayout = buildVisibleLayout(child, state);
+
+        if (childLayout) {
+          childLayouts.push(childLayout);
+        }
+      }
+
+      if (childLayouts.length === 0) {
+        return null;
+      }
+
+      const firstY = childLayouts[0].y;
+      const lastY = childLayouts[childLayouts.length - 1].y;
+
+      return {
+        node,
+        x: 0,
+        y: (firstY + lastY) / 2,
+        children: childLayouts
+      };
+    }
+
+    function assignCoordinates(layout, xScale) {
+      layout.x = xScale(layout.node.age);
+
+      for (const child of layout.children) {
+        assignCoordinates(child, xScale);
+      }
+    }
+
+    function indexLayout(layout) {
+      lastLayoutById.set(layout.node.id, layout);
+
+      for (const child of layout.children) {
+        indexLayout(child);
+      }
+    }
+
+    function findSelectedMrca() {
+      if (selectedTips.length !== 2) {
+        return null;
+      }
+
+      const ancestors = new Set();
+
+      let current = selectedTips[0];
+
+      while (current) {
+        ancestors.add(current);
         current = current.parent;
-    }
+      }
 
-    current = nodeB;
+      current = selectedTips[1];
 
-    while (current) {
-        if (ancestorsA.has(current)) {
-            return current;
+      while (current) {
+        if (ancestors.has(current)) {
+          return current;
         }
 
         current = current.parent;
+      }
+
+      return null;
     }
 
-    return null;
-}
+    function highlightedBranchIds() {
+      const result = new Set();
+      const mrca = findSelectedMrca();
 
-function isAncestorOrSelf(ancestor, descendant) {
-    let current = descendant;
+      if (!mrca) {
+        return result;
+      }
 
-    while (current) {
-        if (current === ancestor) {
-            return true;
+      for (const tip of selectedTips) {
+        let current = tip;
+
+        while (current && current !== mrca) {
+          result.add(current.id);
+          current = current.parent;
         }
+      }
 
-        current = current.parent;
+      return result;
     }
 
-    return false;
-}
+    function niceTickStep(maximum, desiredTicks = 8) {
+      const roughStep = maximum / desiredTicks;
 
-function isOnSelectedPath(node) {
-    if (!selectedMRCA || selectedTips.length !== 2) {
-        return false;
+      if (
+        !Number.isFinite(roughStep) ||
+        roughStep <= 0
+      ) {
+        return 1;
+      }
+
+      const power =
+        10 ** Math.floor(Math.log10(roughStep));
+
+      const fraction = roughStep / power;
+
+      let niceFraction;
+
+      if (fraction <= 1) {
+        niceFraction = 1;
+      } else if (fraction <= 2) {
+        niceFraction = 2;
+      } else if (fraction <= 5) {
+        niceFraction = 5;
+      } else {
+        niceFraction = 10;
+      }
+
+      return niceFraction * power;
     }
 
-    return (
-        isAncestorOrSelf(node, selectedTips[0]) ||
-        isAncestorOrSelf(node, selectedTips[1])
-    );
-}
+    function makeTimelineTicks(maximum) {
+      const step = niceTickStep(maximum);
+      const top = Math.ceil(maximum / step) * step;
+      const ticks = [];
 
-/* ============================================================
-   Focus
-   ============================================================ */
+      for (
+        let value = 0;
+        value <= top + step / 2;
+        value += step
+      ) {
+        ticks.push(Number(value.toFixed(12)));
+      }
 
-function focusNode(node) {
-    if (!node || !zoomBehavior) {
+      return {
+        ticks,
+        maximum: top
+      };
+    }
+
+    function longestVisibleLabel(node) {
+      let longest = 15;
+
+      walk(node, item => {
+        if (
+          !item.hidden &&
+          item.children.length === 0
+        ) {
+          longest = Math.max(
+            longest,
+            item.name.length
+          );
+        }
+      });
+
+      return longest;
+    }
+
+    function renderTimeline({
+      ticks,
+      plotLeft,
+      plotRight,
+      axisY,
+      treeBottom,
+      xScale
+    }) {
+      const unitText =
+        timelineUnits.value.trim() || "tree units";
+
+      let markup = "";
+
+      for (const tick of ticks) {
+        const x = xScale(tick);
+
+        markup += `
+          <line
+            class="grid-line"
+            x1="${x}"
+            y1="${axisY}"
+            x2="${x}"
+            y2="${treeBottom}"
+          ></line>
+
+          <line
+            class="timeline-tick"
+            x1="${x}"
+            y1="${axisY - 7}"
+            x2="${x}"
+            y2="${axisY + 7}"
+          ></line>
+
+          <text
+            class="timeline-label"
+            x="${x}"
+            y="${axisY - 16}"
+          >${escapeXml(formatNumber(tick))}</text>
+        `;
+      }
+
+      markup += `
+        <line
+          class="timeline-axis"
+          x1="${plotLeft}"
+          y1="${axisY}"
+          x2="${plotRight}"
+          y2="${axisY}"
+        ></line>
+
+        <text
+          class="timeline-title"
+          x="${(plotLeft + plotRight) / 2}"
+          y="29"
+        >
+          Time before present (${escapeXml(unitText)})
+        </text>
+
+        <text
+          class="timeline-direction-label"
+          x="${plotLeft}"
+          y="${axisY + 27}"
+          text-anchor="start"
+        >
+          Older
+        </text>
+
+        <text
+          class="timeline-direction-label"
+          x="${plotRight}"
+          y="${axisY + 27}"
+          text-anchor="end"
+        >
+          Present
+        </text>
+      `;
+
+      return markup;
+    }
+
+    function renderBranches(layout, highlighted, xScale) {
+      let markup = "";
+
+      if (layout.node.hpd) {
+        const hpdStart = xScale(layout.node.hpd[1]);
+        const hpdEnd = xScale(layout.node.hpd[0]);
+
+        markup += `
+          <line
+            class="hpd-bar"
+            x1="${hpdStart}"
+            y1="${layout.y}"
+            x2="${hpdEnd}"
+            y2="${layout.y}"
+          ></line>
+        `;
+      }
+
+      for (const child of layout.children) {
+        const highlightClass =
+          highlighted.has(child.node.id)
+            ? " highlighted"
+            : "";
+
+        markup += `
+          <path
+            class="branch${highlightClass}"
+            d="
+              M ${layout.x} ${layout.y}
+              V ${child.y}
+              H ${child.x}
+            "
+          ></path>
+        `;
+
+        markup += renderBranches(
+          child,
+          highlighted,
+          xScale
+        );
+      }
+
+      return markup;
+    }
+
+    function renderNodes(layout, plotRight) {
+      const node = layout.node;
+
+      let markup = "";
+
+      if (
+        node.collapsed &&
+        node.children.length > 0
+      ) {
+        const visibleTips = countTips(node, true);
+
+        const triangleHeight = Math.min(
+          22,
+          Math.max(
+            7,
+            4 + Math.log2(visibleTips + 1) * 3
+          )
+        );
+
+        const triangleEndX = plotRight;
+
+        markup += `
+          <polygon
+            class="collapsed-triangle${
+              selectedNode === node ? " selected" : ""
+            }"
+            data-node-id="${node.id}"
+            points="
+              ${layout.x},${layout.y}
+              ${triangleEndX},${layout.y - triangleHeight}
+              ${triangleEndX},${layout.y + triangleHeight}
+            "
+          >
+            <title>
+              Double-click to expand this clade
+            </title>
+          </polygon>
+
+          <text
+            class="collapsed-label"
+            x="${triangleEndX + 7}"
+            y="${layout.y}"
+          >
+            Collapsed clade (${visibleTips} tips)
+          </text>
+        `;
+
+        return markup;
+      }
+
+      if (node.children.length === 0) {
+        const isSelected = selectedTips.includes(node);
+        const selectedClass = isSelected ? " selected" : "";
+
+        /*
+         * Both the tip circle and tip label contain data-tip-id.
+         * Either can be double-clicked.
+         */
+        markup += `
+          <circle
+            class="tip-point${selectedClass}"
+            data-tip-id="${node.id}"
+            cx="${layout.x}"
+            cy="${layout.y}"
+            r="4"
+          >
+            <title>
+              Double-click to rename ${escapeXml(node.name)}
+            </title>
+          </circle>
+
+          <text
+            class="tip-label${selectedClass}"
+            data-tip-id="${node.id}"
+            x="${layout.x + 8}"
+            y="${layout.y}"
+          >${escapeXml(node.name)}</text>
+        `;
+      } else {
+        markup += `
+          <circle
+            class="internal-node${
+              selectedNode === node ? " selected" : ""
+            }"
+            data-node-id="${node.id}"
+            cx="${layout.x}"
+            cy="${layout.y}"
+            r="4.3"
+          >
+            <title>
+              Double-click to collapse this clade
+            </title>
+          </circle>
+        `;
+      }
+
+      for (const child of layout.children) {
+        markup += renderNodes(child, plotRight);
+      }
+
+      return markup;
+    }
+
+    function renderTree({
+      preserveScroll = true,
+      preserveZoom = true
+    } = {}) {
+      cancelPendingSvgClick();
+      closeTipEditor();
+
+      if (!root) {
+        treeSvg.innerHTML = "";
+        emptyTreeMessage.hidden = false;
+        updateInformationPanels();
         return;
-    }
+      }
 
-    const descendants =
-        collectAllDescendantNodes(node)
-            .filter(d => !d.data.hidden);
+      const oldScrollLeft = treeContainer.scrollLeft;
+      const oldScrollTop = treeContainer.scrollTop;
 
-    if (!descendants.length) {
-        return;
-    }
+      if (!preserveZoom) {
+        zoomScale = 1;
+      }
 
-    const xs = descendants.map(d => d.x);
-    const ys = descendants.map(d => d.y);
+      const rowHeight = 22;
 
-    const minX = d3.min(xs);
-    const maxX = d3.max(xs);
-    const minY = d3.min(ys);
-    const maxY = d3.max(ys);
+      /*
+       * Additional space for the enlarged timeline text.
+       */
+      const topMargin = 126;
+      const bottomMargin = 35;
+      const plotLeft = 55;
 
-    const width = viewer.clientWidth;
-    const height = viewer.clientHeight;
-
-    const boxWidth = Math.max(maxX - minX, 80);
-    const boxHeight = Math.max(maxY - minY, 80);
-
-    const scale = Math.min(
-        0.85 * width / boxWidth,
-        0.85 * height / boxHeight,
-        MAX_ZOOM
-    );
-
-    const centerX = (minX + maxX) / 2;
-    const centerY = (minY + maxY) / 2;
-
-    const transform = d3.zoomIdentity
-        .translate(
-            width / 2 - scale * centerX,
-            height / 2 - scale * centerY
+      const labelWidth = Math.min(
+        760,
+        Math.max(
+          220,
+          longestVisibleLabel(root) * 7.1 + 20
         )
-        .scale(scale);
+      );
 
-    svg.transition()
-        .duration(500)
-        .call(
-            zoomBehavior.transform,
-            transform
+      baseWidth = Math.max(
+        1100,
+        820 + labelWidth
+      );
+
+      const plotRight = baseWidth - labelWidth;
+
+      const rawTimelineMaximum = maximumTimelineAge(root);
+      const tickInfo = makeTimelineTicks(rawTimelineMaximum);
+      const timelineMaximum = tickInfo.maximum;
+
+      const layoutState = {
+        nextY: topMargin,
+        rowHeight,
+        items: 0
+      };
+
+      const layout = buildVisibleLayout(root, layoutState);
+
+      if (!layout) {
+        treeSvg.innerHTML = "";
+        emptyTreeMessage.hidden = false;
+        emptyTreeMessage.textContent =
+          "All tips are hidden. Use “Restore hidden” to show the tree.";
+
+        updateInformationPanels();
+        return;
+      }
+
+      baseHeight = Math.max(
+        500,
+        layoutState.nextY + bottomMargin
+      );
+
+      const xScale = age => {
+        const normalized = Math.max(
+          0,
+          Math.min(1, age / timelineMaximum)
         );
-}
 
-function focusSelection() {
-    if (selectedMRCA) {
-        focusNode(selectedMRCA);
-    } else if (selectedInternalNode) {
-        focusNode(selectedInternalNode);
-    } else if (selectedTips.length === 1) {
-        focusNode(selectedTips[0]);
+        return (
+          plotRight -
+          normalized * (plotRight - plotLeft)
+        );
+      };
+
+      assignCoordinates(layout, xScale);
+
+      lastLayoutById = new Map();
+      indexLayout(layout);
+
+      const highlighted = highlightedBranchIds();
+
+      const timeline = renderTimeline({
+        ticks: tickInfo.ticks,
+        plotLeft,
+        plotRight,
+        axisY: 82,
+        treeBottom: baseHeight - 20,
+        xScale
+      });
+
+      const branches = renderBranches(
+        layout,
+        highlighted,
+        xScale
+      );
+
+      const nodes = renderNodes(layout, plotRight);
+
+      treeSvg.setAttribute(
+        "viewBox",
+        `0 0 ${baseWidth} ${baseHeight}`
+      );
+
+      treeSvg.setAttribute(
+        "width",
+        baseWidth * zoomScale
+      );
+
+      treeSvg.setAttribute(
+        "height",
+        baseHeight * zoomScale
+      );
+
+      treeSvg.innerHTML = `
+        <rect
+          x="0"
+          y="0"
+          width="${baseWidth}"
+          height="${baseHeight}"
+          fill="#ffffff"
+        ></rect>
+
+        ${timeline}
+        ${branches}
+        ${nodes}
+      `;
+
+      emptyTreeMessage.hidden = true;
+
+      if (preserveScroll) {
+        requestAnimationFrame(() => {
+          treeContainer.scrollLeft = oldScrollLeft;
+          treeContainer.scrollTop = oldScrollTop;
+        });
+      }
+
+      updateInformationPanels();
     }
-}
 
-/* ============================================================
-   Panels
-   ============================================================ */
-
-function reportMRCA() {
-    if (selectedTips.length === 0) {
-        mrcaPanel.innerHTML = `
-            <h3>MRCA / selected tips</h3>
-            Click two tip names to calculate their MRCA.
+    function updateInformationPanels() {
+      if (!selectedNode) {
+        selectedNodeDetails.innerHTML = `
+          <p class="empty-message">
+            Click an internal node to view its timing and clade size.
+          </p>
         `;
+      } else {
+        const nodeName =
+          selectedNode.name || "unnamed internal node";
+
+        const branchLength =
+          selectedNode.parent
+            ? formatNumber(selectedNode.length)
+            : "root";
+
+        const hpd = selectedNode.hpd
+          ? `${formatNumber(
+              selectedNode.hpd[0]
+            )}–${formatNumber(
+              selectedNode.hpd[1]
+            )}`
+          : "not provided";
+
+        selectedNodeDetails.innerHTML = `
+          <p class="compact-details">
+            <span class="compact-item">
+              <strong>Node:</strong>
+              ${escapeHtml(nodeName)}
+            </span>
+
+            <span class="compact-separator">•</span>
+
+            <span class="compact-item">
+              <strong>Time:</strong>
+              ${formatNumber(selectedNode.age)}
+              before present
+            </span>
+
+            <span class="compact-separator">•</span>
+
+            <span class="compact-item">
+              <strong>Clade:</strong>
+              ${countTips(selectedNode)} tips
+              (${countTips(selectedNode, true)} visible)
+            </span>
+
+            <span class="compact-separator">•</span>
+
+            <span class="compact-item">
+              <strong>Branch:</strong>
+              ${branchLength}
+            </span>
+
+            <span class="compact-separator">•</span>
+
+            <span class="compact-item">
+              <strong>95% HPD:</strong>
+              ${hpd}
+            </span>
+          </p>
+        `;
+      }
+
+      if (selectedTips.length !== 2) {
+        const selectedText =
+          selectedTips.length === 1
+            ? `Selected: ${escapeHtml(
+                selectedTips[0].name
+              )}. Select one more tip.`
+            : "Click two tip names to calculate their MRCA.";
+
+        mrcaDetails.innerHTML = `
+          <p class="empty-message">
+            ${selectedText}
+          </p>
+        `;
+
         return;
-    }
+      }
 
-    if (selectedTips.length === 1) {
-        mrcaPanel.innerHTML = `
-            <h3>MRCA / selected tips</h3>
-            Selected tip:
-            <strong>${escapeHtml(
-                cleanLabel(selectedTips[0].data.name)
-            )}</strong>.
-            Select one more tip.
+      const mrca = findSelectedMrca();
+
+      if (!mrca) {
+        mrcaDetails.innerHTML = `
+          <p class="empty-message">
+            The MRCA could not be calculated.
+          </p>
         `;
+
         return;
+      }
+
+      const hpd = mrca.hpd
+        ? `${formatNumber(
+            mrca.hpd[0]
+          )}–${formatNumber(
+            mrca.hpd[1]
+          )}`
+        : "not provided";
+
+      mrcaDetails.innerHTML = `
+        <p class="compact-details">
+          <span class="compact-item">
+            <strong>Tips:</strong>
+            ${escapeHtml(selectedTips[0].name)}
+            +
+            ${escapeHtml(selectedTips[1].name)}
+          </span>
+
+          <span class="compact-separator">•</span>
+
+          <span class="compact-item">
+            <strong>MRCA:</strong>
+            ${formatNumber(mrca.age)}
+            before present
+          </span>
+
+          <span class="compact-separator">•</span>
+
+          <span class="compact-item">
+            <strong>Clade:</strong>
+            ${countTips(mrca)} tips
+          </span>
+
+          <span class="compact-separator">•</span>
+
+          <span class="compact-item">
+            <strong>95% HPD:</strong>
+            ${hpd}
+          </span>
+        </p>
+      `;
     }
 
-    selectedMRCA =
-        findMRCA(selectedTips[0], selectedTips[1]);
+    function findNodeById(id) {
+      let result = null;
 
-    if (!selectedMRCA) {
-        mrcaPanel.innerHTML = `
-            <h3>MRCA / selected tips</h3>
-            The MRCA could not be identified.
-        `;
-        return;
+      if (!root) {
+        return result;
+      }
+
+      walk(root, node => {
+        if (node.id === id) {
+          result = node;
+        }
+      });
+
+      return result;
     }
 
-    const nameA = cleanLabel(
-        selectedTips[0].data.name
-    );
-
-    const nameB = cleanLabel(
-        selectedTips[1].data.name
-    );
-
-    const mrcaName =
-        selectedMRCA === root
-            ? "Root / oldest node"
-            : selectedMRCA.data.name
-                ? cleanLabel(selectedMRCA.data.name)
-                : "unnamed internal node";
-
-    let html = `
-        <h3>MRCA / selected tips</h3>
-
-        <strong>Tips:</strong>
-        ${escapeHtml(nameA)}
-        and
-        ${escapeHtml(nameB)}
-        &nbsp; | &nbsp;
-
-        <strong>MRCA:</strong>
-        ${escapeHtml(mrcaName)}
-        &nbsp; | &nbsp;
-
-        <strong>MRCA divergence time:</strong>
-        <span class="mrca-time">
-            ${formatNumber(selectedMRCA.data.age)}
-        </span>
-        time units before present
-        &nbsp; | &nbsp;
-
-        <strong>Clade size:</strong>
-        ${getTipCountLabel(selectedMRCA)}
-    `;
-
-    if (
-        selectedMRCA.data.hpdLow !== null &&
-        selectedMRCA.data.hpdHigh !== null
-    ) {
-        html += `
-            &nbsp; | &nbsp;
-            <strong>95% CI:</strong>
-            ${formatNumber(selectedMRCA.data.hpdLow)}
-            --
-            ${formatNumber(selectedMRCA.data.hpdHigh)}
-        `;
-    } else {
-        html += `
-            &nbsp; | &nbsp;
-            <strong>95% CI:</strong> unavailable
-        `;
+    function clearSelections() {
+      selectedNode = null;
+      selectedTips = [];
+      renderTree();
     }
 
-    mrcaPanel.innerHTML = html;
-}
+    function selectTip(tip) {
+      const existingIndex = selectedTips.indexOf(tip);
 
-function reportNodeTiming(node) {
-    if (!node) {
-        nodePanel.innerHTML = `
-            <h3>Selected node</h3>
-            No internal node selected.
-        `;
-        return;
-    }
-
-    const name =
-        node === root
-            ? "Root / oldest node"
-            : node.data.name
-                ? cleanLabel(node.data.name)
-                : "unnamed internal node";
-
-    let html = `
-        <h3>Selected node</h3>
-
-        <strong>Node:</strong>
-        ${escapeHtml(name)}
-        <br>
-
-        <strong>Divergence time:</strong>
-        <span class="mrca-time">
-            ${formatNumber(node.data.age)}
-        </span>
-        time units before present
-        <br>
-
-        <strong>Clade size:</strong>
-        ${getTipCountLabel(node)}
-        <br>
-
-        <strong>Visible tips:</strong>
-        ${getVisibleTipCount(node)}
-        <br>
-
-        <strong>Branch length:</strong>
-        ${formatNumber(node.data.length)}
-    `;
-
-    if (
-        node.data.hpdLow !== null &&
-        node.data.hpdHigh !== null
-    ) {
-        html += `
-            <br>
-            <strong>95% CI:</strong>
-            ${formatNumber(node.data.hpdLow)}
-            --
-            ${formatNumber(node.data.hpdHigh)}
-        `;
-    }
-
-    nodePanel.innerHTML = html;
-}
-
-/* ============================================================
-   Selection and clade actions
-   ============================================================ */
-
-function toggleTipSelection(tip) {
-    const index = selectedTips.indexOf(tip);
-
-    if (index >= 0) {
-        selectedTips.splice(index, 1);
-    } else {
+      if (existingIndex >= 0) {
+        selectedTips.splice(existingIndex, 1);
+      } else {
         if (selectedTips.length >= 2) {
-            selectedTips = [];
+          selectedTips.shift();
         }
 
         selectedTips.push(tip);
+      }
+
+      renderTree();
     }
 
-    selectedMRCA =
-        selectedTips.length === 2
-            ? findMRCA(selectedTips[0], selectedTips[1])
-            : null;
+    function selectNode(node) {
+      selectedNode =
+        selectedNode === node
+          ? null
+          : node;
 
-    selectedInternalNode = null;
-
-    renderTree();
-    reportMRCA();
-    reportNodeTiming(null);
-}
-
-function selectInternalNode(node) {
-    selectedInternalNode = node;
-
-    renderTree();
-    reportNodeTiming(node);
-}
-
-function clearSelections() {
-    selectedTips = [];
-    selectedMRCA = null;
-    selectedInternalNode = null;
-
-    if (root) {
-        renderTree();
+      renderTree();
     }
 
-    reportMRCA();
-    reportNodeTiming(null);
-}
+    function resetNodeState(node) {
+      node.hidden = false;
+      node.collapsed = false;
 
-function hideSelectedTips() {
-    selectedTips.forEach(tip => {
-        tip.data.hidden = true;
-    });
+      for (const child of node.children) {
+        resetNodeState(child);
+      }
+    }
 
-    selectedTips = [];
-    selectedMRCA = null;
-
-    renderTree();
-    reportMRCA();
-}
-
-function hideSubtree(node) {
-    node.data.hidden = true;
-
-    getChildren(node).forEach(child => {
-        hideSubtree(child);
-    });
-}
-
-function hideSelectedClade() {
-    const node =
-        selectedInternalNode ||
-        selectedMRCA;
-
-    if (!node || node === root) {
+    function openTipEditor(tip, event) {
+      if (!tip) {
         return;
-    }
-
-    hideSubtree(node);
-
-    selectedTips = [];
-    selectedMRCA = null;
-    selectedInternalNode = null;
-
-    renderTree();
-    reportMRCA();
-    reportNodeTiming(null);
-}
-
-function restoreHidden() {
-    if (!root) {
-        return;
-    }
-
-    root.descendants().forEach(node => {
-        node.data.hidden = false;
-    });
-
-    renderTree();
-    reportMRCA();
-}
-
-function collapseNode(node) {
-    if (!node || node === root) {
-        return;
-    }
-
-    if (node.children) {
-        node._children = node.children;
-        node.children = null;
-    }
-}
-
-function expandNode(node) {
-    if (node && node._children) {
-        node.children = node._children;
-        node._children = null;
-    }
-}
-
-function collapseSelectedClade() {
-    const node =
-        selectedInternalNode ||
-        selectedMRCA;
-
-    if (!node || node === root) {
-        return;
-    }
-
-    collapseNode(node);
-
-    renderTree();
-    reportMRCA();
-}
-
-function expandAllClades() {
-    if (!root) {
-        return;
-    }
-
-    root.descendants().forEach(node => {
-        expandNode(node);
-    });
-
-    renderTree();
-    reportMRCA();
-}
-
-/* ============================================================
-   Collapsed triangle
-   ============================================================ */
-
-function drawCollapsedTriangle(
-    treeGroup,
-    node,
-    xScale,
-    yScale
-) {
-    if (
-        !node._children ||
-        node.children ||
-        node.data.hidden
-    ) {
-        return;
-    }
-
-    /*
-     * Use all descendants of the collapsed clade,
-     * including hidden descendants stored in _children.
-     */
-    const tips = collectAllTips(node);
-
-    if (!tips.length) {
-        return;
-    }
-
-    const yValues = tips
-        .map(tip => yScale(tip.data.name))
-        .filter(value => Number.isFinite(value));
-
-    const tipAges = tips
-        .map(tip => tip.data.age)
-        .filter(age => Number.isFinite(age));
-
-    if (!yValues.length || !tipAges.length) {
-        return;
-    }
-
-    const minY = Math.min(...yValues);
-    const maxY = Math.max(...yValues);
-    const centerY = (minY + maxY) / 2;
-
-    /*
-     * The most recent tip has the smallest age.
-     * With the reversed time axis, this is the rightmost point.
-     */
-    const mostRecentTipAge = Math.min(...tipAges);
-    const mostRecentTipX = xScale(mostRecentTipAge);
-
-    /*
-     * The triangle begins at the collapsed node and ends
-     * at the most recent descendant tip date.
-     */
-    const triangleLeftX = node.x;
-    const triangleRightX = Math.max(
-        mostRecentTipX,
-        triangleLeftX + 35
-    );
-
-    const points = [
-        `${triangleLeftX},${centerY}`,
-        `${triangleRightX},${minY}`,
-        `${triangleRightX},${maxY}`
-    ].join(" ");
-
-    treeGroup.append("polygon")
-        .attr("class", "collapsed-triangle")
-        .attr("points", points)
-        .on("click", event => {
-            event.stopPropagation();
-
-            selectedInternalNode = node;
-            renderTree();
-            reportNodeTiming(node);
-        })
-        .on("dblclick", event => {
-            event.stopPropagation();
-
-            expandNode(node);
-
-            renderTree();
-            reportMRCA();
-        });
-
-    treeGroup.append("text")
-        .attr("class", "collapsed-label")
-        .attr("x", triangleRightX + 5)
-        .attr("y", centerY + 3)
-        .text(`${getTipCount(node)} tips`);
-}
-
-/* ============================================================
-   Tip-name editing
-   ============================================================ */
-
-function editTipName(tip) {
-    const oldName = cleanLabel(tip.data.name);
-
-    const newName = window.prompt(
-        "Edit tip name:",
-        oldName
-    );
-
-    if (newName === null) {
-        return;
-    }
-
-    const trimmedName = newName.trim();
-
-    if (!trimmedName) {
-        return;
-    }
-
-    tip.data.name =
-        trimmedName.replace(/\s+/g, "_");
-
-    renderTree();
-    reportMRCA();
-}
-
-/* ============================================================
-   Search and tooltip
-   ============================================================ */
-
-function applySearch() {
-    const query = document
-        .getElementById("searchInput")
-        .value
-        .trim()
-        .toLowerCase();
-
-    svg.selectAll(".node")
-        .classed("search-highlight", d => {
-            if (!query) {
-                return false;
-            }
-
-            return String(d.data.name)
-                .toLowerCase()
-                .includes(query);
-        });
-}
-
-function showTooltip(event, d) {
-    const node = d.data;
-
-    const title =
-        d === root
-            ? "Root / oldest node"
-            : node.name
-                ? cleanLabel(node.name)
-                : d.children || d._children
-                    ? "Internal node"
-                    : "Tip";
-
-    let html = `
-        <strong>${escapeHtml(title)}</strong><br>
-
-        Divergence time:
-        ${formatNumber(node.age)}
-        time units before present<br>
-
-        Clade size:
-        ${getTipCountLabel(d)}<br>
-
-        Visible tips:
-        ${getVisibleTipCount(d)}<br>
-
-        Branch length:
-        ${formatNumber(node.length)}<br>
-    `;
-
-    if (
-        node.hpdLow !== null &&
-        node.hpdHigh !== null
-    ) {
-        html += `
-            95% CI:
-            ${formatNumber(node.hpdLow)}
-            --
-            ${formatNumber(node.hpdHigh)}
-        `;
-    }
-
-    tooltip.innerHTML = html;
-    tooltip.style.display = "block";
-    tooltip.style.left = `${event.clientX + 14}px`;
-    tooltip.style.top = `${event.clientY + 14}px`;
-}
-
-function hideTooltip() {
-    tooltip.style.display = "none";
-}
-
-/* ============================================================
-   Rendering
-   ============================================================ */
-
-function renderTree() {
-    if (!root) {
-        return;
-    }
-
-    /*
-     * Preserve current zoom and pan during redraw.
-     */
-    const currentTransform =
-        d3.zoomTransform(svg.node());
-
-    applyTipSort();
-    svg.selectAll("*").remove();
-
-    const width = viewer.clientWidth;
-    const tips = collectAllTips(root);
-
-    const height = Math.max(
-        viewer.clientHeight,
-        margin.top +
-        margin.bottom +
-        tips.length * 20
-    );
-
-    svg.attr(
-        "viewBox",
-        `0 0 ${width} ${height}`
-    );
-
-    /*
-     * Calculate distances through both visible and
-     * collapsed parts of the hierarchy.
-     */
-    assignDistances(root);
-
-    const maxAge = d3.max(
-        root.descendants(),
-        d => d.data.distanceFromRoot
-    );
-
-    /*
-     * Include collapsed descendants when calculating
-     * their ages.
-     */
-    collectAllDescendantNodes(root).forEach(node => {
-        node.data.age =
-            maxAge - node.data.distanceFromRoot;
-    });
-
-    const xScale = d3.scaleLinear()
-        .domain([maxAge, 0])
-        .range([
-            margin.left,
-            width - margin.right
-        ]);
-
-    const yScale = d3.scalePoint()
-        .domain(
-            tips.map(d => d.data.name)
+      }
+
+      cancelPendingSvgClick();
+
+      editingTip = tip;
+      tipEditorInput.value = tip.name;
+
+      tipEditor.classList.add("open");
+
+      /*
+       * Position after displaying the editor so its actual dimensions
+       * can be measured.
+       */
+      const editorRect = tipEditor.getBoundingClientRect();
+      const margin = 10;
+
+      let left = event.clientX + margin;
+      let top = event.clientY + margin;
+
+      if (
+        left + editorRect.width >
+        window.innerWidth - margin
+      ) {
+        left =
+          event.clientX -
+          editorRect.width -
+          margin;
+      }
+
+      if (
+        top + editorRect.height >
+        window.innerHeight - margin
+      ) {
+        top =
+          event.clientY -
+          editorRect.height -
+          margin;
+      }
+
+      left = Math.max(
+        margin,
+        Math.min(
+          left,
+          window.innerWidth -
+            editorRect.width -
+            margin
         )
-        .range([
-            margin.top,
-            height - margin.bottom
-        ])
-        .padding(0.5);
+      );
 
-    assignYPositions(root, yScale);
-
-    root.descendants().forEach(d => {
-        d.x = xScale(d.data.age);
-    });
-
-    /*
-     * Assign x/y positions to nodes inside collapsed clades,
-     * which are not returned by root.descendants().
-     */
-    collectAllDescendantNodes(root).forEach(d => {
-        d.x = xScale(d.data.age);
-    });
-
-    const treeGroup = svg.append("g")
-        .attr("class", "tree-group");
-
-    /* Branches */
-
-    const branchGroup = treeGroup.append("g");
-
-    root.descendants()
-        .filter(d =>
-            d.parent &&
-            !d.data.hidden &&
-            !d.parent.data.hidden
+      top = Math.max(
+        margin,
+        Math.min(
+          top,
+          window.innerHeight -
+            editorRect.height -
+            margin
         )
-        .forEach(d => {
-            const parent = d.parent;
+      );
 
-            const selectedPath =
-                isOnSelectedPath(d) ||
-                isOnSelectedPath(parent);
+      tipEditor.style.left = `${left}px`;
+      tipEditor.style.top = `${top}px`;
 
-            const branchClass =
-                selectedPath
-                    ? "branch selected-path"
-                    : "branch";
+      requestAnimationFrame(() => {
+        tipEditorInput.focus();
+        tipEditorInput.select();
+      });
+    }
 
-            branchGroup.append("path")
-                .attr("class", branchClass)
-                .attr(
-                    "d",
-                    `M${parent.x},${d.y} H${d.x}`
-                );
+    function saveTipName() {
+      if (!editingTip) {
+        closeTipEditor();
+        return;
+      }
 
-            branchGroup.append("path")
-                .attr("class", branchClass)
-                .attr(
-                    "d",
-                    `M${parent.x},${parent.y} V${d.y}`
-                );
-        });
+      const newName = tipEditorInput.value.trim();
 
-    /* Confidence intervals */
+      if (!newName) {
+        tipEditorInput.focus();
+        tipEditorInput.select();
+        return;
+      }
 
-    const ciGroup = treeGroup.append("g");
+      editingTip.name = newName;
 
-    root.descendants()
-        .filter(d =>
-            !d.data.hidden &&
-            d.data.hpdLow !== null &&
-            d.data.hpdHigh !== null
-        )
-        .forEach(d => {
-            const x1 = Math.min(
-                xScale(d.data.hpdHigh),
-                xScale(d.data.hpdLow)
-            );
+      closeTipEditor();
+      renderTree();
+    }
 
-            const x2 = Math.max(
-                xScale(d.data.hpdHigh),
-                xScale(d.data.hpdLow)
-            );
+    function closeTipEditor() {
+      tipEditor.classList.remove("open");
+      editingTip = null;
+    }
 
-            ciGroup.append("line")
-                .attr("class", "hpd-line")
-                .attr("x1", x1)
-                .attr("x2", x2)
-                .attr("y1", d.y)
-                .attr("y2", d.y);
+    function parseAndDisplayTree(treeRecord) {
+      nodeSequence = 0;
 
-            ciGroup.append("line")
-                .attr("class", "hpd-cap")
-                .attr("x1", x1)
-                .attr("x2", x1)
-                .attr("y1", d.y - 4)
-                .attr("y2", d.y + 4);
+      const parser = new NewickParser(treeRecord.newick);
+      const parsedRoot = parser.parse();
 
-            ciGroup.append("line")
-                .attr("class", "hpd-cap")
-                .attr("x1", x2)
-                .attr("x2", x2)
-                .attr("y1", d.y - 4)
-                .attr("y2", d.y + 4);
-        });
+      applyTranslations(parsedRoot, translations);
+      calculateAges(parsedRoot);
 
-    /* Collapsed triangles */
+      root = parsedRoot;
+      selectedNode = null;
+      selectedTips = [];
+      zoomScale = 1;
 
-    root.descendants()
-        .filter(d =>
-            d._children &&
-            !d.children &&
-            !d.data.hidden
-        )
-        .forEach(d => {
-            drawCollapsedTriangle(
-                treeGroup,
-                d,
-                xScale,
-                yScale
-            );
-        });
+      sortClades.value = "original";
 
-    /* Nodes */
+      renderTree({
+        preserveScroll: false,
+        preserveZoom: false
+      });
 
-    const visibleNodes = root.descendants()
-        .filter(d => !d.data.hidden);
+      treeContainer.scrollLeft = 0;
+      treeContainer.scrollTop = 0;
 
-    const nodes = treeGroup.append("g")
-        .selectAll("g")
-        .data(visibleNodes)
-        .join("g")
-        .attr("class", d => {
-            const classes = ["node"];
+      const tipCount = countTips(root);
 
-            if (d === root) {
-                classes.push("root-node");
-            }
+      setStatus(
+        `<strong>${escapeHtml(
+          currentFileName
+        )}</strong> — ` +
+        `${escapeHtml(
+          treeRecord.name
+        )}, ${tipCount} tips`,
+        "success"
+      );
+    }
 
-            if (d.children || d._children) {
-                classes.push("internal-node");
-            } else {
-                classes.push("leaf-node");
-            }
+    function populateTreeChoice() {
+      treeChoice.innerHTML = "";
 
-            if (selectedTips.includes(d)) {
-                classes.push("selected-tip");
-            }
+      loadedTrees.forEach((tree, index) => {
+        const option = document.createElement("option");
 
-            if (selectedMRCA === d) {
-                classes.push("mrca-node");
-            }
+        option.value = String(index);
+        option.textContent = tree.name;
 
-            if (selectedInternalNode === d) {
-                classes.push("internal-selected");
-            }
+        treeChoice.appendChild(option);
+      });
 
-            return classes.join(" ");
-        })
-        .attr(
-            "transform",
-            d => `translate(${d.x},${d.y})`
-        )
-        .on("click", (event, d) => {
-            event.stopPropagation();
+      treeChoice.disabled = loadedTrees.length <= 1;
+    }
 
-            if (!d.children && !d._children) {
-                toggleTipSelection(d);
-            } else {
-                selectInternalNode(d);
-            }
-        })
-        .on("dblclick", (event, d) => {
-            event.stopPropagation();
+    function loadTreeText(text, fileName) {
+      try {
+        translations = extractTranslations(text);
+        loadedTrees = extractTrees(text);
 
-            if (d === root) {
-                return;
-            }
-
-            if (d.children) {
-                d._children = d.children;
-                d.children = null;
-            } else if (d._children) {
-                d.children = d._children;
-                d._children = null;
-            }
-
-            renderTree();
-            reportMRCA();
-        })
-        .on("mousemove", showTooltip)
-        .on("mouseleave", hideTooltip);
-
-    nodes.append("circle")
-        .attr("class", "node-hit-area")
-        .attr("r", d => {
-            if (d === root) return 15;
-            if (d.children || d._children) return 12;
-            return 8;
-        });
-
-    nodes.append("circle")
-        .attr("class", "visible-node")
-        .attr("r", d => {
-            if (d === root) return 6;
-            if (d.children || d._children) return 4.2;
-            return 3.2;
-        });
-
-    /*
-     * Tip labels:
-     * single-click selects;
-     * double-click edits.
-     */
-    nodes.append("text")
-        .attr("class", d => {
-            const classes = ["label"];
-
-            if (!d.children && !d._children) {
-                classes.push("leaf-label");
-            }
-
-            if (selectedTips.includes(d)) {
-                classes.push("selected-label");
-            }
-
-            if (selectedMRCA === d) {
-                classes.push("mrca-label");
-            }
-
-            if (selectedInternalNode === d) {
-                classes.push("internal-selected-label");
-            }
-
-            return classes.join(" ");
-        })
-        .attr(
-            "x",
-            d => d.children || d._children ? -9 : 9
-        )
-        .attr(
-            "text-anchor",
-            d => d.children || d._children
-                ? "end"
-                : "start"
-        )
-        .text(
-            d => d.children || d._children
-                ? ""
-                : cleanLabel(d.data.name)
-        )
-        .on("click", (event, d) => {
-            event.stopPropagation();
-
-            if (!d.children && !d._children) {
-                toggleTipSelection(d);
-            }
-        })
-        .on("dblclick", (event, d) => {
-            event.stopPropagation();
-
-            if (!d.children && !d._children) {
-                editTipName(d);
-            }
-        });
-
-    nodes
-        .filter(d => d === root)
-        .append("text")
-        .attr("class", "root-label")
-        .attr("x", 11)
-        .attr("y", -11)
-        .text("Root / oldest");
-
-    /* Time axis */
-
-    const axis = d3.axisBottom(xScale)
-        .ticks(8)
-        .tickFormat(d => Number(d).toFixed(1));
-
-    treeGroup.append("g")
-        .attr("class", "axis")
-        .attr(
-            "transform",
-            `translate(0,${height - margin.bottom + 20})`
-        )
-        .call(axis);
-
-    treeGroup.append("text")
-        .attr("class", "axis-title")
-        .attr("x", width / 2)
-        .attr("y", height - 12)
-        .attr("text-anchor", "middle")
-        .text("Time before present");
-
-    /*
-     * Recreate zoom behavior but preserve current transform.
-     */
-    zoomBehavior = d3.zoom()
-        .scaleExtent([MIN_ZOOM, MAX_ZOOM])
-        .wheelDelta(event => -event.deltaY * 0.003)
-        .on("zoom", event => {
-            treeGroup.attr(
-                "transform",
-                event.transform
-            );
-        });
-
-    svg.call(zoomBehavior);
-
-    svg.call(
-        zoomBehavior.transform,
-        currentTransform
-    );
-
-    updateStatus();
-    applySearch();
-}
-
-/* ============================================================
-   Loading
-   ============================================================ */
-
-function loadTree(text) {
-    try {
-        const newick = extractNewick(text);
-
-        if (!newick || !newick.includes("(")) {
-            throw new Error(
-                "No valid Newick tree was found."
-            );
+        if (loadedTrees.length === 0) {
+          throw new Error(
+            "No TREE/UTREE declaration or Newick tree was found."
+          );
         }
 
-        const parsedTree = parseNewick(newick);
+        currentFileName = fileName || "Uploaded tree";
 
-        root = d3.hierarchy(
-            parsedTree,
-            d => d.children
-        );
+        populateTreeChoice();
 
-        if (!root || root.leaves().length === 0) {
-            throw new Error(
-                "The parsed tree contains no tips."
-            );
-        }
+        treeChoice.value = "0";
 
-        saveOriginalChildOrder(root);
-
-        selectedTips = [];
-        selectedMRCA = null;
-        selectedInternalNode = null;
-        tipSort = "original";
-
-        document.getElementById("tipSort").value =
-            "original";
-
-        renderTree();
-        reportMRCA();
-        reportNodeTiming(null);
-
-        status.textContent =
-            `${root.leaves().length} tips loaded`;
-    } catch (error) {
+        parseAndDisplayTree(loadedTrees[0]);
+      } catch (error) {
         console.error(error);
 
-        status.textContent =
-            "Could not parse tree";
+        root = null;
+        loadedTrees = [];
+        translations = new Map();
 
-        mrcaPanel.innerHTML = `
-            <h3>MRCA / selected tips</h3>
-            <span class="error">
-                The tree could not be parsed.
-            </span>
-            <br>
-            <small>${escapeHtml(error.message)}</small>
-        `;
-    }
-}
+        treeSvg.innerHTML = "";
 
-async function loadDefaultTree() {
-    try {
-        status.textContent =
-            `Loading ${DEFAULT_TREE_FILE}...`;
+        emptyTreeMessage.hidden = false;
+        emptyTreeMessage.textContent =
+          "The tree could not be displayed. Check the file format.";
 
-        const response = await fetch(
-            DEFAULT_TREE_FILE,
-            {
-                cache: "no-store"
-            }
+        treeChoice.innerHTML =
+          "<option>No tree loaded</option>";
+
+        treeChoice.disabled = true;
+
+        setStatus(
+          "<strong>Could not load the tree:</strong> " +
+          escapeHtml(error.message),
+          "error"
         );
 
+        updateInformationPanels();
+      }
+    }
+
+    async function loadFile(file) {
+      if (!file) {
+        return;
+      }
+
+      setStatus(
+        `Loading <strong>${escapeHtml(
+          file.name
+        )}</strong>...`,
+        "loading"
+      );
+
+      try {
+        const text = await file.text();
+
+        loadTreeText(text, file.name);
+      } catch (error) {
+        setStatus(
+          "<strong>Could not read the file:</strong> " +
+          escapeHtml(error.message),
+          "error"
+        );
+      }
+    }
+
+    async function loadDefaultTree() {
+      setStatus(
+        `Loading <strong>${escapeHtml(
+          DEFAULT_TREE_FILE
+        )}</strong>...`,
+        "loading"
+      );
+
+      try {
+        const response = await fetch(DEFAULT_TREE_FILE, {
+          cache: "no-store"
+        });
+
         if (!response.ok) {
-            throw new Error(
-                `HTTP ${response.status}: ${response.statusText}`
-            );
+          throw new Error(`HTTP ${response.status}`);
         }
 
         const text = await response.text();
 
-        if (!text.trim()) {
-            throw new Error(
-                "The tree file is empty."
-            );
-        }
-
-        loadTree(text);
-    } catch (error) {
-        console.error(error);
-
-        status.textContent =
-            "Default tree unavailable";
-
-        mrcaPanel.innerHTML = `
-            <h3>MRCA / selected tips</h3>
-            Default tree could not be loaded.
-            Please choose a tree file manually.
-            <br>
-            <small>${escapeHtml(error.message)}</small>
-        `;
-    }
-}
-
-function updateStatus() {
-    if (!root) {
-        status.textContent = "No tree loaded";
-        return;
-    }
-
-    const hiddenCount = root.descendants()
-        .filter(d => d.data.hidden)
-        .length;
-
-    status.textContent =
-        `${root.leaves().length} tips, ` +
-        `${root.descendants().length} nodes` +
-        (hiddenCount ? `, ${hiddenCount} hidden` : "");
-}
-
-/* ============================================================
-   Controls
-   ============================================================ */
-
-document
-    .getElementById("fileInput")
-    .addEventListener("change", event => {
-        const file = event.target.files[0];
-
-        if (!file) {
-            return;
-        }
-
-        status.textContent =
-            `Reading ${file.name}...`;
-
-        const reader = new FileReader();
-
-        reader.onload = event => {
-            loadTree(event.target.result);
-        };
-
-        reader.onerror = () => {
-            status.textContent =
-                "Could not read the selected file.";
-        };
-
-        reader.readAsText(file);
-    });
-
-document
-    .getElementById("searchInput")
-    .addEventListener("input", applySearch);
-
-document
-    .getElementById("tipSort")
-    .addEventListener("change", event => {
-        tipSort = event.target.value;
-
-        if (root) {
-            renderTree();
-            reportMRCA();
-        }
-    });
-
-document
-    .getElementById("zoomInButton")
-    .addEventListener("click", () => {
-        if (zoomBehavior) {
-            svg.transition()
-                .duration(250)
-                .call(
-                    zoomBehavior.scaleBy,
-                    2
-                );
-        }
-    });
-
-document
-    .getElementById("zoomOutButton")
-    .addEventListener("click", () => {
-        if (zoomBehavior) {
-            svg.transition()
-                .duration(250)
-                .call(
-                    zoomBehavior.scaleBy,
-                    0.5
-                );
-        }
-    });
-
-document
-    .getElementById("focusButton")
-    .addEventListener("click", focusSelection);
-
-document
-    .getElementById("fitButton")
-    .addEventListener("click", () => {
-        if (!root) {
-            return;
-        }
-
-        renderTree();
-
-        svg.transition()
-            .duration(300)
-            .call(
-                zoomBehavior.transform,
-                d3.zoomIdentity
-            );
-    });
-
-document
-    .getElementById("clearSelectionButton")
-    .addEventListener("click", clearSelections);
-
-document
-    .getElementById("hideTipsButton")
-    .addEventListener("click", hideSelectedTips);
-
-document
-    .getElementById("hideCladeButton")
-    .addEventListener("click", hideSelectedClade);
-
-document
-    .getElementById("restoreHiddenButton")
-    .addEventListener("click", restoreHidden);
-
-document
-    .getElementById("collapseButton")
-    .addEventListener("click", collapseSelectedClade);
-
-document
-    .getElementById("expandButton")
-    .addEventListener("click", expandAllClades);
-
-document
-    .getElementById("resetButton")
-    .addEventListener("click", () => {
-        document.getElementById("searchInput").value = "";
-
-        tipSort = "original";
-        selectedTips = [];
-        selectedMRCA = null;
-        selectedInternalNode = null;
-
-        document.getElementById("tipSort").value =
-            "original";
-
-        if (!root) {
-            return;
-        }
-
-        root.descendants().forEach(node => {
-            node.data.hidden = false;
-
-            if (node._children) {
-                node.children = node._children;
-                node._children = null;
-            }
-        });
-
-        restoreOriginalChildOrder(root);
-
-        renderTree();
-
-        svg.transition()
-            .duration(300)
-            .call(
-                zoomBehavior.transform,
-                d3.zoomIdentity
-            );
-
-        reportMRCA();
-        reportNodeTiming(null);
-    });
-
-document
-    .getElementById("downloadButton")
-    .addEventListener("click", () => {
-        const svgElement =
-            document.getElementById("treeSvg");
-
-        const source =
-            new XMLSerializer()
-                .serializeToString(svgElement);
-
-        const blob = new Blob(
-            [source],
-            {
-                type: "image/svg+xml;charset=utf-8"
-            }
+        loadTreeText(text, DEFAULT_TREE_FILE);
+      } catch (error) {
+        console.warn(
+          "Automatic tree loading failed.",
+          error
         );
 
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement("a");
+        root = null;
+        treeSvg.innerHTML = "";
+        emptyTreeMessage.hidden = false;
 
-        link.href = url;
-        link.download = "interactive-timetree.svg";
-        link.click();
+        setStatus(
+          "Could not automatically load " +
+          `<strong>${escapeHtml(
+            DEFAULT_TREE_FILE
+          )}</strong>. ` +
+          "Use “Upload NEXUS / Newick” or drop the file into the viewer.",
+          "error"
+        );
+      }
+    }
 
-        URL.revokeObjectURL(url);
+    function setZoom(nextZoom) {
+      cancelPendingSvgClick();
+      closeTipEditor();
+
+      const centerX =
+        treeContainer.scrollLeft +
+        treeContainer.clientWidth / 2;
+
+      const centerY =
+        treeContainer.scrollTop +
+        treeContainer.clientHeight / 2;
+
+      const oldZoom = zoomScale;
+
+      zoomScale = Math.max(
+        0.4,
+        Math.min(3.5, nextZoom)
+      );
+
+      treeSvg.setAttribute(
+        "width",
+        baseWidth * zoomScale
+      );
+
+      treeSvg.setAttribute(
+        "height",
+        baseHeight * zoomScale
+      );
+
+      const ratio = zoomScale / oldZoom;
+
+      requestAnimationFrame(() => {
+        treeContainer.scrollLeft =
+          centerX * ratio -
+          treeContainer.clientWidth / 2;
+
+        treeContainer.scrollTop =
+          centerY * ratio -
+          treeContainer.clientHeight / 2;
+      });
+    }
+
+    function focusSelection() {
+      const targets = [];
+
+      if (selectedNode) {
+        const layout = lastLayoutById.get(selectedNode.id);
+
+        if (layout) {
+          targets.push(layout);
+        }
+      }
+
+      for (const tip of selectedTips) {
+        const layout = lastLayoutById.get(tip.id);
+
+        if (layout) {
+          targets.push(layout);
+        }
+      }
+
+      const mrca = findSelectedMrca();
+
+      if (mrca) {
+        const layout = lastLayoutById.get(mrca.id);
+
+        if (layout) {
+          targets.push(layout);
+        }
+      }
+
+      if (targets.length === 0) {
+        return;
+      }
+
+      if (zoomScale < 1.25) {
+        setZoom(1.25);
+      }
+
+      requestAnimationFrame(() => {
+        const averageX =
+          targets.reduce(
+            (sum, item) => sum + item.x,
+            0
+          ) / targets.length;
+
+        const averageY =
+          targets.reduce(
+            (sum, item) => sum + item.y,
+            0
+          ) / targets.length;
+
+        treeContainer.scrollTo({
+          left:
+            averageX * zoomScale -
+            treeContainer.clientWidth / 2,
+
+          top:
+            averageY * zoomScale -
+            treeContainer.clientHeight / 2,
+
+          behavior: "smooth"
+        });
+      });
+    }
+
+    function downloadSvg() {
+      if (!root) {
+        return;
+      }
+
+      cancelPendingSvgClick();
+      closeTipEditor();
+
+      const clone = treeSvg.cloneNode(true);
+
+      clone.setAttribute("xmlns", SVG_NS);
+      clone.setAttribute("width", baseWidth);
+      clone.setAttribute("height", baseHeight);
+      clone.setAttribute(
+        "viewBox",
+        `0 0 ${baseWidth} ${baseHeight}`
+      );
+
+      const styleText = Array.from(document.styleSheets)
+        .map(sheet => {
+          try {
+            return Array.from(sheet.cssRules)
+              .map(rule => rule.cssText)
+              .join("\n");
+          } catch {
+            return "";
+          }
+        })
+        .join("\n");
+
+      const styleElement = document.createElementNS(
+        SVG_NS,
+        "style"
+      );
+
+      styleElement.textContent = styleText;
+
+      clone.insertBefore(
+        styleElement,
+        clone.firstChild
+      );
+
+      const source =
+        '<?xml version="1.0" encoding="UTF-8"?>\n' +
+        new XMLSerializer().serializeToString(clone);
+
+      const blob = new Blob([source], {
+        type: "image/svg+xml;charset=utf-8"
+      });
+
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+
+      const baseName = currentFileName
+        .replace(/\.[^.]+$/, "")
+        .replace(/[^\w.-]+/g, "_");
+
+      link.href = url;
+      link.download =
+        `${baseName || "timetree"}_viewer.svg`;
+
+      document.body.appendChild(link);
+
+      link.click();
+      link.remove();
+
+      URL.revokeObjectURL(url);
+    }
+
+    /*
+     * File controls.
+     */
+    fileInput.addEventListener("change", event => {
+      loadFile(event.target.files[0]);
+      event.target.value = "";
     });
 
-window.addEventListener("resize", () => {
-    if (root) {
-        renderTree();
-        reportMRCA();
+    treeChoice.addEventListener("change", () => {
+      const index = Number(treeChoice.value);
 
-        if (selectedInternalNode) {
-            reportNodeTiming(selectedInternalNode);
+      if (loadedTrees[index]) {
+        parseAndDisplayTree(loadedTrees[index]);
+      }
+    });
+
+    sortClades.addEventListener("change", () => {
+      renderTree();
+    });
+
+    timelineUnits.addEventListener("input", () => {
+      renderTree();
+    });
+
+    /*
+     * Single-click handling.
+     *
+     * Selection is delayed. If a double-click arrives before the timer
+     * completes, the selection is canceled and the edit dialog opens.
+     */
+    treeSvg.addEventListener("click", event => {
+      const tipElement = event.target.closest?.(
+        "[data-tip-id]"
+      );
+
+      if (tipElement) {
+        const tip = findNodeById(
+          tipElement.dataset.tipId
+        );
+
+        if (tip) {
+          scheduleSvgSingleClick(() => {
+            selectTip(tip);
+          });
         }
-    }
-});
 
-/* Automatically preload the default tree */
-loadDefaultTree();
-</script>
+        return;
+      }
 
+      const nodeElement = event.target.closest?.(
+        "[data-node-id]"
+      );
+
+      if (nodeElement) {
+        const node = findNodeById(
+          nodeElement.dataset.nodeId
+        );
+
+        if (node) {
+          scheduleSvgSingleClick(() => {
+            selectNode(node);
+          });
+        }
+      }
+    });
+
+    /*
+     * Double-click handling.
+     *
+     * This now works because the first click does not immediately
+     * re-render and destroy the SVG element.
+     */
+    treeSvg.addEventListener("dblclick", event => {
+      cancelPendingSvgClick();
+
+      event.preventDefault();
+      event.stopPropagation();
+
+      const tipElement = event.target.closest?.(
+        "[data-tip-id]"
+      );
+
+      if (tipElement) {
+        const tip = findNodeById(
+          tipElement.dataset.tipId
+        );
+
+        if (tip) {
+          openTipEditor(tip, event);
+        }
+
+        return;
+      }
+
+      const nodeElement = event.target.closest?.(
+        "[data-node-id]"
+      );
+
+      if (nodeElement) {
+        const node = findNodeById(
+          nodeElement.dataset.nodeId
+        );
+
+        if (
+          node &&
+          node.children.length > 0
+        ) {
+          node.collapsed = !node.collapsed;
+          selectedNode = node;
+
+          renderTree();
+        }
+      }
+    });
+
+    /*
+     * Prevent the browser's default text selection behavior when
+     * double-clicking SVG tip labels.
+     */
+    treeSvg.addEventListener("mousedown", event => {
+      if (
+        event.detail > 1 &&
+        event.target.closest?.(
+          "[data-tip-id], [data-node-id]"
+        )
+      ) {
+        event.preventDefault();
+      }
+    });
+
+    /*
+     * Tip editor controls.
+     */
+    tipEditorSave.addEventListener(
+      "click",
+      saveTipName
+    );
+
+    tipEditorCancel.addEventListener(
+      "click",
+      closeTipEditor
+    );
+
+    tipEditorInput.addEventListener("keydown", event => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        saveTipName();
+      } else if (event.key === "Escape") {
+        event.preventDefault();
+        closeTipEditor();
+      }
+    });
+
+    document.addEventListener("pointerdown", event => {
+      if (
+        tipEditor.classList.contains("open") &&
+        !tipEditor.contains(event.target) &&
+        !event.target.closest?.("[data-tip-id]")
+      ) {
+        closeTipEditor();
+      }
+    });
+
+    /*
+     * Zoom controls.
+     */
+    document
+      .getElementById("zoom-in")
+      .addEventListener("click", () => {
+        setZoom(zoomScale * 1.2);
+      });
+
+    document
+      .getElementById("zoom-out")
+      .addEventListener("click", () => {
+        setZoom(zoomScale / 1.2);
+      });
+
+    document
+      .getElementById("fit-tree")
+      .addEventListener("click", () => {
+        if (!root) {
+          return;
+        }
+
+        const widthScale =
+          (treeContainer.clientWidth - 4) /
+          baseWidth;
+
+        setZoom(
+          Math.min(
+            1,
+            Math.max(0.4, widthScale)
+          )
+        );
+
+        treeContainer.scrollTo({
+          left: 0,
+          top: 0,
+          behavior: "smooth"
+        });
+      });
+
+    document
+      .getElementById("focus-selection")
+      .addEventListener(
+        "click",
+        focusSelection
+      );
+
+    /*
+     * Reset controls.
+     */
+    document
+      .getElementById("reset-tree")
+      .addEventListener("click", () => {
+        if (!root) {
+          return;
+        }
+
+        resetNodeState(root);
+
+        selectedNode = null;
+        selectedTips = [];
+
+        sortClades.value = "original";
+        zoomScale = 1;
+
+        renderTree({
+          preserveScroll: false,
+          preserveZoom: false
+        });
+
+        treeContainer.scrollLeft = 0;
+        treeContainer.scrollTop = 0;
+      });
+
+    document
+      .getElementById("clear-selections")
+      .addEventListener(
+        "click",
+        clearSelections
+      );
+
+    /*
+     * Hide and restore controls.
+     */
+    document
+      .getElementById("hide-selected-tips")
+      .addEventListener("click", () => {
+        if (selectedTips.length === 0) {
+          return;
+        }
+
+        for (const tip of selectedTips) {
+          tip.hidden = true;
+        }
+
+        selectedTips = [];
+
+        renderTree();
+      });
+
+    document
+      .getElementById("hide-selected-clade")
+      .addEventListener("click", () => {
+        if (
+          !selectedNode ||
+          selectedNode === root
+        ) {
+          return;
+        }
+
+        selectedNode.hidden = true;
+        selectedNode = null;
+
+        renderTree();
+      });
+
+    document
+      .getElementById("restore-hidden")
+      .addEventListener("click", () => {
+        if (!root) {
+          return;
+        }
+
+        walk(root, node => {
+          node.hidden = false;
+        });
+
+        renderTree();
+      });
+
+    /*
+     * Collapse controls.
+     */
+    document
+      .getElementById("collapse-selected-clade")
+      .addEventListener("click", () => {
+        if (
+          selectedNode &&
+          selectedNode.children.length > 0
+        ) {
+          selectedNode.collapsed = true;
+          renderTree();
+        }
+      });
+
+    document
+      .getElementById("expand-all-clades")
+      .addEventListener("click", () => {
+        if (!root) {
+          return;
+        }
+
+        walk(root, node => {
+          node.collapsed = false;
+        });
+
+        renderTree();
+      });
+
+    document
+      .getElementById("download-svg")
+      .addEventListener(
+        "click",
+        downloadSvg
+      );
+
+    /*
+     * Drag-and-drop file loading.
+     */
+    treeContainer.addEventListener("scroll", () => {
+      closeTipEditor();
+    });
+
+    treeContainer.addEventListener("dragover", event => {
+      event.preventDefault();
+      treeContainer.classList.add("dragover");
+    });
+
+    treeContainer.addEventListener("dragleave", event => {
+      if (
+        !treeContainer.contains(event.relatedTarget)
+      ) {
+        treeContainer.classList.remove("dragover");
+      }
+    });
+
+    treeContainer.addEventListener("drop", event => {
+      event.preventDefault();
+
+      treeContainer.classList.remove("dragover");
+
+      const file = event.dataTransfer.files[0];
+
+      if (file) {
+        loadFile(file);
+      }
+    });
+
+    window.addEventListener("resize", () => {
+      closeTipEditor();
+    });
+
+    /*
+     * Attempt to load the default tree at startup.
+     */
+    loadDefaultTree();
+  </script>
 </body>
 </html>
