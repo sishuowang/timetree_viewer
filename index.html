@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>Interactive Timetree Viewer</title>
+<title>Multi-Tree Interactive Timetree Viewer</title>
 
 <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
 
@@ -23,6 +23,7 @@
     --root: #6f42c1;
     --triangle: #dbeafe;
     --triangle-stroke: #2563eb;
+    --panel-background: #ffffff;
 }
 
 * {
@@ -32,7 +33,7 @@
 body {
     margin: 0;
     color: var(--text);
-    background: #f7f9fb;
+    background: #f3f6f8;
     font-family: Arial, Helvetica, sans-serif;
 }
 
@@ -74,6 +75,8 @@ body {
 }
 
 .toolbar {
+    position: relative;
+    z-index: 10;
     display: flex;
     flex-wrap: wrap;
     align-items: center;
@@ -103,20 +106,45 @@ button:hover {
     background: var(--accent-dark);
 }
 
+button:disabled {
+    cursor: not-allowed;
+    opacity: 0.45;
+}
+
 button.secondary {
     background: #64748b;
+}
+
+button.secondary:hover {
+    background: #475569;
 }
 
 button.warning {
     background: #c2410c;
 }
 
+button.warning:hover {
+    background: #9a3412;
+}
+
+button.danger {
+    background: #b42318;
+}
+
+button.danger:hover {
+    background: #8f1c13;
+}
+
 button.purple {
     background: var(--mrca);
 }
 
+button.purple:hover {
+    background: #5f2190;
+}
+
 input[type="text"] {
-    width: 210px;
+    width: 190px;
     padding: 6px 8px;
     border: 1px solid #b8c1cc;
     border-radius: 4px;
@@ -124,7 +152,7 @@ input[type="text"] {
 }
 
 input[type="file"] {
-    max-width: 250px;
+    max-width: 290px;
     font-size: 12px;
 }
 
@@ -172,23 +200,134 @@ select {
     color: #78909c;
 }
 
-.viewer {
-    height: 73vh;
-    min-height: 560px;
+/* ============================================================
+   Multiple-tree layout
+   ============================================================ */
+
+.tree-grid {
+    display: grid;
+    grid-template-columns: repeat(
+        auto-fit,
+        minmax(min(540px, 100%), 1fr)
+    );
+    align-items: start;
+    gap: 14px;
+    padding: 14px;
+}
+
+.empty-message {
+    grid-column: 1 / -1;
+    padding: 50px 20px;
+    color: var(--muted);
+    background: white;
+    border: 2px dashed #cbd5e1;
+    border-radius: 8px;
+    text-align: center;
+}
+
+.empty-message strong {
+    display: block;
+    margin-bottom: 7px;
+    color: var(--text);
+    font-size: 18px;
+}
+
+.tree-panel {
+    min-width: 0;
+    overflow: hidden;
+    background: var(--panel-background);
+    border: 2px solid #cbd5e1;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
+    transition:
+        border-color 0.15s ease,
+        box-shadow 0.15s ease;
+}
+
+.tree-panel:hover {
+    border-color: #94a3b8;
+}
+
+.tree-panel.active {
+    border-color: var(--accent);
+    box-shadow:
+        0 0 0 2px rgba(8, 127, 140, 0.15),
+        0 4px 14px rgba(15, 23, 42, 0.12);
+}
+
+.tree-panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    min-height: 48px;
+    padding: 8px 10px;
+    background: #f8fafc;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+}
+
+.tree-panel.active .tree-panel-header {
+    background: #e8f7f8;
+}
+
+.tree-title-area {
+    min-width: 0;
+}
+
+.tree-title {
+    overflow: hidden;
+    margin: 0 0 3px;
+    color: #183b4a;
+    font-size: 14px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.tree-panel.active .tree-title::before {
+    content: "Active: ";
+    color: var(--accent);
+}
+
+.tree-panel-status {
+    color: var(--muted);
+    font-size: 10.5px;
+}
+
+.tree-panel-actions {
+    display: flex;
+    flex-shrink: 0;
+    gap: 5px;
+}
+
+.tree-panel-actions button {
+    padding: 5px 7px;
+    font-size: 10px;
+}
+
+.tree-viewer {
+    position: relative;
+    height: 520px;
+    min-height: 420px;
     overflow: hidden;
     background: white;
 }
 
-svg {
+.tree-svg {
     display: block;
     width: 100%;
     height: 100%;
     cursor: grab;
+    user-select: none;
 }
 
-svg:active {
+.tree-svg:active {
     cursor: grabbing;
 }
+
+/* ============================================================
+   Tree SVG styles
+   ============================================================ */
 
 .branch {
     fill: none;
@@ -328,6 +467,12 @@ svg:active {
     font-size: 11px;
 }
 
+.no-visible-tips {
+    fill: #64748b;
+    font-size: 14px;
+    text-anchor: middle;
+}
+
 .tooltip {
     position: fixed;
     z-index: 30;
@@ -338,25 +483,26 @@ svg:active {
     background: white;
     border: 1px solid #aeb7c2;
     border-radius: 5px;
-    box-shadow: 0 3px 14px rgba(0,0,0,.15);
+    box-shadow: 0 3px 14px rgba(0, 0, 0, 0.15);
     font-size: 12px;
     line-height: 1.4;
     pointer-events: none;
 }
 
 .help {
-    padding: 7px 14px;
+    padding: 8px 14px;
     color: var(--muted);
     background: white;
     border-top: 1px solid var(--border);
     font-size: 11px;
+    line-height: 1.5;
 }
 
 .error {
     color: #b42318;
 }
 
-@media (max-width: 800px) {
+@media (max-width: 900px) {
     .header-content {
         display: block;
     }
@@ -370,6 +516,25 @@ svg:active {
         width: 100%;
         margin-left: 0;
     }
+
+    .tree-viewer {
+        height: 480px;
+    }
+}
+
+@media (max-width: 600px) {
+    .tree-grid {
+        padding: 7px;
+    }
+
+    .tree-viewer {
+        height: 430px;
+        min-height: 360px;
+    }
+
+    input[type="text"] {
+        width: 150px;
+    }
 }
 </style>
 </head>
@@ -379,10 +544,10 @@ svg:active {
 <header class="site-header">
     <div class="header-content">
         <div>
-            <h1>Interactive Timetree Viewer</h1>
+            <h1>Multi-Tree Interactive Timetree Viewer</h1>
             <p>
-                Explore evolutionary time, uncertainty, and relationships
-                across your phylogenetic tree.
+                Upload and compare multiple phylogenetic trees in the
+                same browser window.
             </p>
         </div>
 
@@ -394,19 +559,21 @@ svg:active {
 </header>
 
 <div class="toolbar">
+    <!-- "multiple" allows selection of more than one file. -->
     <input
         type="file"
         id="fileInput"
-        accept=".tre,.tree,.nex,.nexus,.txt"
+        accept=".tre,.tree,.nwk,.newick,.nex,.nexus,.txt"
+        multiple
     >
 
     <input
         type="text"
         id="searchInput"
-        placeholder="Search taxon..."
+        placeholder="Search all trees..."
     >
 
-    <label for="tipSort">Sort:</label>
+    <label for="tipSort">Active tree sort:</label>
 
     <select id="tipSort">
         <option value="original">Original order</option>
@@ -420,33 +587,65 @@ svg:active {
     <button id="focusButton" class="purple">Focus</button>
     <button id="fitButton">Fit</button>
     <button id="resetButton">Reset</button>
-    <button id="clearSelectionButton">Clear</button>
-    <button id="hideTipsButton" class="warning">Hide tips</button>
-    <button id="hideCladeButton" class="warning">Hide clade</button>
-    <button id="restoreHiddenButton" class="secondary">Restore</button>
-    <button id="collapseButton" class="secondary">Collapse</button>
-    <button id="expandButton" class="secondary">Expand all</button>
-    <button id="downloadButton">Download SVG</button>
+    <button id="clearSelectionButton">Clear selection</button>
+
+    <button id="hideTipsButton" class="warning">
+        Hide tips
+    </button>
+
+    <button id="hideCladeButton" class="warning">
+        Hide clade
+    </button>
+
+    <button id="restoreHiddenButton" class="secondary">
+        Restore
+    </button>
+
+    <button id="collapseButton" class="secondary">
+        Collapse
+    </button>
+
+    <button id="expandButton" class="secondary">
+        Expand all
+    </button>
+
+    <button id="downloadButton">
+        Download active SVG
+    </button>
+
+    <button id="removeActiveButton" class="danger">
+        Remove active
+    </button>
+
+    <button id="clearAllButton" class="danger">
+        Clear all trees
+    </button>
 
     <span class="status" id="status">
-        Loading Wang_Luo_2025_FigTree.tre...
+        Loading default tree...
     </span>
 </div>
 
 <div id="infoBar" class="info-bar">
-    <h3>MRCA / selected node</h3>
-    Click two tips to calculate their MRCA, or click an internal node
-    to display its timing.
+    <h3>Active tree</h3>
+    Upload one or more tree files. Click a tree panel to make it active.
 </div>
 
-<div class="viewer" id="viewer">
-    <svg id="treeSvg"></svg>
-</div>
+<main id="treeGrid" class="tree-grid">
+    <div class="empty-message" id="emptyMessage">
+        <strong>No trees are currently displayed</strong>
+        Select one or more Newick or NEXUS files above.
+    </div>
+</main>
 
 <div class="help">
-    Click tips to select them. Double-click a tip name to edit it.
-    Click an internal node for timing. Double-click an internal node
-    to collapse or expand it as a triangle.
+    Select multiple files from the file chooser to add several trees.
+    Click a tree panel to make it active. Toolbar operations such as
+    sorting, rotating, hiding, collapsing, resetting, and downloading
+    apply to the active tree. Searching applies to every displayed tree.
+    Click two tips in the active tree to calculate their MRCA.
+    Double-click a tip name to edit it. Double-click an internal node to
+    collapse or expand its clade.
 </div>
 
 <div class="tooltip" id="tooltip"></div>
@@ -454,251 +653,35 @@ svg:active {
 <script>
 "use strict";
 
-const svg = d3.select("#treeSvg");
-const viewer = document.getElementById("viewer");
-const tooltip = document.getElementById("tooltip");
-const status = document.getElementById("status");
-const infoBar = document.getElementById("infoBar");
+/* ============================================================
+   Global configuration
+   ============================================================ */
 
 const DEFAULT_TREE_FILE = "Wang_Luo_2025_FigTree.tre";
+
 const MIN_ZOOM = 0.01;
 const MAX_ZOOM = 1000;
 
-let root = null;
-let zoomBehavior = null;
-let selectedTips = [];
-let selectedMRCA = null;
-let selectedInternalNode = null;
-let tipSort = "original";
-let rotation = 0;
-
 const margin = {
     top: 55,
-    right: 300,
+    right: 260,
     bottom: 70,
     left: 70
 };
 
-/* ============================================================
-   Newick/NEXUS parser
-   ============================================================ */
+const treeGrid = document.getElementById("treeGrid");
+const emptyMessage = document.getElementById("emptyMessage");
+const tooltip = document.getElementById("tooltip");
+const statusElement = document.getElementById("status");
+const infoBar = document.getElementById("infoBar");
 
-function extractNewick(text) {
-    text = text.trim().replace(/#NEXUS/ig, "");
-
-    const treeMatch = text.match(
-        /(?:UTREE|TREE)\s+[^=]*=\s*([\s\S]*)/i
-    );
-
-    if (treeMatch) {
-        text = treeMatch[1];
-    } else {
-        const equalIndex = text.indexOf("=");
-
-        if (equalIndex !== -1) {
-            text = text.slice(equalIndex + 1);
-        }
-    }
-
-    const semicolonIndex = text.lastIndexOf(";");
-
-    if (semicolonIndex !== -1) {
-        text = text.slice(0, semicolonIndex);
-    }
-
-    return text.trim();
-}
-
-function parseNewick(input) {
-    let index = 0;
-
-    function skipWhitespace() {
-        while (index < input.length && /\s/.test(input[index])) {
-            index++;
-        }
-    }
-
-    function readUntil(stopCharacters) {
-        const start = index;
-
-        while (
-            index < input.length &&
-            !stopCharacters.includes(input[index])
-        ) {
-            index++;
-        }
-
-        return input.slice(start, index).trim();
-    }
-
-    function readComment() {
-        if (input[index] !== "[") {
-            return "";
-        }
-
-        const start = index;
-        let depth = 0;
-
-        while (index < input.length) {
-            if (input[index] === "[") {
-                depth++;
-            }
-
-            if (input[index] === "]") {
-                depth--;
-
-                if (depth === 0) {
-                    index++;
-                    break;
-                }
-            }
-
-            index++;
-        }
-
-        return input.slice(start, index);
-    }
-
-    function parseHPDComment(comment) {
-        const match = comment && comment.match(
-            /95%HPD\s*=\s*\{\s*([^,]+)\s*,\s*([^}]+)\s*\}/i
-        );
-
-        if (!match) {
-            return {
-                hpdLow: null,
-                hpdHigh: null
-            };
-        }
-
-        return {
-            hpdLow: parseFloat(match[1]),
-            hpdHigh: parseFloat(match[2])
-        };
-    }
-
-    function parseBareHPD(text) {
-        const match = text.match(
-            /^\s*([+-]?(?:\d+(?:\.\d*)?|\.\d+))\s*-\s*([+-]?(?:\d+(?:\.\d*)?|\.\d+))\s*$/
-        );
-
-        if (!match) {
-            return null;
-        }
-
-        return {
-            hpdLow: parseFloat(match[1]),
-            hpdHigh: parseFloat(match[2])
-        };
-    }
-
-    function parseNode() {
-        skipWhitespace();
-
-        /*
-         * Important:
-         * tips have children: null;
-         * internal nodes receive children: [].
-         */
-        const node = {
-            name: "",
-            length: 0,
-            comment: "",
-            hpdLow: null,
-            hpdHigh: null,
-            children: null
-        };
-
-        if (input[index] === "(") {
-            index++;
-            node.children = [];
-
-            while (true) {
-                node.children.push(parseNode());
-                skipWhitespace();
-
-                if (input[index] === ",") {
-                    index++;
-                    continue;
-                }
-
-                if (input[index] === ")") {
-                    index++;
-                    break;
-                }
-
-                throw new Error(
-                    "Invalid Newick format near character " + index
-                );
-            }
-
-            skipWhitespace();
-
-            if (
-                input[index] !== ":" &&
-                input[index] !== "[" &&
-                input[index] !== "," &&
-                input[index] !== ")" &&
-                index < input.length
-            ) {
-                const internalText = readUntil(":,[)]");
-                const bareHPD = parseBareHPD(internalText);
-
-                if (bareHPD) {
-                    node.hpdLow = bareHPD.hpdLow;
-                    node.hpdHigh = bareHPD.hpdHigh;
-                } else {
-                    node.name = internalText;
-                }
-            }
-        } else {
-            /*
-             * This is a true tip.
-             */
-            node.name = readUntil(":,[)]");
-        }
-
-        skipWhitespace();
-
-        if (input[index] === "[") {
-            node.comment = readComment();
-
-            const hpd = parseHPDComment(node.comment);
-            node.hpdLow = hpd.hpdLow;
-            node.hpdHigh = hpd.hpdHigh;
-        }
-
-        skipWhitespace();
-
-        if (input[index] === ":") {
-            index++;
-
-            const branchLength = readUntil(",[)]");
-            node.length = parseFloat(branchLength);
-
-            if (!Number.isFinite(node.length)) {
-                node.length = 0;
-            }
-        }
-
-        skipWhitespace();
-
-        if (input[index] === "[") {
-            node.comment = readComment();
-
-            const hpd = parseHPDComment(node.comment);
-            node.hpdLow = hpd.hpdLow;
-            node.hpdHigh = hpd.hpdHigh;
-        }
-
-        return node;
-    }
-
-    return parseNode();
-}
+let treeStates = [];
+let activeTreeState = null;
+let treeIdCounter = 0;
+let nodeIdCounter = 0;
 
 /* ============================================================
-   Utilities
+   General utilities
    ============================================================ */
 
 function cleanLabel(value) {
@@ -726,14 +709,466 @@ function escapeHtml(value) {
         .replaceAll("'", "&#039;");
 }
 
+function fileBaseName(fileName) {
+    return String(fileName || "Tree").replace(
+        /\.(tre|tree|nwk|newick|nex|nexus|txt)$/i,
+        ""
+    );
+}
+
+function safeDownloadName(value) {
+    return String(value || "tree")
+        .replace(/[^\w.-]+/g, "_")
+        .replace(/^_+|_+$/g, "") || "tree";
+}
+
+function showInfo(title, html) {
+    infoBar.innerHTML = `
+        <h3>${escapeHtml(title)}</h3>
+        ${html}
+    `;
+}
+
+function updateEmptyMessage() {
+    if (!emptyMessage) {
+        return;
+    }
+
+    emptyMessage.style.display =
+        treeStates.length === 0 ? "block" : "none";
+}
+
+function updateGlobalStatus(message = "") {
+    if (message) {
+        statusElement.textContent = message;
+        return;
+    }
+
+    if (treeStates.length === 0) {
+        statusElement.textContent = "No trees loaded";
+        return;
+    }
+
+    const totalTips = treeStates.reduce(
+        (sum, state) => sum + getTipCount(state.root),
+        0
+    );
+
+    const activeName = activeTreeState
+        ? `; active: ${activeTreeState.name}`
+        : "";
+
+    statusElement.textContent =
+        `${treeStates.length} tree` +
+        `${treeStates.length === 1 ? "" : "s"}, ` +
+        `${totalTips} total tips${activeName}`;
+}
+
+function updateControlState() {
+    const hasActiveTree = Boolean(activeTreeState);
+
+    const controlIds = [
+        "tipSort",
+        "zoomInButton",
+        "zoomOutButton",
+        "rotateButton",
+        "focusButton",
+        "fitButton",
+        "resetButton",
+        "clearSelectionButton",
+        "hideTipsButton",
+        "hideCladeButton",
+        "restoreHiddenButton",
+        "collapseButton",
+        "expandButton",
+        "downloadButton",
+        "removeActiveButton"
+    ];
+
+    controlIds.forEach(id => {
+        const element = document.getElementById(id);
+
+        if (element) {
+            element.disabled = !hasActiveTree;
+        }
+    });
+
+    document.getElementById("clearAllButton").disabled =
+        treeStates.length === 0;
+
+    if (activeTreeState) {
+        document.getElementById("tipSort").value =
+            activeTreeState.tipSort;
+    } else {
+        document.getElementById("tipSort").value =
+            "original";
+    }
+}
+
+/* ============================================================
+   Tree extraction
+   Supports:
+   - One Newick tree
+   - Several semicolon-separated Newick trees
+   - One or more TREE/UTREE definitions in NEXUS
+   ============================================================ */
+
+function extractTrees(text, fallbackName = "Tree") {
+    const source = String(text || "")
+        .replace(/^\uFEFF/, "")
+        .trim();
+
+    if (!source) {
+        return [];
+    }
+
+    const extracted = [];
+
+    /*
+     * Find TREE name = (...) and UTREE name = (...) declarations.
+     * The expression stops at the next semicolon.
+     */
+    const nexusTreeRegex =
+        /(?:^|\s)(?:UTREE|TREE)\s+([^=\s]+)?\s*=\s*([\s\S]*?);/gi;
+
+    let match;
+
+    while ((match = nexusTreeRegex.exec(source)) !== null) {
+        let treeName = match[1] || fallbackName;
+        let newick = match[2].trim();
+
+        treeName = treeName.replace(/^['"]|['"]$/g, "");
+
+        /*
+         * Remove leading NEXUS rooting annotations such as [&R].
+         */
+        newick = newick.replace(
+            /^\s*(?:\[\s*&[^\]]*\]\s*)+/,
+            ""
+        );
+
+        if (newick.includes("(")) {
+            extracted.push({
+                name: treeName,
+                newick
+            });
+        }
+    }
+
+    if (extracted.length > 0) {
+        return extracted;
+    }
+
+    /*
+     * Plain Newick input. Allow several trees separated by a
+     * semicolon.
+     */
+    const withoutNexusHeader = source.replace(/#NEXUS/ig, "");
+
+    const candidates = withoutNexusHeader
+        .split(";")
+        .map(part => part.trim())
+        .filter(part => part.includes("("));
+
+    candidates.forEach((candidate, index) => {
+        let newick = candidate;
+
+        /*
+         * Handle text such as "name = (...)".
+         */
+        const equalIndex = newick.indexOf("=");
+
+        if (
+            equalIndex !== -1 &&
+            newick.slice(equalIndex + 1).includes("(")
+        ) {
+            newick = newick.slice(equalIndex + 1).trim();
+        }
+
+        newick = newick.replace(
+            /^\s*(?:\[\s*&[^\]]*\]\s*)+/,
+            ""
+        );
+
+        extracted.push({
+            name:
+                candidates.length > 1
+                    ? `${fallbackName} ${index + 1}`
+                    : fallbackName,
+            newick
+        });
+    });
+
+    return extracted;
+}
+
+/* ============================================================
+   Newick parser
+   ============================================================ */
+
+function parseNewick(input) {
+    let index = 0;
+
+    function skipWhitespace() {
+        while (
+            index < input.length &&
+            /\s/.test(input[index])
+        ) {
+            index++;
+        }
+    }
+
+    function readQuotedToken() {
+        const quote = input[index];
+        index++;
+
+        let result = "";
+
+        while (index < input.length) {
+            const character = input[index];
+
+            /*
+             * Newick commonly escapes a quote by doubling it.
+             */
+            if (
+                character === quote &&
+                input[index + 1] === quote
+            ) {
+                result += quote;
+                index += 2;
+                continue;
+            }
+
+            if (character === quote) {
+                index++;
+                break;
+            }
+
+            result += character;
+            index++;
+        }
+
+        return result.trim();
+    }
+
+    function readToken(stopCharacters) {
+        skipWhitespace();
+
+        if (
+            input[index] === "'" ||
+            input[index] === '"'
+        ) {
+            return readQuotedToken();
+        }
+
+        const start = index;
+
+        while (
+            index < input.length &&
+            !stopCharacters.includes(input[index])
+        ) {
+            index++;
+        }
+
+        return input.slice(start, index).trim();
+    }
+
+    function readComment() {
+        if (input[index] !== "[") {
+            return "";
+        }
+
+        const start = index;
+        let depth = 0;
+
+        while (index < input.length) {
+            if (input[index] === "[") {
+                depth++;
+            } else if (input[index] === "]") {
+                depth--;
+
+                if (depth === 0) {
+                    index++;
+                    break;
+                }
+            }
+
+            index++;
+        }
+
+        return input.slice(start, index);
+    }
+
+    function parseHPDComment(comment) {
+        const match = comment && comment.match(
+            /95%HPD\s*=\s*\{\s*([^,]+)\s*,\s*([^}]+)\s*\}/i
+        );
+
+        if (!match) {
+            return {
+                hpdLow: null,
+                hpdHigh: null
+            };
+        }
+
+        const first = parseFloat(match[1]);
+        const second = parseFloat(match[2]);
+
+        return {
+            hpdLow: Number.isFinite(first) ? first : null,
+            hpdHigh: Number.isFinite(second) ? second : null
+        };
+    }
+
+    function parseBareHPD(text) {
+        const match = String(text || "").match(
+            /^\s*([+-]?(?:\d+(?:\.\d*)?|\.\d+))\s*-\s*([+-]?(?:\d+(?:\.\d*)?|\.\d+))\s*$/
+        );
+
+        if (!match) {
+            return null;
+        }
+
+        return {
+            hpdLow: parseFloat(match[1]),
+            hpdHigh: parseFloat(match[2])
+        };
+    }
+
+    function applyComment(node, comment) {
+        if (!comment) {
+            return;
+        }
+
+        node.comment = node.comment
+            ? `${node.comment} ${comment}`
+            : comment;
+
+        const hpd = parseHPDComment(comment);
+
+        if (
+            hpd.hpdLow !== null &&
+            hpd.hpdHigh !== null
+        ) {
+            node.hpdLow = hpd.hpdLow;
+            node.hpdHigh = hpd.hpdHigh;
+        }
+    }
+
+    function readAllComments(node) {
+        skipWhitespace();
+
+        while (input[index] === "[") {
+            applyComment(node, readComment());
+            skipWhitespace();
+        }
+    }
+
+    function parseNode() {
+        skipWhitespace();
+
+        const node = {
+            name: "",
+            length: 0,
+            comment: "",
+            hpdLow: null,
+            hpdHigh: null,
+            hidden: false,
+            children: null
+        };
+
+        if (input[index] === "(") {
+            index++;
+            node.children = [];
+
+            while (true) {
+                node.children.push(parseNode());
+                skipWhitespace();
+
+                if (input[index] === ",") {
+                    index++;
+                    continue;
+                }
+
+                if (input[index] === ")") {
+                    index++;
+                    break;
+                }
+
+                throw new Error(
+                    `Invalid Newick format near character ${index}.`
+                );
+            }
+
+            skipWhitespace();
+
+            if (
+                index < input.length &&
+                input[index] !== ":" &&
+                input[index] !== "[" &&
+                input[index] !== "," &&
+                input[index] !== ")" &&
+                input[index] !== ";"
+            ) {
+                const internalText = readToken(":,[);");
+                const bareHPD = parseBareHPD(internalText);
+
+                if (bareHPD) {
+                    node.hpdLow = bareHPD.hpdLow;
+                    node.hpdHigh = bareHPD.hpdHigh;
+                } else {
+                    node.name = internalText;
+                }
+            }
+        } else {
+            node.name = readToken(":,[);");
+        }
+
+        readAllComments(node);
+        skipWhitespace();
+
+        if (input[index] === ":") {
+            index++;
+            skipWhitespace();
+
+            const branchLengthText = readToken(",[);");
+            const parsedLength = parseFloat(branchLengthText);
+
+            node.length = Number.isFinite(parsedLength)
+                ? parsedLength
+                : 0;
+        }
+
+        readAllComments(node);
+
+        return node;
+    }
+
+    const result = parseNode();
+
+    skipWhitespace();
+
+    if (!result) {
+        throw new Error("The Newick tree is empty.");
+    }
+
+    return result;
+}
+
+/* ============================================================
+   Hierarchy utilities
+   ============================================================ */
+
 function isTip(node) {
-    return !node.children || node.children.length === 0;
+    return getChildren(node).length === 0;
 }
 
 function isCollapsed(node) {
     return Boolean(
+        node &&
         node._children &&
-        node._children.length > 0
+        node._children.length > 0 &&
+        !node.children
     );
 }
 
@@ -741,21 +1176,11 @@ function getChildren(node) {
     return node.children || node._children || [];
 }
 
-function assignDistances(node, distanceFromRoot = 0) {
-    node.data.distanceFromRoot = distanceFromRoot;
-
-    [
-        ...(node.children || []),
-        ...(node._children || [])
-    ].forEach(child => {
-        assignDistances(
-            child,
-            distanceFromRoot + (child.data.length || 0)
-        );
-    });
-}
-
 function allNodes(node, result = []) {
+    if (!node) {
+        return result;
+    }
+
     result.push(node);
 
     getChildren(node).forEach(child => {
@@ -763,6 +1188,23 @@ function allNodes(node, result = []) {
     });
 
     return result;
+}
+
+function assignNodeIds(root) {
+    allNodes(root).forEach(node => {
+        node._viewerNodeId = `node-${++nodeIdCounter}`;
+    });
+}
+
+function assignDistances(node, distanceFromRoot = 0) {
+    node.data.distanceFromRoot = distanceFromRoot;
+
+    getChildren(node).forEach(child => {
+        assignDistances(
+            child,
+            distanceFromRoot + Number(child.data.length || 0)
+        );
+    });
 }
 
 function getTipCount(node) {
@@ -804,16 +1246,15 @@ function collectAllTips(node, result = []) {
     return result;
 }
 
-function getVisibleChildren(node) {
-    return (node.children || [])
-        .filter(child => !child.data.hidden);
-}
-
 function getVisibleTipCount(node) {
-    const children = getVisibleChildren(node);
+    if (!node || node.data.hidden) {
+        return 0;
+    }
+
+    const children = getChildren(node);
 
     if (children.length === 0) {
-        return node.data.hidden ? 0 : 1;
+        return 1;
     }
 
     return children.reduce(
@@ -822,119 +1263,150 @@ function getVisibleTipCount(node) {
     );
 }
 
-function assignYPositions(node, yScale) {
-    const children = getVisibleChildren(node);
+function isDisplayableNode(node) {
+    return (
+        node &&
+        !node.data.hidden &&
+        getVisibleTipCount(node) > 0
+    );
+}
 
-    if (children.length > 0) {
-        children.forEach(child => {
+function getVisibleExpandedChildren(node) {
+    return (node.children || []).filter(
+        child => isDisplayableNode(child)
+    );
+}
+
+function assignYPositions(node, yScale) {
+    const expandedChildren =
+        getVisibleExpandedChildren(node);
+
+    if (expandedChildren.length > 0) {
+        expandedChildren.forEach(child => {
             assignYPositions(child, yScale);
         });
 
         node.y = d3.mean(
-            children,
+            expandedChildren,
             child => child.y
         );
 
         return node.y;
     }
 
-    const tips = collectAllTips(node);
+    const descendantTips = collectAllTips(node);
 
-    node.y = tips.length
-        ? d3.mean(
-            tips,
-            tip => yScale(tip.data.name)
-        )
+    const yValues = descendantTips
+        .map(tip => yScale(tip._viewerNodeId))
+        .filter(Number.isFinite);
+
+    node.y = yValues.length
+        ? d3.mean(yValues)
         : 0;
 
     return node.y;
 }
 
 /* ============================================================
-   Sorting
+   Original order and sorting
    ============================================================ */
 
 function saveOriginalChildOrder(node) {
-    if (node.children) {
-        node._originalChildren =
-            node.children.slice();
+    const children = getChildren(node);
 
-        node.children.forEach(child => {
-            saveOriginalChildOrder(child);
-        });
-    }
-}
-
-function restoreOriginalChildOrder(node) {
-    if (!node._originalChildren) {
+    if (children.length === 0) {
         return;
     }
 
-    const currentChildren =
-        node.children || node._children || [];
+    node._originalChildren = children.slice();
 
-    const ordered =
-        node._originalChildren.filter(
-            child => currentChildren.includes(child)
-        );
+    children.forEach(child => {
+        saveOriginalChildOrder(child);
+    });
+}
+
+function restoreOriginalChildOrder(node) {
+    if (!node || !node._originalChildren) {
+        return;
+    }
+
+    const currentChildren = getChildren(node);
+
+    const ordered = node._originalChildren.filter(
+        child => currentChildren.includes(child)
+    );
+
+    /*
+     * Include any children that may not have existed when the
+     * original order was recorded.
+     */
+    currentChildren.forEach(child => {
+        if (!ordered.includes(child)) {
+            ordered.push(child);
+        }
+    });
 
     if (node.children) {
         node.children = ordered;
-    } else {
+    } else if (node._children) {
         node._children = ordered;
     }
 
-    node._originalChildren.forEach(child => {
+    ordered.forEach(child => {
         restoreOriginalChildOrder(child);
     });
 }
 
-function sortChildrenRecursively(node) {
+function sortChildrenRecursively(node, sortMode) {
     const children = getChildren(node);
 
     children.forEach(child => {
-        sortChildrenRecursively(child);
+        sortChildrenRecursively(child, sortMode);
     });
 
     if (
-        tipSort !== "ascending" &&
-        tipSort !== "descending"
+        sortMode !== "ascending" &&
+        sortMode !== "descending"
     ) {
         return;
     }
 
     const direction =
-        tipSort === "ascending"
-            ? 1
-            : -1;
+        sortMode === "ascending" ? 1 : -1;
 
-    /*
-     * Sort child clades by their number of descendant tips.
-     * Tip names are not changed.
-     */
-    children.sort((a, b) =>
-        direction * (
-            getTipCount(a) -
-            getTipCount(b)
-        )
-    );
+    children.sort((a, b) => {
+        const countDifference =
+            getTipCount(a) - getTipCount(b);
+
+        if (countDifference !== 0) {
+            return direction * countDifference;
+        }
+
+        const nameA = String(a.data.name || "");
+        const nameB = String(b.data.name || "");
+
+        return nameA.localeCompare(nameB);
+    });
 
     if (node.children) {
         node.children = children;
-    } else {
+    } else if (node._children) {
         node._children = children;
     }
 }
 
-function applyTipSort() {
-    if (!root) {
+function applyTipSort(state) {
+    if (!state || !state.root) {
         return;
     }
 
-    if (tipSort === "original") {
-        restoreOriginalChildOrder(root);
+    if (state.tipSort === "original") {
+        restoreOriginalChildOrder(state.root);
     } else {
-        sortChildrenRecursively(root);
+        sortChildrenRecursively(
+            state.root,
+            state.tipSort
+        );
     }
 }
 
@@ -943,6 +1415,10 @@ function applyTipSort() {
    ============================================================ */
 
 function findMRCA(nodeA, nodeB) {
+    if (!nodeA || !nodeB) {
+        return null;
+    }
+
     const ancestorsA = new Set();
     let current = nodeA;
 
@@ -965,20 +1441,112 @@ function findMRCA(nodeA, nodeB) {
 }
 
 /* ============================================================
-   Display
+   Active tree management
    ============================================================ */
 
-function showInfo(title, html) {
-    infoBar.innerHTML = `
-        <h3>${title}</h3>
-        ${html}
-    `;
+function setActiveTree(state) {
+    if (!state || !treeStates.includes(state)) {
+        return;
+    }
+
+    activeTreeState = state;
+
+    treeStates.forEach(treeState => {
+        treeState.panel.classList.toggle(
+            "active",
+            treeState === state
+        );
+    });
+
+    document.getElementById("tipSort").value =
+        state.tipSort;
+
+    updateGlobalStatus();
+    updateControlState();
+
+    if (state.selectedInternalNode) {
+        reportNode(state, state.selectedInternalNode);
+    } else {
+        reportMRCA(state);
+    }
 }
 
-function reportMRCA() {
+function removeTree(state) {
+    if (!state) {
+        return;
+    }
+
+    const index = treeStates.indexOf(state);
+
+    if (index === -1) {
+        return;
+    }
+
+    state.panel.remove();
+    treeStates.splice(index, 1);
+
+    if (activeTreeState === state) {
+        activeTreeState =
+            treeStates[index] ||
+            treeStates[index - 1] ||
+            treeStates[0] ||
+            null;
+    }
+
+    treeStates.forEach(treeState => {
+        treeState.panel.classList.toggle(
+            "active",
+            treeState === activeTreeState
+        );
+    });
+
+    updateEmptyMessage();
+    updateGlobalStatus();
+    updateControlState();
+
+    if (activeTreeState) {
+        setActiveTree(activeTreeState);
+    } else {
+        showInfo(
+            "Active tree",
+            "Upload one or more tree files. Click a tree panel to make it active."
+        );
+    }
+}
+
+function clearAllTrees() {
+    treeStates.forEach(state => {
+        state.panel.remove();
+    });
+
+    treeStates = [];
+    activeTreeState = null;
+
+    hideTooltip();
+    updateEmptyMessage();
+    updateGlobalStatus();
+    updateControlState();
+
+    showInfo(
+        "Active tree",
+        "Upload one or more tree files. Click a tree panel to make it active."
+    );
+}
+
+/* ============================================================
+   Information bar
+   ============================================================ */
+
+function reportMRCA(state) {
+    if (!state) {
+        return;
+    }
+
+    const selectedTips = state.selectedTips;
+
     if (selectedTips.length === 0) {
         showInfo(
-            "MRCA / selected node",
+            state.name,
             "Click two tips to calculate their MRCA, or click an internal node to view its timing."
         );
         return;
@@ -986,23 +1554,26 @@ function reportMRCA() {
 
     if (selectedTips.length === 1) {
         showInfo(
-            "Selected tip",
-            `<strong>${escapeHtml(
-                cleanLabel(selectedTips[0].data.name)
-            )}</strong> — select one more tip.`
+            state.name,
+            `
+                <strong>Selected tip:</strong>
+                ${escapeHtml(
+                    cleanLabel(selectedTips[0].data.name)
+                )}
+                — select one more tip.
+            `
         );
         return;
     }
 
-    selectedMRCA =
-        findMRCA(
-            selectedTips[0],
-            selectedTips[1]
-        );
+    state.selectedMRCA = findMRCA(
+        selectedTips[0],
+        selectedTips[1]
+    );
 
-    if (!selectedMRCA) {
+    if (!state.selectedMRCA) {
         showInfo(
-            "MRCA / selected node",
+            state.name,
             "The MRCA could not be identified."
         );
         return;
@@ -1017,11 +1588,11 @@ function reportMRCA() {
     );
 
     const mrcaName =
-        selectedMRCA === root
+        state.selectedMRCA === state.root
             ? "Root / oldest"
-            : selectedMRCA.data.name
+            : state.selectedMRCA.data.name
                 ? cleanLabel(
-                    selectedMRCA.data.name
+                    state.selectedMRCA.data.name
                 )
                 : "unnamed node";
 
@@ -1040,49 +1611,43 @@ function reportMRCA() {
 
         <strong>Time:</strong>
         <span class="value">
-            ${formatNumber(selectedMRCA.data.age)}
+            ${formatNumber(state.selectedMRCA.data.age)}
         </span>
 
         <span class="separator">|</span>
 
         <strong>Clade:</strong>
-        ${getTipCountLabel(selectedMRCA)}
+        ${getTipCountLabel(state.selectedMRCA)}
     `;
 
     if (
-        selectedMRCA.data.hpdLow !== null &&
-        selectedMRCA.data.hpdHigh !== null
+        state.selectedMRCA.data.hpdLow !== null &&
+        state.selectedMRCA.data.hpdHigh !== null
     ) {
         html += `
             <span class="separator">|</span>
+
             <strong>95% CI:</strong>
             ${formatNumber(
-                selectedMRCA.data.hpdLow
+                state.selectedMRCA.data.hpdLow
             )}
             --
             ${formatNumber(
-                selectedMRCA.data.hpdHigh
+                state.selectedMRCA.data.hpdHigh
             )}
         `;
     }
 
-    showInfo(
-        "MRCA / selected tips",
-        html
-    );
+    showInfo(state.name, html);
 }
 
-function reportNode(node) {
-    if (!node) {
-        showInfo(
-            "MRCA / selected node",
-            "Click two tips to calculate their MRCA, or click an internal node to view its timing."
-        );
+function reportNode(state, node) {
+    if (!state || !node) {
         return;
     }
 
     const name =
-        node === root
+        node === state.root
             ? "Root / oldest"
             : node.data.name
                 ? cleanLabel(node.data.name)
@@ -1111,6 +1676,7 @@ function reportNode(node) {
     ) {
         html += `
             <span class="separator">|</span>
+
             <strong>95% CI:</strong>
             ${formatNumber(node.data.hpdLow)}
             --
@@ -1118,106 +1684,96 @@ function reportNode(node) {
         `;
     }
 
-    showInfo(
-        "Selected node",
-        html
-    );
+    showInfo(state.name, html);
 }
 
 /* ============================================================
-   Actions
+   Selection and editing
    ============================================================ */
 
-function toggleTipSelection(tip) {
-    const index =
-        selectedTips.indexOf(tip);
+function toggleTipSelection(state, tip) {
+    setActiveTree(state);
+
+    const index = state.selectedTips.indexOf(tip);
 
     if (index >= 0) {
-        selectedTips.splice(index, 1);
+        state.selectedTips.splice(index, 1);
     } else {
-        if (selectedTips.length >= 2) {
-            selectedTips = [];
+        if (state.selectedTips.length >= 2) {
+            state.selectedTips = [];
         }
 
-        selectedTips.push(tip);
+        state.selectedTips.push(tip);
     }
 
-    selectedMRCA =
-        selectedTips.length === 2
+    state.selectedMRCA =
+        state.selectedTips.length === 2
             ? findMRCA(
-                selectedTips[0],
-                selectedTips[1]
+                state.selectedTips[0],
+                state.selectedTips[1]
             )
             : null;
 
-    selectedInternalNode = null;
+    state.selectedInternalNode = null;
 
-    renderTree();
-    reportMRCA();
+    renderTree(state);
+    reportMRCA(state);
 }
 
-function selectInternalNode(node) {
-    selectedInternalNode = node;
+function selectInternalNode(state, node) {
+    setActiveTree(state);
 
-    renderTree();
-    reportNode(node);
+    state.selectedInternalNode = node;
+
+    renderTree(state);
+    reportNode(state, node);
 }
 
-function clearSelections() {
-    selectedTips = [];
-    selectedMRCA = null;
-    selectedInternalNode = null;
-
-    renderTree();
-    reportMRCA();
-}
-
-function hideSelectedTips() {
-    selectedTips.forEach(tip => {
-        tip.data.hidden = true;
-    });
-
-    selectedTips = [];
-    selectedMRCA = null;
-
-    renderTree();
-    reportMRCA();
-}
-
-function hideSelectedClade() {
-    const node =
-        selectedInternalNode ||
-        selectedMRCA;
-
-    if (!node || node === root) {
+function clearSelections(state) {
+    if (!state) {
         return;
     }
 
-    allNodes(node).forEach(child => {
-        child.data.hidden = true;
-    });
+    state.selectedTips = [];
+    state.selectedMRCA = null;
+    state.selectedInternalNode = null;
 
-    selectedTips = [];
-    selectedMRCA = null;
-    selectedInternalNode = null;
-
-    renderTree();
-    reportMRCA();
+    renderTree(state);
+    reportMRCA(state);
 }
 
-function restoreHidden() {
-    allNodes(root).forEach(node => {
-        node.data.hidden = false;
-    });
+function editTipName(state, tip) {
+    const oldName = cleanLabel(tip.data.name);
 
-    renderTree();
-    reportMRCA();
+    const newName = window.prompt(
+        "Edit tip name:",
+        oldName
+    );
+
+    if (
+        newName === null ||
+        !newName.trim()
+    ) {
+        return;
+    }
+
+    tip.data.name =
+        newName.trim().replace(/\s+/g, "_");
+
+    renderTree(state);
+
+    if (state === activeTreeState) {
+        reportMRCA(state);
+    }
 }
+
+/* ============================================================
+   Hide, collapse and expand
+   ============================================================ */
 
 function collapseNode(node) {
     if (
         node &&
-        node !== root &&
         node.children &&
         node.children.length > 0
     ) {
@@ -1237,260 +1793,165 @@ function expandNode(node) {
     }
 }
 
-function collapseSelectedClade() {
-    const node =
-        selectedInternalNode ||
-        selectedMRCA;
+function hideSelectedTips(state) {
+    if (!state) {
+        return;
+    }
 
-    if (!node || node === root) {
+    state.selectedTips.forEach(tip => {
+        tip.data.hidden = true;
+    });
+
+    state.selectedTips = [];
+    state.selectedMRCA = null;
+
+    renderTree(state);
+    reportMRCA(state);
+}
+
+function hideSelectedClade(state) {
+    if (!state) {
+        return;
+    }
+
+    const node =
+        state.selectedInternalNode ||
+        state.selectedMRCA;
+
+    if (!node || node === state.root) {
+        return;
+    }
+
+    allNodes(node).forEach(descendant => {
+        descendant.data.hidden = true;
+    });
+
+    state.selectedTips = [];
+    state.selectedMRCA = null;
+    state.selectedInternalNode = null;
+
+    renderTree(state);
+    reportMRCA(state);
+}
+
+function restoreHidden(state) {
+    if (!state) {
+        return;
+    }
+
+    allNodes(state.root).forEach(node => {
+        node.data.hidden = false;
+    });
+
+    renderTree(state);
+    reportMRCA(state);
+}
+
+function collapseSelectedClade(state) {
+    if (!state) {
+        return;
+    }
+
+    const node =
+        state.selectedInternalNode ||
+        state.selectedMRCA;
+
+    if (!node || node === state.root) {
         return;
     }
 
     collapseNode(node);
 
-    renderTree();
-    reportMRCA();
+    renderTree(state);
+
+    if (state.selectedInternalNode) {
+        reportNode(state, state.selectedInternalNode);
+    } else {
+        reportMRCA(state);
+    }
 }
 
-function expandAllClades() {
-    allNodes(root).forEach(node => {
+function expandAllClades(state) {
+    if (!state) {
+        return;
+    }
+
+    allNodes(state.root).forEach(node => {
         expandNode(node);
     });
 
-    renderTree();
-    reportMRCA();
-}
+    renderTree(state);
 
-function editTipName(tip) {
-    const oldName = cleanLabel(tip.data.name);
-
-    const newName = window.prompt(
-        "Edit tip name:",
-        oldName
-    );
-
-    if (
-        newName === null ||
-        !newName.trim()
-    ) {
-        return;
+    if (state.selectedInternalNode) {
+        reportNode(state, state.selectedInternalNode);
+    } else {
+        reportMRCA(state);
     }
-
-    tip.data.name =
-        newName.trim().replace(/\s+/g, "_");
-
-    renderTree();
-    reportMRCA();
-}
-
-/* ============================================================
-   Focus and rotation
-   ============================================================ */
-
-function focusNode(node) {
-    if (!node || !zoomBehavior) {
-        return;
-    }
-
-    const nodes = allNodes(node)
-        .filter(d => !d.data.hidden);
-
-    if (!nodes.length) {
-        return;
-    }
-
-    const xs = nodes
-        .map(d => d.x)
-        .filter(Number.isFinite);
-
-    const ys = nodes
-        .map(d => d.y)
-        .filter(Number.isFinite);
-
-    if (!xs.length || !ys.length) {
-        return;
-    }
-
-    const minX = d3.min(xs);
-    const maxX = d3.max(xs);
-    const minY = d3.min(ys);
-    const maxY = d3.max(ys);
-
-    const width = viewer.clientWidth;
-    const height = viewer.clientHeight;
-
-    const scale = Math.min(
-        0.85 * width /
-            Math.max(maxX - minX, 80),
-        0.85 * height /
-            Math.max(maxY - minY, 80),
-        MAX_ZOOM
-    );
-
-    const centerX =
-        (minX + maxX) / 2;
-
-    const centerY =
-        (minY + maxY) / 2;
-
-    const transform = d3.zoomIdentity
-        .translate(
-            width / 2 - scale * centerX,
-            height / 2 - scale * centerY
-        )
-        .scale(scale);
-
-    svg.transition()
-        .duration(500)
-        .call(
-            zoomBehavior.transform,
-            transform
-        );
-}
-
-function focusSelection() {
-    if (selectedMRCA) {
-        focusNode(selectedMRCA);
-    } else if (selectedInternalNode) {
-        focusNode(selectedInternalNode);
-    } else if (selectedTips.length === 1) {
-        focusNode(selectedTips[0]);
-    }
-}
-
-/* ============================================================
-   Collapsed triangles
-   ============================================================ */
-
-function drawCollapsedTriangle(
-    scene,
-    node,
-    xScale,
-    yScale
-) {
-    if (!isCollapsed(node) || node.data.hidden) {
-        return;
-    }
-
-    const tips = collectAllTips(node);
-
-    /*
-     * A single tip is rendered as a tip, not a collapsed triangle.
-     */
-    if (tips.length <= 1) {
-        return;
-    }
-
-    const yValues = tips
-        .map(tip => yScale(tip.data.name))
-        .filter(Number.isFinite);
-
-    const ages = tips
-        .map(tip => tip.data.age)
-        .filter(Number.isFinite);
-
-    if (!yValues.length || !ages.length) {
-        return;
-    }
-
-    const minY = Math.min(...yValues);
-    const maxY = Math.max(...yValues);
-    const centerY =
-        (minY + maxY) / 2;
-
-    /*
-     * Most recent descendant tip = smallest age.
-     */
-    const youngestAge = Math.min(...ages);
-
-    const rightX = Math.max(
-        xScale(youngestAge),
-        node.x + 35
-    );
-
-    const points = [
-        `${node.x},${centerY}`,
-        `${rightX},${minY}`,
-        `${rightX},${maxY}`
-    ].join(" ");
-
-    scene.append("polygon")
-        .attr(
-            "class",
-            "collapsed-triangle"
-        )
-        .attr("points", points)
-        .on("click", event => {
-            event.stopPropagation();
-
-            selectedInternalNode = node;
-
-            renderTree();
-            reportNode(node);
-        })
-        .on("dblclick", event => {
-            event.stopPropagation();
-
-            expandNode(node);
-
-            renderTree();
-            reportMRCA();
-        });
-
-    scene.append("text")
-        .attr(
-            "class",
-            "collapsed-label"
-        )
-        .attr("x", rightX + 5)
-        .attr("y", centerY + 3)
-        .text(getTipCountLabel(node));
 }
 
 /* ============================================================
    Search and tooltip
    ============================================================ */
 
-function applySearch() {
+function applySearchToTree(state) {
+    if (!state || !state.svg) {
+        return;
+    }
+
     const query = document
         .getElementById("searchInput")
         .value
         .trim()
         .toLowerCase();
 
-    svg.selectAll(".node")
-        .attr("opacity", d => {
+    state.svg.selectAll(".node")
+        .attr("opacity", node => {
             if (!query) {
                 return 1;
             }
 
-            return String(d.data.name)
-                .toLowerCase()
-                .includes(query)
+            const nodeName = cleanLabel(
+                node.data.name
+            ).toLowerCase();
+
+            return nodeName.includes(query)
                 ? 1
-                : 0.25;
+                : 0.18;
         });
+
+    state.svg.selectAll(".collapsed-triangle")
+        .attr("opacity", query ? 0.35 : 1);
+
+    state.svg.selectAll(".collapsed-label")
+        .attr("opacity", query ? 0.35 : 1);
 }
 
-function showTooltip(event, d) {
-    const node = d.data;
+function applySearchToAllTrees() {
+    treeStates.forEach(state => {
+        applySearchToTree(state);
+    });
+}
+
+function showTooltip(event, state, hierarchyNode) {
+    const node = hierarchyNode.data;
 
     const title =
-        d === root
+        hierarchyNode === state.root
             ? "Root / oldest"
-            : isTip(d)
+            : isTip(hierarchyNode)
                 ? cleanLabel(node.name)
                 : node.name
                     ? cleanLabel(node.name)
                     : "Internal node";
 
     let html = `
-        <strong>${escapeHtml(title)}</strong><br>
+        <strong>${escapeHtml(state.name)}</strong><br>
+        ${escapeHtml(title)}<br>
         Time:
         ${formatNumber(node.age)}
         units before present<br>
         Clade:
-        ${getTipCountLabel(d)}<br>
+        ${getTipCountLabel(hierarchyNode)}<br>
         Branch:
         ${formatNumber(node.length)}
     `;
@@ -1521,444 +1982,985 @@ function hideTooltip() {
 }
 
 /* ============================================================
-   Rendering
+   Focus
    ============================================================ */
 
-function renderTree() {
-    if (!root) {
+function focusNode(state, node) {
+    if (
+        !state ||
+        !node ||
+        !state.zoomBehavior
+    ) {
         return;
     }
 
-    const currentTransform =
-        d3.zoomTransform(svg.node());
+    const nodes = allNodes(node).filter(
+        hierarchyNode =>
+            isDisplayableNode(hierarchyNode) &&
+            Number.isFinite(hierarchyNode.x) &&
+            Number.isFinite(hierarchyNode.y)
+    );
 
-    applyTipSort();
+    if (nodes.length === 0) {
+        return;
+    }
+
+    const xs = nodes.map(d => d.x);
+    const ys = nodes.map(d => d.y);
+
+    const minX = d3.min(xs);
+    const maxX = d3.max(xs);
+    const minY = d3.min(ys);
+    const maxY = d3.max(ys);
+
+    const width =
+        state.viewer.clientWidth || 800;
+
+    const height =
+        state.viewer.clientHeight || 520;
+
+    const scale = Math.min(
+        0.82 * width /
+            Math.max(maxX - minX, 80),
+        0.82 * height /
+            Math.max(maxY - minY, 80),
+        MAX_ZOOM
+    );
+
+    const centerX = (minX + maxX) / 2;
+    const centerY = (minY + maxY) / 2;
+
+    const transform = d3.zoomIdentity
+        .translate(
+            width / 2 - scale * centerX,
+            height / 2 - scale * centerY
+        )
+        .scale(scale);
+
+    state.svg.transition()
+        .duration(500)
+        .call(
+            state.zoomBehavior.transform,
+            transform
+        );
+}
+
+function focusSelection(state) {
+    if (!state) {
+        return;
+    }
+
+    if (state.selectedMRCA) {
+        focusNode(state, state.selectedMRCA);
+    } else if (state.selectedInternalNode) {
+        focusNode(
+            state,
+            state.selectedInternalNode
+        );
+    } else if (state.selectedTips.length === 1) {
+        focusNode(
+            state,
+            state.selectedTips[0]
+        );
+    }
+}
+
+/* ============================================================
+   Collapsed triangle
+   ============================================================ */
+
+function drawCollapsedTriangle(
+    state,
+    scene,
+    node,
+    xScale,
+    yScale
+) {
+    if (
+        !isCollapsed(node) ||
+        !isDisplayableNode(node)
+    ) {
+        return;
+    }
+
+    const tips = collectAllTips(node);
+
+    /*
+     * One-tip groups are not drawn as triangles.
+     */
+    if (tips.length <= 1) {
+        return;
+    }
+
+    const yValues = tips
+        .map(tip => yScale(tip._viewerNodeId))
+        .filter(Number.isFinite);
+
+    const ages = tips
+        .map(tip => tip.data.age)
+        .filter(Number.isFinite);
+
+    if (
+        yValues.length === 0 ||
+        ages.length === 0
+    ) {
+        return;
+    }
+
+    const minY = Math.min(...yValues);
+    const maxY = Math.max(...yValues);
+    const centerY = (minY + maxY) / 2;
+
+    const youngestAge = Math.min(...ages);
+
+    const rightX = Math.max(
+        xScale(youngestAge),
+        node.x + 35
+    );
+
+    const points = [
+        `${node.x},${centerY}`,
+        `${rightX},${minY}`,
+        `${rightX},${maxY}`
+    ].join(" ");
+
+    scene.append("polygon")
+        .datum(node)
+        .attr("class", "collapsed-triangle")
+        .attr("points", points)
+        .on("click", event => {
+            event.stopPropagation();
+
+            setActiveTree(state);
+            state.selectedInternalNode = node;
+
+            renderTree(state);
+            reportNode(state, node);
+        })
+        .on("dblclick", event => {
+            event.stopPropagation();
+
+            setActiveTree(state);
+            expandNode(node);
+
+            renderTree(state);
+            reportMRCA(state);
+        });
+
+    scene.append("text")
+        .datum(node)
+        .attr("class", "collapsed-label")
+        .attr("x", rightX + 5)
+        .attr("y", centerY + 3)
+        .text(getTipCountLabel(node));
+}
+
+/* ============================================================
+   Panel status
+   ============================================================ */
+
+function updateTreePanelStatus(state) {
+    const nodes = allNodes(state.root);
+
+    const hiddenCount = nodes.filter(
+        node => node.data.hidden
+    ).length;
+
+    const collapsedCount = nodes.filter(
+        node => isCollapsed(node)
+    ).length;
+
+    let text =
+        `${getTipCount(state.root)} tips, ` +
+        `${nodes.length} nodes`;
+
+    if (hiddenCount > 0) {
+        text += `, ${hiddenCount} hidden`;
+    }
+
+    if (collapsedCount > 0) {
+        text += `, ${collapsedCount} collapsed`;
+    }
+
+    state.panelStatus.textContent = text;
+}
+
+/* ============================================================
+   Rendering
+   ============================================================ */
+
+function renderTree(state) {
+    if (!state || !state.root) {
+        return;
+    }
+
+    applyTipSort(state);
+
+    const svg = state.svg;
+    const svgNode = svg.node();
+
+    const currentTransform =
+        svgNode && svgNode.__zoom
+            ? d3.zoomTransform(svgNode)
+            : d3.zoomIdentity;
+
     svg.selectAll("*").remove();
 
-    const width = viewer.clientWidth;
-    const tips = collectAllTips(root);
+    const width =
+        state.viewer.clientWidth || 800;
 
-    const height = Math.max(
-        viewer.clientHeight,
+    const visibleTips =
+        collectAllTips(state.root);
+
+    const drawingHeight = Math.max(
+        state.viewer.clientHeight || 520,
         margin.top +
         margin.bottom +
-        tips.length * 20
+        visibleTips.length * 20
     );
 
     svg.attr(
         "viewBox",
-        `0 0 ${width} ${height}`
+        `0 0 ${width} ${drawingHeight}`
     );
 
     /*
-     * Calculate distances through visible and collapsed nodes.
+     * Assign distances to expanded and collapsed descendants.
      */
-    assignDistances(root);
+    assignDistances(state.root);
 
-    const all = allNodes(root);
+    const structuralNodes =
+        allNodes(state.root);
 
-    const maxAge = d3.max(
-        all,
-        d => d.data.distanceFromRoot
+    let maxDistance = d3.max(
+        structuralNodes,
+        node => node.data.distanceFromRoot
     );
 
-    /*
-     * Correct tip age calculation after sorting.
-     */
-    all.forEach(node => {
+    if (
+        !Number.isFinite(maxDistance) ||
+        maxDistance <= 0
+    ) {
+        maxDistance = 1;
+    }
+
+    structuralNodes.forEach(node => {
         node.data.age =
-            maxAge -
+            maxDistance -
             node.data.distanceFromRoot;
     });
 
+    if (visibleTips.length === 0) {
+        svg.append("text")
+            .attr("class", "no-visible-tips")
+            .attr("x", width / 2)
+            .attr("y", drawingHeight / 2)
+            .text(
+                "All tips are hidden. Click Restore to show them."
+            );
+
+        updateTreePanelStatus(state);
+        updateGlobalStatus();
+        return;
+    }
+
     const xScale = d3.scaleLinear()
-        .domain([maxAge, 0])
+        .domain([maxDistance, 0])
         .range([
             margin.left,
-            width - margin.right
+            Math.max(
+                margin.left + 100,
+                width - margin.right
+            )
         ]);
 
     const yScale = d3.scalePoint()
         .domain(
-            tips.map(d => d.data.name)
+            visibleTips.map(
+                tip => tip._viewerNodeId
+            )
         )
         .range([
             margin.top,
-            height - margin.bottom
+            drawingHeight - margin.bottom
         ])
         .padding(0.5);
 
-    assignYPositions(root, yScale);
+    assignYPositions(state.root, yScale);
 
-    all.forEach(node => {
+    structuralNodes.forEach(node => {
         node.x = xScale(node.data.age);
     });
 
     const scene = svg.append("g")
         .attr("class", "scene");
 
-    /*
-     * Normal gray branches only.
-     */
-    const branchGroup = scene.append("g");
+    /* --------------------------------------------------------
+       Branches
+       -------------------------------------------------------- */
 
-    root.descendants()
-        .filter(d =>
-            d.parent &&
-            !d.data.hidden &&
-            !d.parent.data.hidden
+    const branchGroup = scene.append("g")
+        .attr("class", "branch-group");
+
+    state.root.descendants()
+        .filter(node =>
+            node.parent &&
+            isDisplayableNode(node) &&
+            isDisplayableNode(node.parent)
         )
-        .forEach(d => {
-            const parent = d.parent;
+        .forEach(node => {
+            const parent = node.parent;
 
             branchGroup.append("path")
                 .attr("class", "branch")
                 .attr(
                     "d",
-                    `M${parent.x},${d.y} H${d.x}`
+                    `M${parent.x},${node.y} H${node.x}`
                 );
 
             branchGroup.append("path")
                 .attr("class", "branch")
                 .attr(
                     "d",
-                    `M${parent.x},${parent.y} V${d.y}`
+                    `M${parent.x},${parent.y} V${node.y}`
                 );
         });
 
-    /*
-     * Confidence/HPD intervals.
-     */
-    const ciGroup = scene.append("g");
+    /* --------------------------------------------------------
+       HPD/confidence intervals
+       -------------------------------------------------------- */
 
-    root.descendants()
-        .filter(d =>
-            !d.data.hidden &&
-            d.data.hpdLow !== null &&
-            d.data.hpdHigh !== null
+    const ciGroup = scene.append("g")
+        .attr("class", "ci-group");
+
+    state.root.descendants()
+        .filter(node =>
+            isDisplayableNode(node) &&
+            node.data.hpdLow !== null &&
+            node.data.hpdHigh !== null
         )
-        .forEach(d => {
+        .forEach(node => {
             const x1 = Math.min(
-                xScale(d.data.hpdHigh),
-                xScale(d.data.hpdLow)
+                xScale(node.data.hpdHigh),
+                xScale(node.data.hpdLow)
             );
 
             const x2 = Math.max(
-                xScale(d.data.hpdHigh),
-                xScale(d.data.hpdLow)
+                xScale(node.data.hpdHigh),
+                xScale(node.data.hpdLow)
             );
 
             ciGroup.append("line")
                 .attr("class", "hpd-line")
                 .attr("x1", x1)
                 .attr("x2", x2)
-                .attr("y1", d.y)
-                .attr("y2", d.y);
+                .attr("y1", node.y)
+                .attr("y2", node.y);
 
             ciGroup.append("line")
                 .attr("class", "hpd-cap")
                 .attr("x1", x1)
                 .attr("x2", x1)
-                .attr("y1", d.y - 4)
-                .attr("y2", d.y + 4);
+                .attr("y1", node.y - 4)
+                .attr("y2", node.y + 4);
 
             ciGroup.append("line")
                 .attr("class", "hpd-cap")
                 .attr("x1", x2)
                 .attr("x2", x2)
-                .attr("y1", d.y - 4)
-                .attr("y2", d.y + 4);
+                .attr("y1", node.y - 4)
+                .attr("y2", node.y + 4);
         });
 
-    /*
-     * Collapsed triangles.
-     */
-    root.descendants()
-        .filter(d =>
-            isCollapsed(d) &&
-            !d.data.hidden
+    /* --------------------------------------------------------
+       Collapsed clades
+       -------------------------------------------------------- */
+
+    state.root.descendants()
+        .filter(node =>
+            isCollapsed(node) &&
+            isDisplayableNode(node)
         )
-        .forEach(d => {
+        .forEach(node => {
             drawCollapsedTriangle(
+                state,
                 scene,
-                d,
+                node,
                 xScale,
                 yScale
             );
         });
 
-    /*
-     * Visible nodes.
-     */
-    const visibleNodes =
-        root.descendants()
-            .filter(d => !d.data.hidden);
+    /* --------------------------------------------------------
+       Visible nodes
+       -------------------------------------------------------- */
 
-    const nodes = scene.append("g")
-        .selectAll("g")
-        .data(visibleNodes)
+    const visibleNodes =
+        state.root.descendants()
+            .filter(isDisplayableNode);
+
+    const nodeSelection = scene.append("g")
+        .attr("class", "nodes-group")
+        .selectAll("g.node")
+        .data(
+            visibleNodes,
+            node => node._viewerNodeId
+        )
         .join("g")
-        .attr("class", d => {
+        .attr("class", node => {
             const classes = ["node"];
 
-            if (d === root) {
+            if (node === state.root) {
                 classes.push("root-node");
             }
 
-            if (isTip(d)) {
+            if (isTip(node)) {
                 classes.push("leaf-node");
             } else {
                 classes.push("internal-node");
             }
 
-            if (selectedTips.includes(d)) {
+            if (state.selectedTips.includes(node)) {
                 classes.push("selected-tip");
             }
 
-            if (selectedMRCA === d) {
+            if (state.selectedMRCA === node) {
                 classes.push("mrca-node");
             }
 
-            if (selectedInternalNode === d) {
-                classes.push("internal-selected");
+            if (
+                state.selectedInternalNode === node
+            ) {
+                classes.push(
+                    "internal-selected"
+                );
             }
 
             return classes.join(" ");
         })
         .attr(
             "transform",
-            d => `translate(${d.x},${d.y})`
+            node =>
+                `translate(${node.x},${node.y})`
         )
-        .on("click", (event, d) => {
+        .on("click", (event, node) => {
             event.stopPropagation();
 
-            if (isTip(d)) {
-                toggleTipSelection(d);
+            if (isTip(node)) {
+                toggleTipSelection(state, node);
             } else {
-                selectedInternalNode = d;
-
-                renderTree();
-                reportNode(d);
+                selectInternalNode(state, node);
             }
         })
-        .on("dblclick", (event, d) => {
+        .on("dblclick", (event, node) => {
             event.stopPropagation();
 
-            if (d === root || isTip(d)) {
+            if (
+                node === state.root ||
+                isTip(node)
+            ) {
                 return;
             }
 
-            if (d.children) {
-                d._children = d.children;
-                d.children = null;
-            } else if (isCollapsed(d)) {
-                d.children = d._children;
-                d._children = null;
+            setActiveTree(state);
+
+            if (node.children) {
+                collapseNode(node);
+            } else if (isCollapsed(node)) {
+                expandNode(node);
             }
 
-            renderTree();
-            reportMRCA();
+            renderTree(state);
+            reportMRCA(state);
         })
-        .on("mousemove", showTooltip)
+        .on("mousemove", (event, node) => {
+            showTooltip(event, state, node);
+        })
         .on("mouseleave", hideTooltip);
 
-    /*
-     * Large invisible click targets.
-     */
-    nodes.append("circle")
+    nodeSelection.append("circle")
         .attr("class", "node-hit-area")
-        .attr("r", d => {
-            if (d === root) return 15;
-            if (!isTip(d)) return 12;
+        .attr("r", node => {
+            if (node === state.root) {
+                return 15;
+            }
+
+            if (!isTip(node)) {
+                return 12;
+            }
+
             return 8;
         });
 
-    /*
-     * Visible node markers.
-     */
-    nodes.append("circle")
+    nodeSelection.append("circle")
         .attr("class", "visible-node")
-        .attr("r", d => {
-            if (d === root) return 6;
-            if (!isTip(d)) return 4.2;
+        .attr("r", node => {
+            if (node === state.root) {
+                return 6;
+            }
+
+            if (!isTip(node)) {
+                return 4.2;
+            }
+
             return 3.2;
         });
 
-    /*
-     * Tip names remain visible after sorting because the code
-     * tests isTip(d), not d.children directly.
-     */
-    nodes.append("text")
-        .attr("class", d => {
+    nodeSelection.append("text")
+        .attr("class", node => {
             const classes = ["label"];
 
-            if (isTip(d)) {
+            if (isTip(node)) {
                 classes.push("leaf-label");
             }
 
-            if (selectedTips.includes(d)) {
+            if (
+                state.selectedTips.includes(node)
+            ) {
                 classes.push("selected-label");
             }
 
-            if (selectedMRCA === d) {
+            if (state.selectedMRCA === node) {
                 classes.push("mrca-label");
             }
 
-            if (selectedInternalNode === d) {
-                classes.push("internal-selected-label");
+            if (
+                state.selectedInternalNode === node
+            ) {
+                classes.push(
+                    "internal-selected-label"
+                );
             }
 
             return classes.join(" ");
         })
         .attr(
             "x",
-            d => isTip(d) ? 9 : -9
+            node => isTip(node) ? 9 : -9
         )
         .attr(
             "text-anchor",
-            d => isTip(d) ? "start" : "end"
+            node => isTip(node) ? "start" : "end"
         )
-        .text(d => {
-            if (isTip(d)) {
-                return cleanLabel(d.data.name);
-            }
-
-            return "";
+        .text(node => {
+            return isTip(node)
+                ? cleanLabel(node.data.name)
+                : "";
         })
-        .on("click", (event, d) => {
+        .on("click", (event, node) => {
             event.stopPropagation();
 
-            if (isTip(d)) {
-                toggleTipSelection(d);
+            if (isTip(node)) {
+                toggleTipSelection(state, node);
             }
         })
-        .on("dblclick", (event, d) => {
+        .on("dblclick", (event, node) => {
             event.stopPropagation();
 
-            if (isTip(d)) {
-                editTipName(d);
+            if (isTip(node)) {
+                setActiveTree(state);
+                editTipName(state, node);
             }
         });
 
-    /*
-     * Root label.
-     */
-    nodes
-        .filter(d => d === root)
+    nodeSelection
+        .filter(node => node === state.root)
         .append("text")
         .attr("class", "root-label")
         .attr("x", 11)
         .attr("y", -11)
         .text("Root / oldest");
 
-    /*
-     * Timeline.
-     */
+    /* --------------------------------------------------------
+       Time axis
+       -------------------------------------------------------- */
+
     const axis = d3.axisBottom(xScale)
         .ticks(8)
-        .tickFormat(d => Number(d).toFixed(1));
+        .tickFormat(value =>
+            Number(value).toFixed(1)
+        );
 
     scene.append("g")
         .attr("class", "axis")
         .attr(
             "transform",
-            `translate(0,${height - margin.bottom + 20})`
+            `translate(0,${
+                drawingHeight -
+                margin.bottom +
+                20
+            })`
         )
         .call(axis);
 
     scene.append("text")
         .attr("class", "axis-title")
         .attr("x", width / 2)
-        .attr("y", height - 12)
+        .attr("y", drawingHeight - 12)
         .attr("text-anchor", "middle")
         .text("Time before present");
 
-    /*
-     * Rotation and zoom.
-     */
+    /* --------------------------------------------------------
+       Rotation and zoom
+       -------------------------------------------------------- */
+
     function applySceneTransform(transform) {
         scene.attr(
             "transform",
-            `${transform} rotate(${rotation},${width / 2},${height / 2})`
+            `${transform.toString()} ` +
+            `rotate(` +
+            `${state.rotation},` +
+            `${width / 2},` +
+            `${drawingHeight / 2}` +
+            `)`
         );
     }
 
-    zoomBehavior = d3.zoom()
+    state.zoomBehavior = d3.zoom()
         .scaleExtent([MIN_ZOOM, MAX_ZOOM])
-        .wheelDelta(event => -event.deltaY * 0.003)
+        .wheelDelta(event =>
+            -event.deltaY * 0.003
+        )
+        .on("start", () => {
+            setActiveTree(state);
+        })
         .on("zoom", event => {
-            applySceneTransform(event.transform);
+            state.currentTransform =
+                event.transform;
+
+            applySceneTransform(
+                event.transform
+            );
         });
 
-    svg.call(zoomBehavior);
+    svg.call(state.zoomBehavior);
+
+    /*
+     * Restore the transform that existed before rerendering.
+     */
+    svg.property("__zoom", currentTransform);
+
+    state.currentTransform = currentTransform;
     applySceneTransform(currentTransform);
 
-    updateStatus();
-    applySearch();
+    updateTreePanelStatus(state);
+    updateGlobalStatus();
+    applySearchToTree(state);
 }
 
 /* ============================================================
-   Loading
+   Create a tree panel
    ============================================================ */
 
-function loadTree(text) {
-    try {
-        const newick = extractNewick(text);
+function createTreeState(name, parsedTree) {
+    const root = d3.hierarchy(
+        parsedTree,
+        data => data.children
+    );
 
-        if (!newick || !newick.includes("(")) {
-            throw new Error(
-                "No valid Newick tree was found."
-            );
-        }
-
-        const parsed = parseNewick(newick);
-
-        root = d3.hierarchy(
-            parsed,
-            d => d.children
+    if (!root || getTipCount(root) === 0) {
+        throw new Error(
+            "The parsed tree contains no tips."
         );
+    }
 
-        if (!root || root.leaves().length === 0) {
-            throw new Error(
-                "The parsed tree contains no tips."
-            );
+    assignNodeIds(root);
+    saveOriginalChildOrder(root);
+
+    const state = {
+        id: ++treeIdCounter,
+        name: name || `Tree ${treeIdCounter}`,
+        root,
+        panel: null,
+        panelStatus: null,
+        viewer: null,
+        svg: null,
+        zoomBehavior: null,
+        currentTransform: d3.zoomIdentity,
+        selectedTips: [],
+        selectedMRCA: null,
+        selectedInternalNode: null,
+        tipSort: "original",
+        rotation: 0
+    };
+
+    const panel = document.createElement("section");
+    panel.className = "tree-panel";
+    panel.dataset.treeId = String(state.id);
+
+    const panelHeader =
+        document.createElement("div");
+
+    panelHeader.className =
+        "tree-panel-header";
+
+    const titleArea =
+        document.createElement("div");
+
+    titleArea.className = "tree-title-area";
+
+    const title =
+        document.createElement("h2");
+
+    title.className = "tree-title";
+    title.textContent = state.name;
+    title.title = state.name;
+
+    const panelStatus =
+        document.createElement("div");
+
+    panelStatus.className =
+        "tree-panel-status";
+
+    panelStatus.textContent =
+        "Preparing tree...";
+
+    titleArea.appendChild(title);
+    titleArea.appendChild(panelStatus);
+
+    const actionArea =
+        document.createElement("div");
+
+    actionArea.className =
+        "tree-panel-actions";
+
+    const fitButton =
+        document.createElement("button");
+
+    fitButton.type = "button";
+    fitButton.textContent = "Fit";
+    fitButton.title = "Fit this tree";
+
+    const removeButton =
+        document.createElement("button");
+
+    removeButton.type = "button";
+    removeButton.textContent = "Remove";
+    removeButton.className = "danger";
+    removeButton.title = "Remove this tree";
+
+    actionArea.appendChild(fitButton);
+    actionArea.appendChild(removeButton);
+
+    panelHeader.appendChild(titleArea);
+    panelHeader.appendChild(actionArea);
+
+    const viewer =
+        document.createElement("div");
+
+    viewer.className = "tree-viewer";
+
+    const svgElement = document.createElementNS(
+        "http://www.w3.org/2000/svg",
+        "svg"
+    );
+
+    svgElement.setAttribute(
+        "class",
+        "tree-svg"
+    );
+
+    svgElement.setAttribute(
+        "xmlns",
+        "http://www.w3.org/2000/svg"
+    );
+
+    viewer.appendChild(svgElement);
+
+    panel.appendChild(panelHeader);
+    panel.appendChild(viewer);
+    treeGrid.appendChild(panel);
+
+    state.panel = panel;
+    state.panelStatus = panelStatus;
+    state.viewer = viewer;
+    state.svg = d3.select(svgElement);
+
+    panel.addEventListener("mousedown", () => {
+        setActiveTree(state);
+    });
+
+    panelHeader.addEventListener("click", event => {
+        if (event.target.closest("button")) {
+            return;
         }
 
-        saveOriginalChildOrder(root);
+        setActiveTree(state);
+    });
 
-        selectedTips = [];
-        selectedMRCA = null;
-        selectedInternalNode = null;
-        tipSort = "original";
-        rotation = 0;
+    fitButton.addEventListener("click", event => {
+        event.stopPropagation();
+        setActiveTree(state);
+        fitTree(state);
+    });
 
-        document.getElementById("tipSort").value =
-            "original";
+    removeButton.addEventListener(
+        "click",
+        event => {
+            event.stopPropagation();
+            removeTree(state);
+        }
+    );
 
-        renderTree();
-        reportMRCA();
+    return state;
+}
 
-        status.textContent =
-            `${root.leaves().length} tips loaded`;
-    } catch (error) {
-        console.error(error);
+/* ============================================================
+   Loading trees
+   ============================================================ */
 
-        status.textContent =
-            "Could not parse tree";
+function addTreeFromNewick(name, newick) {
+    const parsed = parseNewick(newick);
+    const state = createTreeState(name, parsed);
 
-        infoBar.innerHTML = `
-            <strong class="error">
-                The tree could not be parsed:
-            </strong>
-            ${escapeHtml(error.message)}
-        `;
+    treeStates.push(state);
+    updateEmptyMessage();
+
+    renderTree(state);
+    setActiveTree(state);
+
+    return state;
+}
+
+function addTreesFromText(
+    text,
+    fallbackName = "Tree"
+) {
+    const extractedTrees =
+        extractTrees(text, fallbackName);
+
+    if (extractedTrees.length === 0) {
+        throw new Error(
+            "No valid Newick tree was found."
+        );
     }
+
+    const addedStates = [];
+    const errors = [];
+
+    extractedTrees.forEach((treeDefinition, index) => {
+        try {
+            let treeName = treeDefinition.name;
+
+            /*
+             * Add a suffix when duplicate names occur.
+             */
+            const duplicateCount = treeStates.filter(
+                state => state.name === treeName
+            ).length;
+
+            if (duplicateCount > 0) {
+                treeName =
+                    `${treeName} (${duplicateCount + 1})`;
+            }
+
+            const state = addTreeFromNewick(
+                treeName,
+                treeDefinition.newick
+            );
+
+            addedStates.push(state);
+        } catch (error) {
+            errors.push(
+                `Tree ${index + 1}: ${error.message}`
+            );
+        }
+    });
+
+    if (
+        addedStates.length === 0 &&
+        errors.length > 0
+    ) {
+        throw new Error(errors.join(" "));
+    }
+
+    return {
+        addedStates,
+        errors
+    };
+}
+
+async function loadSelectedFiles(fileList) {
+    const files = Array.from(fileList || []);
+
+    if (files.length === 0) {
+        return;
+    }
+
+    updateGlobalStatus(
+        `Reading ${files.length} file` +
+        `${files.length === 1 ? "" : "s"}...`
+    );
+
+    let addedCount = 0;
+    const errors = [];
+
+    /*
+     * Files are processed sequentially so their panel order
+     * matches the selected file order.
+     */
+    for (const file of files) {
+        try {
+            const text = await file.text();
+
+            if (!text.trim()) {
+                throw new Error("The file is empty.");
+            }
+
+            const result = addTreesFromText(
+                text,
+                fileBaseName(file.name)
+            );
+
+            addedCount += result.addedStates.length;
+
+            result.errors.forEach(message => {
+                errors.push(
+                    `${file.name}: ${message}`
+                );
+            });
+        } catch (error) {
+            console.error(error);
+
+            errors.push(
+                `${file.name}: ${error.message}`
+            );
+        }
+    }
+
+    updateEmptyMessage();
+    updateControlState();
+
+    if (errors.length > 0) {
+        showInfo(
+            "File loading result",
+            `
+                <strong>${addedCount} tree(s) added.</strong>
+                <span class="error">
+                    ${escapeHtml(errors.join(" | "))}
+                </span>
+            `
+        );
+    } else if (activeTreeState) {
+        reportMRCA(activeTreeState);
+    }
+
+    updateGlobalStatus(
+        `${addedCount} tree` +
+        `${addedCount === 1 ? "" : "s"} added; ` +
+        `${treeStates.length} displayed`
+    );
 }
 
 async function loadDefaultTree() {
+    /*
+     * Do not replace trees selected by the user while the
+     * default fetch is still running.
+     */
     try {
-        status.textContent =
-            `Loading ${DEFAULT_TREE_FILE}...`;
+        updateGlobalStatus(
+            `Loading ${DEFAULT_TREE_FILE}...`
+        );
 
         const response = await fetch(
             DEFAULT_TREE_FILE,
@@ -1969,7 +2971,8 @@ async function loadDefaultTree() {
 
         if (!response.ok) {
             throw new Error(
-                `HTTP ${response.status}: ${response.statusText}`
+                `HTTP ${response.status}: ` +
+                response.statusText
             );
         }
 
@@ -1977,305 +2980,490 @@ async function loadDefaultTree() {
 
         if (!text.trim()) {
             throw new Error(
-                "The tree file is empty."
+                "The default tree file is empty."
             );
         }
 
-        loadTree(text);
+        if (treeStates.length > 0) {
+            updateGlobalStatus();
+            return;
+        }
+
+        addTreesFromText(
+            text,
+            fileBaseName(DEFAULT_TREE_FILE)
+        );
+
+        updateGlobalStatus();
     } catch (error) {
         console.error(error);
 
-        status.textContent =
-            "Default tree unavailable";
+        if (treeStates.length === 0) {
+            updateGlobalStatus(
+                "Default tree unavailable"
+            );
 
-        infoBar.innerHTML = `
-            <strong class="error">
-                Default tree could not be loaded.
-            </strong>
-            Please choose a tree file manually.
-            <br>
-            <small>${escapeHtml(error.message)}</small>
-        `;
+            showInfo(
+                "Default tree unavailable",
+                `
+                    Please select one or more tree files manually.
+                    <br>
+                    <small class="error">
+                        ${escapeHtml(error.message)}
+                    </small>
+                `
+            );
+        }
     }
-}
-
-function updateStatus() {
-    if (!root) {
-        status.textContent = "No tree loaded";
-        return;
-    }
-
-    const hiddenCount =
-        allNodes(root).filter(
-            node => node.data.hidden
-        ).length;
-
-    status.textContent =
-        `${root.leaves().length} tips, ` +
-        `${allNodes(root).length} nodes` +
-        (hiddenCount
-            ? `, ${hiddenCount} hidden`
-            : "");
 }
 
 /* ============================================================
-   Controls
+   Fit and reset
+   ============================================================ */
+
+function fitTree(state) {
+    if (
+        !state ||
+        !state.zoomBehavior
+    ) {
+        return;
+    }
+
+    renderTree(state);
+
+    state.svg.transition()
+        .duration(300)
+        .call(
+            state.zoomBehavior.transform,
+            d3.zoomIdentity
+        );
+}
+
+function resetTree(state) {
+    if (!state) {
+        return;
+    }
+
+    state.tipSort = "original";
+    state.rotation = 0;
+    state.selectedTips = [];
+    state.selectedMRCA = null;
+    state.selectedInternalNode = null;
+
+    allNodes(state.root).forEach(node => {
+        node.data.hidden = false;
+        expandNode(node);
+    });
+
+    restoreOriginalChildOrder(state.root);
+
+    if (state === activeTreeState) {
+        document.getElementById("tipSort").value =
+            "original";
+    }
+
+    renderTree(state);
+
+    if (state.zoomBehavior) {
+        state.svg.transition()
+            .duration(300)
+            .call(
+                state.zoomBehavior.transform,
+                d3.zoomIdentity
+            );
+    }
+
+    reportMRCA(state);
+}
+
+/* ============================================================
+   SVG download
+   ============================================================ */
+
+function downloadActiveSVG() {
+    const state = activeTreeState;
+
+    if (!state) {
+        return;
+    }
+
+    const originalSvg = state.svg.node();
+    const clonedSvg = originalSvg.cloneNode(true);
+
+    clonedSvg.setAttribute(
+        "xmlns",
+        "http://www.w3.org/2000/svg"
+    );
+
+    /*
+     * Embed important SVG styling so the downloaded file works
+     * independently of this HTML page.
+     */
+    const styleElement =
+        document.createElementNS(
+            "http://www.w3.org/2000/svg",
+            "style"
+        );
+
+    styleElement.textContent = `
+        .branch {
+            fill: none;
+            stroke: #7d8a99;
+            stroke-width: 1.2;
+        }
+
+        .node-hit-area {
+            fill: transparent;
+            stroke: transparent;
+        }
+
+        .node circle.visible-node {
+            fill: white;
+            stroke: #087f8c;
+            stroke-width: 1.8;
+        }
+
+        .node.internal-node circle.visible-node {
+            fill: #f8ffff;
+        }
+
+        .node.root-node circle.visible-node {
+            fill: #f1eaff;
+            stroke: #6f42c1;
+            stroke-width: 2.8;
+        }
+
+        .node.leaf-node circle.visible-node {
+            fill: #087f8c;
+            stroke: #075f69;
+        }
+
+        .node.selected-tip circle.visible-node {
+            fill: #d9480f;
+            stroke: #8a2100;
+            stroke-width: 3;
+        }
+
+        .node.mrca-node circle.visible-node {
+            fill: #7b2cbf;
+            stroke: #4a1475;
+            stroke-width: 4;
+        }
+
+        .node.internal-selected circle.visible-node {
+            fill: #e8590c;
+            stroke: #9c2c00;
+            stroke-width: 4;
+        }
+
+        .label {
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 10.5px;
+            dominant-baseline: middle;
+        }
+
+        .selected-label {
+            fill: #d9480f;
+            font-weight: bold;
+        }
+
+        .mrca-label {
+            fill: #7b2cbf;
+            font-weight: bold;
+        }
+
+        .internal-selected-label {
+            fill: #e8590c;
+            font-weight: bold;
+        }
+
+        .root-label {
+            fill: #6f42c1;
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 11px;
+            font-weight: bold;
+        }
+
+        .hpd-line {
+            stroke: #e67700;
+            stroke-width: 2;
+        }
+
+        .hpd-cap {
+            stroke: #e67700;
+            stroke-width: 1.2;
+        }
+
+        .collapsed-triangle {
+            fill: #dbeafe;
+            stroke: #2563eb;
+            stroke-width: 1.5;
+        }
+
+        .collapsed-label {
+            fill: #1d4ed8;
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 10px;
+            font-weight: bold;
+        }
+
+        .axis path,
+        .axis line {
+            stroke: #87909b;
+        }
+
+        .axis text,
+        .axis-title {
+            fill: #4b5563;
+            font-family: Arial, Helvetica, sans-serif;
+        }
+
+        .axis text {
+            font-size: 10px;
+        }
+
+        .axis-title {
+            font-size: 11px;
+        }
+    `;
+
+    clonedSvg.insertBefore(
+        styleElement,
+        clonedSvg.firstChild
+    );
+
+    const source =
+        new XMLSerializer()
+            .serializeToString(clonedSvg);
+
+    const blob = new Blob(
+        [source],
+        {
+            type: "image/svg+xml;charset=utf-8"
+        }
+    );
+
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+
+    link.href = url;
+    link.download =
+        `${safeDownloadName(state.name)}.svg`;
+
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+
+    setTimeout(() => {
+        URL.revokeObjectURL(url);
+    }, 1000);
+}
+
+/* ============================================================
+   Main toolbar controls
    ============================================================ */
 
 document
     .getElementById("fileInput")
-    .addEventListener("change", event => {
-        const file = event.target.files[0];
+    .addEventListener("change", async event => {
+        await loadSelectedFiles(
+            event.target.files
+        );
 
-        if (!file) {
-            return;
-        }
-
-        status.textContent =
-            `Reading ${file.name}...`;
-
-        const reader = new FileReader();
-
-        reader.onload = event => {
-            loadTree(event.target.result);
-        };
-
-        reader.onerror = () => {
-            status.textContent =
-                "Could not read the selected file.";
-        };
-
-        reader.readAsText(file);
+        /*
+         * Clear the input so the same file can be selected again.
+         */
+        event.target.value = "";
     });
 
 document
     .getElementById("searchInput")
-    .addEventListener("input", applySearch);
+    .addEventListener(
+        "input",
+        applySearchToAllTrees
+    );
 
 document
     .getElementById("tipSort")
     .addEventListener("change", event => {
-        tipSort = event.target.value;
+        if (!activeTreeState) {
+            return;
+        }
 
-        if (root) {
-            renderTree();
-            reportMRCA();
+        activeTreeState.tipSort =
+            event.target.value;
+
+        renderTree(activeTreeState);
+
+        if (
+            activeTreeState.selectedInternalNode
+        ) {
+            reportNode(
+                activeTreeState,
+                activeTreeState.selectedInternalNode
+            );
+        } else {
+            reportMRCA(activeTreeState);
         }
     });
 
 document
     .getElementById("zoomInButton")
     .addEventListener("click", () => {
-        if (zoomBehavior) {
-            svg.transition()
-                .duration(250)
-                .call(
-                    zoomBehavior.scaleBy,
-                    2
-                );
+        const state = activeTreeState;
+
+        if (!state || !state.zoomBehavior) {
+            return;
         }
+
+        state.svg.transition()
+            .duration(250)
+            .call(
+                state.zoomBehavior.scaleBy,
+                2
+            );
     });
 
 document
     .getElementById("zoomOutButton")
     .addEventListener("click", () => {
-        if (zoomBehavior) {
-            svg.transition()
-                .duration(250)
-                .call(
-                    zoomBehavior.scaleBy,
-                    0.5
-                );
+        const state = activeTreeState;
+
+        if (!state || !state.zoomBehavior) {
+            return;
         }
+
+        state.svg.transition()
+            .duration(250)
+            .call(
+                state.zoomBehavior.scaleBy,
+                0.5
+            );
     });
 
 document
     .getElementById("rotateButton")
     .addEventListener("click", () => {
-        rotation = (rotation + 90) % 360;
-
-        if (root) {
-            renderTree();
+        if (!activeTreeState) {
+            return;
         }
+
+        activeTreeState.rotation =
+            (activeTreeState.rotation + 90) % 360;
+
+        renderTree(activeTreeState);
     });
 
 document
     .getElementById("focusButton")
-    .addEventListener("click", focusSelection);
+    .addEventListener("click", () => {
+        focusSelection(activeTreeState);
+    });
 
 document
     .getElementById("fitButton")
     .addEventListener("click", () => {
-        if (!root) {
-            return;
-        }
-
-        renderTree();
-
-        svg.transition()
-            .duration(300)
-            .call(
-                zoomBehavior.transform,
-                d3.zoomIdentity
-            );
-    });
-
-document
-    .getElementById("clearSelectionButton")
-    .addEventListener("click", () => {
-        selectedTips = [];
-        selectedMRCA = null;
-        selectedInternalNode = null;
-
-        renderTree();
-        reportMRCA();
-    });
-
-document
-    .getElementById("hideTipsButton")
-    .addEventListener("click", () => {
-        selectedTips.forEach(tip => {
-            tip.data.hidden = true;
-        });
-
-        selectedTips = [];
-        selectedMRCA = null;
-
-        renderTree();
-        reportMRCA();
-    });
-
-document
-    .getElementById("hideCladeButton")
-    .addEventListener("click", () => {
-        const node =
-            selectedInternalNode ||
-            selectedMRCA;
-
-        if (!node || node === root) {
-            return;
-        }
-
-        allNodes(node).forEach(child => {
-            child.data.hidden = true;
-        });
-
-        selectedTips = [];
-        selectedMRCA = null;
-        selectedInternalNode = null;
-
-        renderTree();
-        reportMRCA();
-    });
-
-document
-    .getElementById("restoreHiddenButton")
-    .addEventListener("click", () => {
-        allNodes(root).forEach(node => {
-            node.data.hidden = false;
-        });
-
-        renderTree();
-        reportMRCA();
-    });
-
-document
-    .getElementById("collapseButton")
-    .addEventListener("click", () => {
-        const node =
-            selectedInternalNode ||
-            selectedMRCA;
-
-        if (!node || node === root) {
-            return;
-        }
-
-        collapseNode(node);
-        renderTree();
-        reportMRCA();
-    });
-
-document
-    .getElementById("expandButton")
-    .addEventListener("click", () => {
-        allNodes(root).forEach(node => {
-            expandNode(node);
-        });
-
-        renderTree();
-        reportMRCA();
+        fitTree(activeTreeState);
     });
 
 document
     .getElementById("resetButton")
     .addEventListener("click", () => {
-        document.getElementById("searchInput").value = "";
+        resetTree(activeTreeState);
+    });
 
-        tipSort = "original";
-        rotation = 0;
-        selectedTips = [];
-        selectedMRCA = null;
-        selectedInternalNode = null;
+document
+    .getElementById("clearSelectionButton")
+    .addEventListener("click", () => {
+        clearSelections(activeTreeState);
+    });
 
-        document.getElementById("tipSort").value =
-            "original";
+document
+    .getElementById("hideTipsButton")
+    .addEventListener("click", () => {
+        hideSelectedTips(activeTreeState);
+    });
 
-        if (!root) {
-            return;
-        }
+document
+    .getElementById("hideCladeButton")
+    .addEventListener("click", () => {
+        hideSelectedClade(activeTreeState);
+    });
 
-        allNodes(root).forEach(node => {
-            node.data.hidden = false;
-            expandNode(node);
-        });
+document
+    .getElementById("restoreHiddenButton")
+    .addEventListener("click", () => {
+        restoreHidden(activeTreeState);
+    });
 
-        restoreOriginalChildOrder(root);
-        renderTree();
+document
+    .getElementById("collapseButton")
+    .addEventListener("click", () => {
+        collapseSelectedClade(activeTreeState);
+    });
 
-        svg.transition()
-            .duration(300)
-            .call(
-                zoomBehavior.transform,
-                d3.zoomIdentity
-            );
-
-        reportMRCA();
+document
+    .getElementById("expandButton")
+    .addEventListener("click", () => {
+        expandAllClades(activeTreeState);
     });
 
 document
     .getElementById("downloadButton")
+    .addEventListener(
+        "click",
+        downloadActiveSVG
+    );
+
+document
+    .getElementById("removeActiveButton")
     .addEventListener("click", () => {
-        const source =
-            new XMLSerializer()
-                .serializeToString(
-                    document.getElementById("treeSvg")
-                );
-
-        const blob = new Blob(
-            [source],
-            {
-                type: "image/svg+xml;charset=utf-8"
-            }
-        );
-
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement("a");
-
-        link.href = url;
-        link.download = "interactive-timetree.svg";
-        link.click();
-
-        URL.revokeObjectURL(url);
+        removeTree(activeTreeState);
     });
 
+document
+    .getElementById("clearAllButton")
+    .addEventListener("click", () => {
+        if (treeStates.length === 0) {
+            return;
+        }
+
+        const confirmed = window.confirm(
+            "Remove all displayed trees?"
+        );
+
+        if (confirmed) {
+            clearAllTrees();
+        }
+    });
+
+/* ============================================================
+   Window resizing
+   ============================================================ */
+
+let resizeTimer = null;
+
 window.addEventListener("resize", () => {
-    if (root) {
-        renderTree();
-        reportMRCA();
-    }
+    clearTimeout(resizeTimer);
+
+    resizeTimer = setTimeout(() => {
+        treeStates.forEach(state => {
+            renderTree(state);
+        });
+    }, 120);
 });
 
-/* Automatically preload the default tree */
+/* ============================================================
+   Initialization
+   ============================================================ */
+
+updateEmptyMessage();
+updateControlState();
+
+/*
+ * Automatically preload the default tree when it is available.
+ * Additional uploaded trees are appended to the viewer.
+ */
 loadDefaultTree();
 </script>
 
