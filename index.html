@@ -8,7 +8,7 @@
     content="width=device-width, initial-scale=1"
   >
 
-  <title>Interactive Timetree Viewer</title>
+  <title>timetree_viewer</title>
 
   <style>
     * {
@@ -280,6 +280,23 @@
       color: var(--muted);
       font-size: 13px;
     }
+	
+	.credits {
+      margin: 12px 2px 0;
+      padding-top: 10px;
+      color: var(--muted);
+      font-size: 13px;
+      text-align: center;
+      border-top: 1px solid var(--border);
+    }
+
+    .credits strong {
+      color: var(--text);
+    }
+
+    .credits cite {
+      font-style: italic;
+    }
 
     .timeline-title {
       fill: #20252c;
@@ -527,7 +544,7 @@
 
 <body>
   <main class="container">
-    <h1>Interactive Timetree Viewer</h1>
+    <h1>Timetree Viewer</h1>
 
     <p class="description">
       Explore a Newick or NEXUS timetree with geological ranges,
@@ -679,6 +696,17 @@
       Double-click an internal node to collapse or expand its clade.
       Geological ranges use Ma before present.
     </p>
+	<footer class="credits">
+	  <strong>Interactive Timetree Viewer</strong> was developed by
+	  ChatGPT with help from
+	  <a
+		href="https://sishuowang2022.wordpress.com/"
+		target="_blank"
+		rel="noopener noreferrer"
+	  >Sishuo Wang</a>.
+	  The default tree is from Wang &amp; Luo (2025),
+	  <cite>Systematic Biology</cite>.
+	</footer>
   </main>
 
   <aside
