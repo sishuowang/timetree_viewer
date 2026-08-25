@@ -788,185 +788,133 @@
      */
     const DEFAULT_GEOLOGY_UNIT_MA = 100;
 
-    const GEOLOGICAL_ERAS = [
-      {
-        name: "Cenozoic",
-        younger: 0,
-        older: 0.66,
-        color: "#f2f91d",
-        text: "dark"
-      },
-      {
-        name: "Mesozoic",
-        younger: 0.66,
-        older: 2.51902,
-        color: "#67c5ca",
-        text: "dark"
-      },
-      {
-        name: "Paleozoic",
-        younger: 2.51902,
-        older: 5.388,
-        color: "#99c08d",
-        text: "dark"
-      },
-      {
-        name: "Neoproterozoic",
-        younger: 5.388,
-        older: 10,
-        color: "#f29eaa",
-        text: "dark"
-      },
-      {
-        name: "Mesoproterozoic",
-        younger: 10,
-        older: 16,
-        color: "#f5b3c2",
-        text: "dark"
-      },
-      {
-        name: "Paleoproterozoic",
-        younger: 16,
-        older: 25,
-        color: "#ef7fa1",
-        text: "dark"
-      },
-      {
-        name: "Archean",
-        younger: 25,
-        older: 40.31,
-        color: "#e45b96",
-        text: "light"
-      },
-      {
-        name: "Hadean",
-        younger: 40.31,
-        older: 45.673,
-        color: "#ae4b8f",
-        text: "light"
-      }
-    ];
+const GEOLOGICAL_EONS = [
+  {
+    name: "Phanerozoic",
+    younger: 0,
+    older: 5.41,
+    color: "#9ad9dd",
+    text: "dark"
+  },
+  {
+    name: "Proterozoic",
+    younger: 5.41,
+    older: 25,
+    color: "#f2a7b8",
+    text: "dark"
+  },
+  {
+    name: "Archean",
+    younger: 25,
+    older: 40,
+    color: "#d85b91",
+    text: "light"
+  },
+  {
+    name: "Hadean",
+    younger: 40,
+    older: 46,
+    color: "#984779",
+    text: "light",
+    approximate: true
+  }
+];
 
-    const GEOLOGICAL_PERIODS = [
-      {
-        name: "Quaternary",
-        younger: 0,
-        older: 0.0258,
-        color: "#fff2a8"
-      },
-      {
-        name: "Neogene",
-        younger: 0.0258,
-        older: 0.2303,
-        color: "#ffe619"
-      },
-      {
-        name: "Paleogene",
-        younger: 0.2303,
-        older: 0.66,
-        color: "#fd9a52"
-      },
-      {
-        name: "Cretaceous",
-        younger: 0.66,
-        older: 1.45,
-        color: "#7fc64a"
-      },
-      {
-        name: "Jurassic",
-        younger: 1.45,
-        older: 2.014,
-        color: "#34b2c9"
-      },
-      {
-        name: "Triassic",
-        younger: 2.014,
-        older: 2.51902,
-        color: "#812b92",
-        text: "light"
-      },
-      {
-        name: "Permian",
-        younger: 2.51902,
-        older: 2.989,
-        color: "#ef5845"
-      },
-      {
-        name: "Carboniferous",
-        younger: 2.989,
-        older: 3.589,
-        color: "#67a6a3"
-      },
-      {
-        name: "Devonian",
-        younger: 3.589,
-        older: 4.192,
-        color: "#cb8c37"
-      },
-      {
-        name: "Silurian",
-        younger: 4.192,
-        older: 4.438,
-        color: "#b5d9a7"
-      },
-      {
-        name: "Ordovician",
-        younger: 4.438,
-        older: 4.8685,
-        color: "#009270",
-        text: "light"
-      },
-      {
-        name: "Cambrian",
-        younger: 4.8685,
-        older: 5.388,
-        color: "#7fa056"
-      },
-      {
-        name: "Ediacaran",
-        younger: 5.388,
-        older: 6.35,
-        color: "#f4b6c2"
-      },
-      {
-        name: "Cryogenian",
-        younger: 6.35,
-        older: 7.2,
-        color: "#82a5d8"
-      },
-      {
-        name: "Tonian",
-        younger: 7.2,
-        older: 10,
-        color: "#f0a7b7"
-      },
-      {
-        name: "Mesoproterozoic",
-        younger: 10,
-        older: 16,
-        color: "#f5c2ce"
-      },
-      {
-        name: "Paleoproterozoic",
-        younger: 16,
-        older: 25,
-        color: "#ef93ad"
-      },
-      {
-        name: "Archean",
-        younger: 25,
-        older: 40.31,
-        color: "#d95b91",
-        text: "light"
-      },
-      {
-        name: "Hadean",
-        younger: 40.31,
-        older: 45.673,
-        color: "#984779",
-        text: "light"
-      }
-    ];
+const GEOLOGICAL_ERAS = [
+  /*
+   * Phanerozoic eras
+   */
+  {
+    name: "Cenozoic",
+    younger: 0,
+    older: 0.66,
+    color: "#f2f91d",
+    text: "dark"
+  },
+  {
+    name: "Mesozoic",
+    younger: 0.66,
+    older: 2.52,
+    color: "#67c5ca",
+    text: "dark"
+  },
+  {
+    name: "Paleozoic",
+    younger: 2.52,
+    older: 5.41,
+    color: "#99c08d",
+    text: "dark"
+  },
+
+  /*
+   * Proterozoic eras
+   */
+  {
+    name: "Neoproterozoic",
+    younger: 5.41,
+    older: 10,
+    color: "#f29eaa",
+    text: "dark"
+  },
+  {
+    name: "Mesoproterozoic",
+    younger: 10,
+    older: 16,
+    color: "#f5b3c2",
+    text: "dark"
+  },
+  {
+    name: "Paleoproterozoic",
+    younger: 16,
+    older: 25,
+    color: "#ef7fa1",
+    text: "dark"
+  },
+
+  /*
+   * Archean eras
+   */
+  {
+    name: "Neoarchean",
+    younger: 25,
+    older: 28,
+    color: "#df719d",
+    text: "dark"
+  },
+  {
+    name: "Mesoarchean",
+    younger: 28,
+    older: 32,
+    color: "#d85b91",
+    text: "light"
+  },
+  {
+    name: "Paleoarchean",
+    younger: 32,
+    older: 36,
+    color: "#c64f89",
+    text: "light"
+  },
+  {
+    name: "Eoarchean",
+    younger: 36,
+    older: 40,
+    color: "#ad467e",
+    text: "light"
+  },
+
+  /*
+   * The Hadean has no formally defined eras.
+   */
+  {
+    name: "No formal eras",
+    younger: 40,
+    older: 46,
+    color: "#7f3d69",
+    text: "light",
+    approximate: true
+  }
+];
 
     const fileInput = document.getElementById("tree-file");
     const treeChoice = document.getElementById("tree-choice");
@@ -2062,13 +2010,24 @@
               height="${height}"
               fill="${range.color}"
             >
-              <title>${
-                escapeXml(range.name)
-              }: ${
-                formatNumber(youngerMa)
-              }–${
-                formatNumber(olderMa)
-              } Ma</title>
+<title>${
+  escapeXml(range.name)
+}
+Start: ${
+  range.approximate ? "~" : ""
+}${
+  formatNumber(olderMa)
+} Ma
+End: ${
+  youngerMa === 0
+    ? "0 Ma (Present)"
+    : `${formatNumber(youngerMa)} Ma`
+}
+Duration: ${
+  range.approximate ? "~" : ""
+}${
+  formatNumber(olderMa - youngerMa)
+} million years</title>
             </rect>
         `;
 
@@ -2183,23 +2142,23 @@
       `;
 
       if (geologyEnabled) {
-        markup += renderGeologyRow({
-          ranges: GEOLOGICAL_ERAS,
-          y: axisY + 27,
-          height: 25,
-          xScale,
-          timelineMaximum,
-          rowName: "Era/eon"
-        });
+		markup += renderGeologyRow({
+		  ranges: GEOLOGICAL_EONS,
+		  y: axisY + 27,
+		  height: 25,
+		  xScale,
+		  timelineMaximum,
+		  rowName: "Eon"
+		});
 
-        markup += renderGeologyRow({
-          ranges: GEOLOGICAL_PERIODS,
-          y: axisY + 53,
-          height: 29,
-          xScale,
-          timelineMaximum,
-          rowName: "Period"
-        });
+		markup += renderGeologyRow({
+		  ranges: GEOLOGICAL_ERAS,
+		  y: axisY + 53,
+		  height: 29,
+		  xScale,
+		  timelineMaximum,
+		  rowName: "Era"
+		});
       }
 
       return markup;
