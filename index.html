@@ -143,7 +143,7 @@
     }
 
     #tree-choice {
-      max-width: 260px;
+      max-width: 300px;
     }
 
     #timeline-units {
@@ -209,6 +209,105 @@
 
     .status-dot.error {
       background: var(--danger);
+    }
+
+    .tree-library {
+      margin-bottom: 9px;
+      padding: 9px 10px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+    }
+
+    .tree-library[hidden] {
+      display: none;
+    }
+
+    .tree-library-header {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+      margin-bottom: 7px;
+    }
+
+    .tree-library-header h2 {
+      margin: 0;
+      font-size: 15px;
+    }
+
+    .tree-library-count {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .tree-library-list {
+      display: grid;
+      grid-template-columns: repeat(
+        auto-fit,
+        minmax(min(100%, 330px), 1fr)
+      );
+      gap: 6px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .tree-library-item {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 7px;
+      min-width: 0;
+      padding: 6px 7px;
+      background: #f8f9fb;
+      border: 1px solid var(--border);
+      border-radius: 5px;
+    }
+
+    .tree-library-item.active {
+      background: #edf4ff;
+      border-color: #8eb1e8;
+      box-shadow: inset 3px 0 0 var(--blue);
+    }
+
+    .tree-library-description {
+      min-width: 0;
+    }
+
+    .tree-library-name {
+      display: block;
+      overflow: hidden;
+      color: var(--text);
+      font-weight: 700;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .tree-library-file {
+      display: block;
+      overflow: hidden;
+      color: var(--muted);
+      font-size: 12px;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .remove-tree-button {
+      min-height: 28px;
+      padding: 3px 8px;
+      color: var(--danger);
+      background: #ffffff;
+      border-color: #d9aaaa;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .remove-tree-button:hover {
+      color: #ffffff;
+      background: var(--danger);
+      border-color: var(--danger);
     }
 
     .tree-container {
@@ -553,6 +652,10 @@
       .tree-container {
         max-height: 71vh;
       }
+
+      .tree-library-list {
+        grid-template-columns: 1fr;
+      }
     }
   </style>
 </head>
@@ -562,7 +665,7 @@
     <h1>Timetree Viewer</h1>
 
     <p class="description">
-      Explore a Newick or NEXUS timetree with geological ranges,
+      Explore Newick or NEXUS timetrees with geological ranges,
       confidence intervals, MRCA timing, clade sorting, and editable tips.
     </p>
 
@@ -571,6 +674,7 @@
         id="tree-file"
         type="file"
         accept=".tre,.tree,.trees,.nex,.nexus,.nwk,.newick,text/plain"
+        multiple
       >
 
       <label class="file-button" for="tree-file">
@@ -684,6 +788,27 @@
     </div>
 
     <section
+      id="tree-library"
+      class="tree-library"
+      aria-labelledby="tree-library-heading"
+      hidden
+    >
+      <div class="tree-library-header">
+        <h2 id="tree-library-heading">Loaded trees</h2>
+
+        <span
+          id="tree-library-count"
+          class="tree-library-count"
+        ></span>
+      </div>
+
+      <ul
+        id="tree-library-list"
+        class="tree-library-list"
+      ></ul>
+    </section>
+
+    <section
       id="tree-container"
       class="tree-container"
       aria-label="Timetree display"
@@ -695,7 +820,7 @@
       ></svg>
 
       <div id="empty-tree-message" class="empty-tree-message">
-        Upload a NEXUS or Newick tree file, or drop it here.
+        Upload one or more NEXUS or Newick files, or drop them here.
       </div>
     </section>
 
@@ -777,144 +902,120 @@
     const DEFAULT_TREE_FILE = "Wang_Luo_2025_FigTree.tre";
     const DOUBLE_CLICK_DELAY = 280;
     const SVG_NS = "http://www.w3.org/2000/svg";
-
-    /*
-     * The stored geological boundaries use the original scale:
-     *
-     *   1 stored geological unit = 100 Ma
-     *
-     * The geological scale control converts these stored coordinates
-     * into the branch-length units used by the imported tree.
-     */
     const DEFAULT_GEOLOGY_UNIT_MA = 100;
 
-const GEOLOGICAL_EONS = [
-  {
-    name: "Phanerozoic",
-    younger: 0,
-    older: 5.41,
-    color: "#9ad9dd",
-    text: "dark"
-  },
-  {
-    name: "Proterozoic",
-    younger: 5.41,
-    older: 25,
-    color: "#f2a7b8",
-    text: "dark"
-  },
-  {
-    name: "Archean",
-    younger: 25,
-    older: 40,
-    color: "#d85b91",
-    text: "light"
-  },
-  {
-    name: "Hadean",
-    younger: 40,
-    older: 46,
-    color: "#984779",
-    text: "light",
-    approximate: true
-  }
-];
+    const GEOLOGICAL_EONS = [
+      {
+        name: "Phanerozoic",
+        younger: 0,
+        older: 5.41,
+        color: "#9ad9dd",
+        text: "dark"
+      },
+      {
+        name: "Proterozoic",
+        younger: 5.41,
+        older: 25,
+        color: "#f2a7b8",
+        text: "dark"
+      },
+      {
+        name: "Archean",
+        younger: 25,
+        older: 40,
+        color: "#d85b91",
+        text: "light"
+      },
+      {
+        name: "Hadean",
+        younger: 40,
+        older: 46,
+        color: "#984779",
+        text: "light",
+        approximate: true
+      }
+    ];
 
-const GEOLOGICAL_ERAS = [
-  /*
-   * Phanerozoic eras
-   */
-  {
-    name: "Cenozoic",
-    younger: 0,
-    older: 0.66,
-    color: "#f2f91d",
-    text: "dark"
-  },
-  {
-    name: "Mesozoic",
-    younger: 0.66,
-    older: 2.52,
-    color: "#67c5ca",
-    text: "dark"
-  },
-  {
-    name: "Paleozoic",
-    younger: 2.52,
-    older: 5.41,
-    color: "#99c08d",
-    text: "dark"
-  },
-
-  /*
-   * Proterozoic eras
-   */
-  {
-    name: "Neoproterozoic",
-    younger: 5.41,
-    older: 10,
-    color: "#f29eaa",
-    text: "dark"
-  },
-  {
-    name: "Mesoproterozoic",
-    younger: 10,
-    older: 16,
-    color: "#f5b3c2",
-    text: "dark"
-  },
-  {
-    name: "Paleoproterozoic",
-    younger: 16,
-    older: 25,
-    color: "#ef7fa1",
-    text: "dark"
-  },
-
-  /*
-   * Archean eras
-   */
-  {
-    name: "Neoarchean",
-    younger: 25,
-    older: 28,
-    color: "#df719d",
-    text: "dark"
-  },
-  {
-    name: "Mesoarchean",
-    younger: 28,
-    older: 32,
-    color: "#d85b91",
-    text: "light"
-  },
-  {
-    name: "Paleoarchean",
-    younger: 32,
-    older: 36,
-    color: "#c64f89",
-    text: "light"
-  },
-  {
-    name: "Eoarchean",
-    younger: 36,
-    older: 40,
-    color: "#ad467e",
-    text: "light"
-  },
-
-  /*
-   * The Hadean has no formally defined eras.
-   */
-  {
-    name: "No formal eras",
-    younger: 40,
-    older: 46,
-    color: "#7f3d69",
-    text: "light",
-    approximate: true
-  }
-];
+    const GEOLOGICAL_ERAS = [
+      {
+        name: "Cenozoic",
+        younger: 0,
+        older: 0.66,
+        color: "#f2f91d",
+        text: "dark"
+      },
+      {
+        name: "Mesozoic",
+        younger: 0.66,
+        older: 2.52,
+        color: "#67c5ca",
+        text: "dark"
+      },
+      {
+        name: "Paleozoic",
+        younger: 2.52,
+        older: 5.41,
+        color: "#99c08d",
+        text: "dark"
+      },
+      {
+        name: "Neoproterozoic",
+        younger: 5.41,
+        older: 10,
+        color: "#f29eaa",
+        text: "dark"
+      },
+      {
+        name: "Mesoproterozoic",
+        younger: 10,
+        older: 16,
+        color: "#f5b3c2",
+        text: "dark"
+      },
+      {
+        name: "Paleoproterozoic",
+        younger: 16,
+        older: 25,
+        color: "#ef7fa1",
+        text: "dark"
+      },
+      {
+        name: "Neoarchean",
+        younger: 25,
+        older: 28,
+        color: "#df719d",
+        text: "dark"
+      },
+      {
+        name: "Mesoarchean",
+        younger: 28,
+        older: 32,
+        color: "#d85b91",
+        text: "light"
+      },
+      {
+        name: "Paleoarchean",
+        younger: 32,
+        older: 36,
+        color: "#c64f89",
+        text: "light"
+      },
+      {
+        name: "Eoarchean",
+        younger: 36,
+        older: 40,
+        color: "#ad467e",
+        text: "light"
+      },
+      {
+        name: "No formal eras",
+        younger: 40,
+        older: 46,
+        color: "#7f3d69",
+        text: "light",
+        approximate: true
+      }
+    ];
 
     const fileInput = document.getElementById("tree-file");
     const treeChoice = document.getElementById("tree-choice");
@@ -922,15 +1023,26 @@ const GEOLOGICAL_ERAS = [
     const timelineUnits = document.getElementById("timeline-units");
     const tickIntervalInput = document.getElementById("tick-interval");
     const showGeologyInput = document.getElementById("show-geology");
+
     const geologyUnitMaInput = document.getElementById(
       "geology-unit-ma"
     );
+
     const geologyScaleControl = document.querySelector(
       ".geology-scale-control"
     );
 
+    const treeLibrary = document.getElementById("tree-library");
+    const treeLibraryList = document.getElementById(
+      "tree-library-list"
+    );
+    const treeLibraryCount = document.getElementById(
+      "tree-library-count"
+    );
+
     const treeContainer = document.getElementById("tree-container");
     const treeSvg = document.getElementById("tree-svg");
+
     const emptyTreeMessage = document.getElementById(
       "empty-tree-message"
     );
@@ -939,17 +1051,21 @@ const GEOLOGICAL_ERAS = [
     const statusText = document.getElementById("status-text");
 
     const mrcaDetails = document.getElementById("mrca-details");
+
     const selectedNodeDetails = document.getElementById(
       "selected-node-details"
     );
 
     const tipEditor = document.getElementById("tip-editor");
+
     const tipEditorInput = document.getElementById(
       "tip-editor-input"
     );
+
     const tipEditorSave = document.getElementById(
       "tip-editor-save"
     );
+
     const tipEditorCancel = document.getElementById(
       "tip-editor-cancel"
     );
@@ -957,7 +1073,10 @@ const GEOLOGICAL_ERAS = [
     let loadedTrees = [];
     let root = null;
     let currentFileName = "";
+
     let nodeSequence = 0;
+    let treeRecordSequence = 0;
+    let activeTreeId = null;
 
     let selectedNode = null;
     let selectedTips = [];
@@ -969,6 +1088,12 @@ const GEOLOGICAL_ERAS = [
 
     let lastLayoutById = new Map();
     let pendingSvgClickTimer = null;
+
+    /*
+     * Once the user selects or drops a file, the delayed default-tree
+     * request is not allowed to replace the user's collection.
+     */
+    let userFileInteraction = false;
 
     function cancelPendingSvgClick() {
       if (pendingSvgClickTimer !== null) {
@@ -1143,17 +1268,6 @@ const GEOLOGICAL_ERAS = [
       return map;
     }
 
-    /*
-     * Extracts standalone Newick trees.
-     *
-     * This supports:
-     *   (A,B);
-     *   (C,D);
-     *
-     * It also supports consecutive balanced trees without semicolons:
-     *   (A,B)
-     *   (C,D)
-     */
     function extractStandaloneNewickTrees(text) {
       const statements = [];
 
@@ -1477,6 +1591,7 @@ const GEOLOGICAL_ERAS = [
         this.skipWhitespace();
 
         const remaining = this.text.slice(this.position);
+
         const match = remaining.match(
           /^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?/
         );
@@ -1662,9 +1777,7 @@ const GEOLOGICAL_ERAS = [
       }
 
       return node.children.reduce(
-        (sum, child) => {
-          return sum + countTips(child, visibleOnly);
-        },
+        (sum, child) => sum + countTips(child, visibleOnly),
         0
       );
     }
@@ -1689,10 +1802,6 @@ const GEOLOGICAL_ERAS = [
       return maximum > 0 ? maximum : 1;
     }
 
-    /*
-     * Select a readable interval using the standard sequence:
-     * 1, 2, 2.5, 5, 10 multiplied by a power of ten.
-     */
     function calculateAutomaticTickInterval(
       maximumAge,
       targetTickCount = 8
@@ -1735,6 +1844,7 @@ const GEOLOGICAL_ERAS = [
       }
 
       const maximumAge = maximumTimelineAge(treeRoot);
+
       const interval = calculateAutomaticTickInterval(
         maximumAge
       );
@@ -1758,16 +1868,12 @@ const GEOLOGICAL_ERAS = [
       return value;
     }
 
-    /*
-     * Return the number of Ma represented by one imported-tree unit.
-     * Invalid values temporarily use the default while the field is
-     * being edited.
-     */
     function getGeologyUnitMa() {
       const value = Number(geologyUnitMaInput.value);
 
       if (Number.isFinite(value) && value > 0) {
         geologyScaleControl.classList.remove("invalid");
+
         geologyUnitMaInput.setAttribute(
           "aria-invalid",
           "false"
@@ -1777,6 +1883,7 @@ const GEOLOGICAL_ERAS = [
       }
 
       geologyScaleControl.classList.add("invalid");
+
       geologyUnitMaInput.setAttribute(
         "aria-invalid",
         "true"
@@ -1960,10 +2067,6 @@ const GEOLOGICAL_ERAS = [
 
       const geologyUnitMa = getGeologyUnitMa();
 
-      /*
-       * The stored ranges use 100 Ma per coordinate unit.
-       * Convert them to the imported tree's coordinate units.
-       */
       const coordinateMultiplier =
         DEFAULT_GEOLOGY_UNIT_MA / geologyUnitMa;
 
@@ -2010,24 +2113,16 @@ const GEOLOGICAL_ERAS = [
               height="${height}"
               fill="${range.color}"
             >
-<title>${
-  escapeXml(range.name)
-}
-Start: ${
-  range.approximate ? "~" : ""
-}${
-  formatNumber(olderMa)
-} Ma
+              <title>${escapeXml(range.name)}
+Start: ${range.approximate ? "~" : ""}${formatNumber(olderMa)} Ma
 End: ${
   youngerMa === 0
     ? "0 Ma (Present)"
     : `${formatNumber(youngerMa)} Ma`
 }
-Duration: ${
-  range.approximate ? "~" : ""
-}${
-  formatNumber(olderMa - youngerMa)
-} million years</title>
+Duration: ${range.approximate ? "~" : ""}${formatNumber(
+          olderMa - youngerMa
+        )} million years</title>
             </rect>
         `;
 
@@ -2142,23 +2237,23 @@ Duration: ${
       `;
 
       if (geologyEnabled) {
-		markup += renderGeologyRow({
-		  ranges: GEOLOGICAL_EONS,
-		  y: axisY + 27,
-		  height: 25,
-		  xScale,
-		  timelineMaximum,
-		  rowName: "Eon"
-		});
+        markup += renderGeologyRow({
+          ranges: GEOLOGICAL_EONS,
+          y: axisY + 27,
+          height: 25,
+          xScale,
+          timelineMaximum,
+          rowName: "Eon"
+        });
 
-		markup += renderGeologyRow({
-		  ranges: GEOLOGICAL_ERAS,
-		  y: axisY + 53,
-		  height: 29,
-		  xScale,
-		  timelineMaximum,
-		  rowName: "Era"
-		});
+        markup += renderGeologyRow({
+          ranges: GEOLOGICAL_ERAS,
+          y: axisY + 53,
+          height: 29,
+          xScale,
+          timelineMaximum,
+          rowName: "Era"
+        });
       }
 
       return markup;
@@ -2216,6 +2311,7 @@ Duration: ${
         node.children.length > 0
       ) {
         const visibleTips = countTips(node, true);
+
         const triangleHeight = Math.min(
           22,
           Math.max(7, 4 + Math.log2(visibleTips + 1) * 3)
@@ -2372,6 +2468,7 @@ Duration: ${
         emptyTreeMessage.hidden = false;
         emptyTreeMessage.textContent =
           "All tips are hidden. Use Restore hidden.";
+
         updateInformationPanels();
         return;
       }
@@ -2421,6 +2518,7 @@ Duration: ${
         "viewBox",
         `0 0 ${baseWidth} ${baseHeight}`
       );
+
       treeSvg.setAttribute("width", baseWidth * zoomScale);
       treeSvg.setAttribute("height", baseHeight * zoomScale);
 
@@ -2521,6 +2619,7 @@ Duration: ${
             The MRCA could not be calculated.
           </p>
         `;
+
         return;
       }
 
@@ -2577,6 +2676,10 @@ Duration: ${
       });
 
       return result;
+    }
+
+    function findTreeById(treeId) {
+      return loadedTrees.find(tree => tree.id === treeId) || null;
     }
 
     function selectTip(tip) {
@@ -2680,13 +2783,87 @@ Duration: ${
       editingTip = null;
     }
 
-    function populateTreeChoice(selectedIndex = null) {
+    function renderTreeLibrary() {
+      treeLibraryList.innerHTML = "";
+
+      if (loadedTrees.length === 0) {
+        treeLibrary.hidden = true;
+        treeLibraryCount.textContent = "";
+        return;
+      }
+
+      treeLibrary.hidden = false;
+
+      treeLibraryCount.textContent =
+        `${loadedTrees.length} tree${
+          loadedTrees.length === 1 ? "" : "s"
+        } loaded`;
+
+      loadedTrees.forEach((tree, index) => {
+        const item = document.createElement("li");
+
+        item.className = "tree-library-item";
+
+        if (tree.id === activeTreeId) {
+          item.classList.add("active");
+        }
+
+        const description = document.createElement("div");
+        description.className = "tree-library-description";
+
+        const name = document.createElement("span");
+        name.className = "tree-library-name";
+        name.textContent = `${index + 1}. ${tree.name}`;
+        name.title = tree.name;
+
+        const file = document.createElement("span");
+        file.className = "tree-library-file";
+        file.textContent = tree.fileName || "Uploaded tree";
+        file.title = tree.fileName || "Uploaded tree";
+
+        description.append(name, file);
+
+        const removeButton = document.createElement("button");
+
+        removeButton.type = "button";
+        removeButton.className = "remove-tree-button";
+        removeButton.dataset.removeTreeId = tree.id;
+        removeButton.textContent = "Remove";
+
+        removeButton.setAttribute(
+          "aria-label",
+          `Remove ${tree.name} from ${
+            tree.fileName || "Uploaded tree"
+          }`
+        );
+
+        item.append(description, removeButton);
+        treeLibraryList.appendChild(item);
+      });
+    }
+
+    function populateTreeChoice(
+      selectedTreeId = activeTreeId
+    ) {
       treeChoice.innerHTML = "";
+
+      if (loadedTrees.length === 0) {
+        const option = document.createElement("option");
+
+        option.textContent = "No tree loaded";
+        option.value = "";
+
+        treeChoice.appendChild(option);
+        treeChoice.disabled = true;
+
+        renderTreeLibrary();
+        return;
+      }
 
       loadedTrees.forEach((tree, index) => {
         const option = document.createElement("option");
 
-        option.value = String(index);
+        option.value = tree.id;
 
         const fileLabel =
           tree.fileName || "Uploaded tree";
@@ -2702,15 +2879,41 @@ Duration: ${
 
       treeChoice.disabled = loadedTrees.length <= 1;
 
-      if (
-        selectedIndex !== null &&
-        loadedTrees[selectedIndex]
-      ) {
-        treeChoice.value = String(selectedIndex);
+      const selectedTree =
+        findTreeById(selectedTreeId) || loadedTrees[0];
+
+      treeChoice.value = selectedTree.id;
+
+      renderTreeLibrary();
+    }
+
+    function updateCurrentTreeStatus(treeRecord) {
+      if (!treeRecord || !root) {
+        return;
       }
+
+      const currentIndex =
+        loadedTrees.findIndex(
+          tree => tree.id === treeRecord.id
+        ) + 1;
+
+      setStatus(
+        `<strong>${escapeHtml(
+          treeRecord.fileName || "Uploaded tree"
+        )}</strong> — ` +
+        `tree ${currentIndex} of ${loadedTrees.length}: ` +
+        `${escapeHtml(treeRecord.name)}, ` +
+        `${countTips(root)} tips, ` +
+        `root age ${formatNumber(root.age)}`,
+        "success"
+      );
     }
 
     function parseAndDisplayTree(treeRecord) {
+      if (!treeRecord) {
+        return;
+      }
+
       nodeSequence = 0;
 
       const parser = new NewickParser(treeRecord.newick);
@@ -2724,6 +2927,8 @@ Duration: ${
       calculateAges(parsedRoot);
 
       root = parsedRoot;
+      activeTreeId = treeRecord.id;
+
       currentFileName =
         treeRecord.fileName || "Uploaded tree";
 
@@ -2734,10 +2939,8 @@ Duration: ${
       sortClades.value = "original";
       showGeologyInput.checked = true;
 
-      /*
-       * Calculate a new timeline interval for the selected tree.
-       */
       applyAutomaticTimelineScale(root);
+      populateTreeChoice(activeTreeId);
 
       renderTree({
         preserveScroll: false,
@@ -2747,17 +2950,98 @@ Duration: ${
       treeContainer.scrollLeft = 0;
       treeContainer.scrollTop = 0;
 
-      const currentIndex =
-        loadedTrees.indexOf(treeRecord) + 1;
+      updateCurrentTreeStatus(treeRecord);
+    }
 
-      setStatus(
-        `<strong>${escapeHtml(currentFileName)}</strong> — ` +
-        `tree ${currentIndex} of ${loadedTrees.length}: ` +
-        `${escapeHtml(treeRecord.name)}, ` +
-        `${countTips(root)} tips, ` +
-        `root age ${formatNumber(root.age)}`,
-        "success"
+    function clearDisplayedTree({
+      message = "Upload one or more NEXUS or Newick files, or drop them here.",
+      statusMessage = "No trees are loaded."
+    } = {}) {
+      cancelPendingSvgClick();
+      closeTipEditor();
+
+      root = null;
+      activeTreeId = null;
+      currentFileName = "";
+
+      selectedNode = null;
+      selectedTips = [];
+      editingTip = null;
+
+      lastLayoutById = new Map();
+
+      zoomScale = 1;
+      baseWidth = 1200;
+      baseHeight = 600;
+
+      treeSvg.innerHTML = "";
+      treeSvg.removeAttribute("viewBox");
+      treeSvg.removeAttribute("width");
+      treeSvg.removeAttribute("height");
+
+      emptyTreeMessage.hidden = false;
+      emptyTreeMessage.textContent = message;
+
+      populateTreeChoice(null);
+      updateInformationPanels();
+
+      treeContainer.scrollLeft = 0;
+      treeContainer.scrollTop = 0;
+
+      setStatus(statusMessage);
+    }
+
+    function removeLoadedTree(treeId) {
+      const removalIndex = loadedTrees.findIndex(
+        tree => tree.id === treeId
       );
+
+      if (removalIndex < 0) {
+        return;
+      }
+
+      cancelPendingSvgClick();
+      closeTipEditor();
+
+      const removedTree = loadedTrees[removalIndex];
+      const removingActiveTree =
+        removedTree.id === activeTreeId;
+
+      loadedTrees.splice(removalIndex, 1);
+
+      if (loadedTrees.length === 0) {
+        clearDisplayedTree({
+          message:
+            "All trees have been removed. Upload or drop another tree file.",
+          statusMessage:
+            `<strong>${escapeHtml(
+              removedTree.name
+            )}</strong> was removed. No trees are loaded.`
+        });
+
+        return;
+      }
+
+      if (removingActiveTree) {
+        const nextIndex = Math.min(
+          removalIndex,
+          loadedTrees.length - 1
+        );
+
+        const nextTree = loadedTrees[nextIndex];
+
+        populateTreeChoice(nextTree.id);
+        parseAndDisplayTree(nextTree);
+        return;
+      }
+
+      populateTreeChoice(activeTreeId);
+
+      const activeTree = findTreeById(activeTreeId);
+
+      if (activeTree && root) {
+        updateCurrentTreeStatus(activeTree);
+      }
     }
 
     function loadTreeText(
@@ -2781,14 +3065,10 @@ Duration: ${
         const sourceFileName =
           fileName || "Uploaded tree";
 
-        /*
-         * Store the source filename and translation map with
-         * every tree. This is necessary because separate NEXUS
-         * files may use different TRANSLATE blocks.
-         */
         const newTreeRecords = extractedTrees.map(
           (tree, index) => ({
             ...tree,
+            id: `tree-record-${++treeRecordSequence}`,
             fileName: sourceFileName,
             translations: new Map(fileTranslations),
             sourceTreeIndex: index
@@ -2796,8 +3076,7 @@ Duration: ${
         );
 
         /*
-         * Validate every new tree before changing loadedTrees.
-         * If one is malformed, the existing collection remains.
+         * Validate every tree before modifying the collection.
          */
         for (const treeRecord of newTreeRecords) {
           nodeSequence = 0;
@@ -2811,39 +3090,31 @@ Duration: ${
 
         if (!append) {
           loadedTrees = [];
+          activeTreeId = null;
         }
-
-        const firstNewTreeIndex = loadedTrees.length;
 
         loadedTrees.push(...newTreeRecords);
 
-        populateTreeChoice(firstNewTreeIndex);
+        const firstNewTree = newTreeRecords[0];
 
-        /*
-         * Display the first tree from the newly uploaded file.
-         */
-        parseAndDisplayTree(
-          loadedTrees[firstNewTreeIndex]
-        );
+        populateTreeChoice(firstNewTree.id);
+        parseAndDisplayTree(firstNewTree);
+
+        return true;
       } catch (error) {
         console.error(error);
 
-        /*
-         * Do not remove previously loaded trees when a later
-         * upload fails.
-         */
         if (loadedTrees.length === 0) {
           root = null;
+          activeTreeId = null;
+
           treeSvg.innerHTML = "";
 
           emptyTreeMessage.hidden = false;
           emptyTreeMessage.textContent =
             "The tree could not be displayed.";
 
-          treeChoice.innerHTML =
-            "<option>No tree loaded</option>";
-
-          treeChoice.disabled = true;
+          populateTreeChoice(null);
           updateInformationPanels();
         }
 
@@ -2852,12 +3123,14 @@ Duration: ${
           escapeHtml(error.message),
           "error"
         );
+
+        return false;
       }
     }
 
     async function loadFile(file) {
       if (!file) {
-        return;
+        return false;
       }
 
       setStatus(
@@ -2868,10 +3141,7 @@ Duration: ${
       try {
         const text = await file.text();
 
-        /*
-         * append: true keeps all previously uploaded trees.
-         */
-        loadTreeText(text, file.name, {
+        return loadTreeText(text, file.name, {
           append: true
         });
       } catch (error) {
@@ -2880,6 +3150,36 @@ Duration: ${
           escapeHtml(error.message),
           "error"
         );
+
+        return false;
+      }
+    }
+
+    async function loadFiles(fileList) {
+      const files = Array.from(fileList || []);
+
+      if (files.length === 0) {
+        return;
+      }
+
+      userFileInteraction = true;
+
+      let successfulFiles = 0;
+
+      for (const file of files) {
+        const loaded = await loadFile(file);
+
+        if (loaded) {
+          successfulFiles += 1;
+        }
+      }
+
+      if (successfulFiles > 0) {
+        const activeTree = findTreeById(activeTreeId);
+
+        if (activeTree && root) {
+          updateCurrentTreeStatus(activeTree);
+        }
       }
     }
 
@@ -2895,11 +3195,10 @@ Duration: ${
 
         const text = await response.text();
 
-        /*
-         * Do not overwrite trees if the user uploaded a file
-         * before the default file finished downloading.
-         */
-        if (loadedTrees.length === 0) {
+        if (
+          loadedTrees.length === 0 &&
+          !userFileInteraction
+        ) {
           loadTreeText(
             text,
             DEFAULT_TREE_FILE,
@@ -2912,12 +3211,12 @@ Duration: ${
           error
         );
 
-        /*
-         * Only show the default-file error if no uploaded tree
-         * is already available.
-         */
-        if (loadedTrees.length === 0) {
+        if (
+          loadedTrees.length === 0 &&
+          !userFileInteraction
+        ) {
           root = null;
+          activeTreeId = null;
           treeSvg.innerHTML = "";
           emptyTreeMessage.hidden = false;
 
@@ -2927,6 +3226,9 @@ Duration: ${
             }</strong>. Upload or drop a tree file into the viewer.`,
             "error"
           );
+
+          populateTreeChoice(null);
+          updateInformationPanels();
         }
       }
     }
@@ -3050,8 +3352,7 @@ Duration: ${
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
 
-      const selectedTree =
-        loadedTrees[Number(treeChoice.value)];
+      const selectedTree = findTreeById(activeTreeId);
 
       const selectedFileName =
         selectedTree?.fileName ||
@@ -3070,6 +3371,7 @@ Duration: ${
         "tree";
 
       link.href = url;
+
       link.download =
         `${fileBaseName}_${treeName}_geological.svg`;
 
@@ -3081,16 +3383,30 @@ Duration: ${
     }
 
     fileInput.addEventListener("change", event => {
-      loadFile(event.target.files[0]);
+      loadFiles(event.target.files);
       event.target.value = "";
     });
 
     treeChoice.addEventListener("change", () => {
-      const tree = loadedTrees[Number(treeChoice.value)];
+      const tree = findTreeById(treeChoice.value);
 
       if (tree) {
         parseAndDisplayTree(tree);
       }
+    });
+
+    treeLibraryList.addEventListener("click", event => {
+      const removeButton = event.target.closest?.(
+        "[data-remove-tree-id]"
+      );
+
+      if (!removeButton) {
+        return;
+      }
+
+      removeLoadedTree(
+        removeButton.dataset.removeTreeId
+      );
     });
 
     sortClades.addEventListener("change", () => {
@@ -3127,6 +3443,7 @@ Duration: ${
           String(DEFAULT_GEOLOGY_UNIT_MA);
 
         geologyScaleControl.classList.remove("invalid");
+
         geologyUnitMaInput.setAttribute(
           "aria-invalid",
           "false"
@@ -3240,13 +3557,17 @@ Duration: ${
     document
       .getElementById("zoom-in")
       .addEventListener("click", () => {
-        setZoom(zoomScale * 1.2);
+        if (root) {
+          setZoom(zoomScale * 1.2);
+        }
       });
 
     document
       .getElementById("zoom-out")
       .addEventListener("click", () => {
-        setZoom(zoomScale / 1.2);
+        if (root) {
+          setZoom(zoomScale / 1.2);
+        }
       });
 
     document
@@ -3289,19 +3610,19 @@ Duration: ${
 
         sortClades.value = "original";
         timelineUnits.value = "100 Ma";
+
         geologyUnitMaInput.value =
           String(DEFAULT_GEOLOGY_UNIT_MA);
+
         geologyScaleControl.classList.remove("invalid");
+
         geologyUnitMaInput.setAttribute(
           "aria-invalid",
           "false"
         );
+
         showGeologyInput.checked = true;
 
-        /*
-         * Reset the interval using the currently selected
-         * tree's calculated maximum/root age.
-         */
         applyAutomaticTimelineScale(root);
 
         renderTree({
@@ -3396,6 +3717,11 @@ Duration: ${
 
     treeContainer.addEventListener("dragover", event => {
       event.preventDefault();
+
+      if (event.dataTransfer) {
+        event.dataTransfer.dropEffect = "copy";
+      }
+
       treeContainer.classList.add("dragover");
     });
 
@@ -3409,11 +3735,7 @@ Duration: ${
       event.preventDefault();
       treeContainer.classList.remove("dragover");
 
-      const file = event.dataTransfer.files[0];
-
-      if (file) {
-        loadFile(file);
-      }
+      loadFiles(event.dataTransfer.files);
     });
 
     window.addEventListener("resize", closeTipEditor);
