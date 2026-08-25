@@ -154,6 +154,21 @@
       width: 82px;
     }
 
+    #geology-unit-ma {
+      width: 92px;
+    }
+
+    .geology-scale-control {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .geology-scale-control.invalid input {
+      border-color: var(--danger);
+      background: #fff4f4;
+    }
+
     .file-status {
       display: flex;
       align-items: center;
@@ -280,8 +295,8 @@
       color: var(--muted);
       font-size: 13px;
     }
-	
-	.credits {
+
+    .credits {
       margin: 12px 2px 0;
       padding-top: 10px;
       color: var(--muted);
@@ -602,6 +617,22 @@
         Geological ranges
       </label>
 
+      <span class="geology-scale-control">
+        <label for="geology-unit-ma">1 tree unit =</label>
+
+        <input
+          id="geology-unit-ma"
+          type="number"
+          value="100"
+          min="0.000000000001"
+          step="any"
+          inputmode="decimal"
+          aria-label="Millions of years per tree unit"
+        >
+
+        <span>Ma</span>
+      </span>
+
       <span class="toolbar-divider" aria-hidden="true"></span>
 
       <button type="button" id="zoom-in">Zoom in</button>
@@ -695,18 +726,22 @@
       <strong>Double-click a tip name or circle to rename it.</strong>
       Double-click an internal node to collapse or expand its clade.
       Geological ranges use Ma before present.
+      Set <strong>1 tree unit</strong> to the number of Ma represented
+      by one branch-length unit. Geological ranges rescale automatically.
+      The <strong>Units</strong> field changes only the timeline title.
     </p>
-	<footer class="credits">
-	  <strong>Interactive Timetree Viewer</strong> was developed by
-	  ChatGPT with help from
-	  <a
-		href="https://sishuowang2022.wordpress.com/"
-		target="_blank"
-		rel="noopener noreferrer"
-	  >Sishuo Wang</a>.
-	  The default tree is from Wang &amp; Luo (2025),
-	  <cite>Systematic Biology</cite>.
-	</footer>
+
+    <footer class="credits">
+      <strong>Interactive Timetree Viewer</strong> was developed by
+      ChatGPT with help from
+      <a
+        href="https://sishuowang2022.wordpress.com/"
+        target="_blank"
+        rel="noopener noreferrer"
+      >Sishuo Wang</a>.
+      The default tree is from Wang &amp; Luo (2025),
+      <cite>Systematic Biology</cite>.
+    </footer>
   </main>
 
   <aside
@@ -742,6 +777,16 @@
     const DEFAULT_TREE_FILE = "Wang_Luo_2025_FigTree.tre";
     const DOUBLE_CLICK_DELAY = 280;
     const SVG_NS = "http://www.w3.org/2000/svg";
+
+    /*
+     * The stored geological boundaries use the original scale:
+     *
+     *   1 stored geological unit = 100 Ma
+     *
+     * The geological scale control converts these stored coordinates
+     * into the branch-length units used by the imported tree.
+     */
+    const DEFAULT_GEOLOGY_UNIT_MA = 100;
 
     const GEOLOGICAL_ERAS = [
       {
@@ -929,6 +974,12 @@
     const timelineUnits = document.getElementById("timeline-units");
     const tickIntervalInput = document.getElementById("tick-interval");
     const showGeologyInput = document.getElementById("show-geology");
+    const geologyUnitMaInput = document.getElementById(
+      "geology-unit-ma"
+    );
+    const geologyScaleControl = document.querySelector(
+      ".geology-scale-control"
+    );
 
     const treeContainer = document.getElementById("tree-container");
     const treeSvg = document.getElementById("tree-svg");
@@ -955,9 +1006,9 @@
       "tip-editor-cancel"
     );
 
-	let loadedTrees = [];
-	let root = null;
-	let currentFileName = "";
+    let loadedTrees = [];
+    let root = null;
+    let currentFileName = "";
     let nodeSequence = 0;
 
     let selectedNode = null;
@@ -1759,6 +1810,33 @@
       return value;
     }
 
+    /*
+     * Return the number of Ma represented by one imported-tree unit.
+     * Invalid values temporarily use the default while the field is
+     * being edited.
+     */
+    function getGeologyUnitMa() {
+      const value = Number(geologyUnitMaInput.value);
+
+      if (Number.isFinite(value) && value > 0) {
+        geologyScaleControl.classList.remove("invalid");
+        geologyUnitMaInput.setAttribute(
+          "aria-invalid",
+          "false"
+        );
+
+        return value;
+      }
+
+      geologyScaleControl.classList.add("invalid");
+      geologyUnitMaInput.setAttribute(
+        "aria-invalid",
+        "true"
+      );
+
+      return DEFAULT_GEOLOGY_UNIT_MA;
+    }
+
     function orderedChildren(node) {
       const children = [...node.children];
       const mode = sortClades.value;
@@ -1932,11 +2010,36 @@
         >${escapeXml(rowName)}</text>
       `;
 
+      const geologyUnitMa = getGeologyUnitMa();
+
+      /*
+       * The stored ranges use 100 Ma per coordinate unit.
+       * Convert them to the imported tree's coordinate units.
+       */
+      const coordinateMultiplier =
+        DEFAULT_GEOLOGY_UNIT_MA / geologyUnitMa;
+
       ranges.forEach(range => {
-        const visibleYounger = Math.max(0, range.younger);
+        const youngerTreeAge =
+          range.younger * coordinateMultiplier;
+
+        const olderTreeAge =
+          range.older * coordinateMultiplier;
+
+        const youngerMa =
+          range.younger * DEFAULT_GEOLOGY_UNIT_MA;
+
+        const olderMa =
+          range.older * DEFAULT_GEOLOGY_UNIT_MA;
+
+        const visibleYounger = Math.max(
+          0,
+          youngerTreeAge
+        );
+
         const visibleOlder = Math.min(
           timelineMaximum,
-          range.older
+          olderTreeAge
         );
 
         if (visibleOlder <= visibleYounger) {
@@ -1962,9 +2065,9 @@
               <title>${
                 escapeXml(range.name)
               }: ${
-                formatNumber(range.younger)
+                formatNumber(youngerMa)
               }–${
-                formatNumber(range.older)
+                formatNumber(olderMa)
               } Ma</title>
             </rect>
         `;
@@ -1984,10 +2087,10 @@
         markup += `</g>`;
 
         if (
-          range.younger > 0 &&
-          range.younger < timelineMaximum
+          youngerTreeAge > 0 &&
+          youngerTreeAge < timelineMaximum
         ) {
-          const boundaryX = xScale(range.younger);
+          const boundaryX = xScale(youngerTreeAge);
 
           markup += `
             <line
@@ -2618,256 +2721,256 @@
       editingTip = null;
     }
 
-	 function populateTreeChoice(selectedIndex = null) {
-	  treeChoice.innerHTML = "";
+    function populateTreeChoice(selectedIndex = null) {
+      treeChoice.innerHTML = "";
 
-	  loadedTrees.forEach((tree, index) => {
-		const option = document.createElement("option");
+      loadedTrees.forEach((tree, index) => {
+        const option = document.createElement("option");
 
-		option.value = String(index);
+        option.value = String(index);
 
-		const fileLabel =
-		  tree.fileName || "Uploaded tree";
+        const fileLabel =
+          tree.fileName || "Uploaded tree";
 
-		option.textContent =
-		  `${index + 1}. ${fileLabel} — ${tree.name}`;
+        option.textContent =
+          `${index + 1}. ${fileLabel} — ${tree.name}`;
 
-		option.title =
-		  `${fileLabel} — ${tree.name}`;
+        option.title =
+          `${fileLabel} — ${tree.name}`;
 
-		treeChoice.appendChild(option);
-	  });
+        treeChoice.appendChild(option);
+      });
 
-	  treeChoice.disabled = loadedTrees.length <= 1;
+      treeChoice.disabled = loadedTrees.length <= 1;
 
-	  if (
-		selectedIndex !== null &&
-		loadedTrees[selectedIndex]
-	  ) {
-		treeChoice.value = String(selectedIndex);
-	  }
-	}
-
-function parseAndDisplayTree(treeRecord) {
-  nodeSequence = 0;
-
-  const parser = new NewickParser(treeRecord.newick);
-  const parsedRoot = parser.parse();
-
-  applyTranslations(
-    parsedRoot,
-    treeRecord.translations || new Map()
-  );
-
-  calculateAges(parsedRoot);
-
-  root = parsedRoot;
-  currentFileName =
-    treeRecord.fileName || "Uploaded tree";
-
-  selectedNode = null;
-  selectedTips = [];
-  zoomScale = 1;
-
-  sortClades.value = "original";
-  showGeologyInput.checked = true;
-
-  /*
-   * Calculate a new timeline interval for the selected tree.
-   */
-  applyAutomaticTimelineScale(root);
-
-  renderTree({
-    preserveScroll: false,
-    preserveZoom: false
-  });
-
-  treeContainer.scrollLeft = 0;
-  treeContainer.scrollTop = 0;
-
-  const currentIndex =
-    loadedTrees.indexOf(treeRecord) + 1;
-
-  setStatus(
-    `<strong>${escapeHtml(currentFileName)}</strong> — ` +
-    `tree ${currentIndex} of ${loadedTrees.length}: ` +
-    `${escapeHtml(treeRecord.name)}, ` +
-    `${countTips(root)} tips, ` +
-    `root age ${formatNumber(root.age)}`,
-    "success"
-  );
-}
-
-function loadTreeText(
-  text,
-  fileName,
-  { append = true } = {}
-) {
-  try {
-    const fileTranslations =
-      extractTranslations(text);
-
-    const extractedTrees =
-      extractTrees(text);
-
-    if (extractedTrees.length === 0) {
-      throw new Error(
-        "No TREE/UTREE declaration or Newick tree was found."
-      );
+      if (
+        selectedIndex !== null &&
+        loadedTrees[selectedIndex]
+      ) {
+        treeChoice.value = String(selectedIndex);
+      }
     }
 
-    const sourceFileName =
-      fileName || "Uploaded tree";
-
-    /*
-     * Store the source filename and translation map with
-     * every tree. This is necessary because separate NEXUS
-     * files may use different TRANSLATE blocks.
-     */
-    const newTreeRecords = extractedTrees.map(
-      (tree, index) => ({
-        ...tree,
-        fileName: sourceFileName,
-        translations: new Map(fileTranslations),
-        sourceTreeIndex: index
-      })
-    );
-
-    /*
-     * Validate every new tree before changing loadedTrees.
-     * If one is malformed, the existing collection remains.
-     */
-    for (const treeRecord of newTreeRecords) {
+    function parseAndDisplayTree(treeRecord) {
       nodeSequence = 0;
 
-      const parser = new NewickParser(
-        treeRecord.newick
+      const parser = new NewickParser(treeRecord.newick);
+      const parsedRoot = parser.parse();
+
+      applyTranslations(
+        parsedRoot,
+        treeRecord.translations || new Map()
       );
 
-      parser.parse();
-    }
+      calculateAges(parsedRoot);
 
-    if (!append) {
-      loadedTrees = [];
-    }
+      root = parsedRoot;
+      currentFileName =
+        treeRecord.fileName || "Uploaded tree";
 
-    const firstNewTreeIndex = loadedTrees.length;
+      selectedNode = null;
+      selectedTips = [];
+      zoomScale = 1;
 
-    loadedTrees.push(...newTreeRecords);
+      sortClades.value = "original";
+      showGeologyInput.checked = true;
 
-    populateTreeChoice(firstNewTreeIndex);
+      /*
+       * Calculate a new timeline interval for the selected tree.
+       */
+      applyAutomaticTimelineScale(root);
 
-    /*
-     * Display the first tree from the newly uploaded file.
-     */
-    parseAndDisplayTree(
-      loadedTrees[firstNewTreeIndex]
-    );
-  } catch (error) {
-    console.error(error);
+      renderTree({
+        preserveScroll: false,
+        preserveZoom: false
+      });
 
-    /*
-     * Do not remove previously loaded trees when a later
-     * upload fails.
-     */
-    if (loadedTrees.length === 0) {
-      root = null;
-      treeSvg.innerHTML = "";
+      treeContainer.scrollLeft = 0;
+      treeContainer.scrollTop = 0;
 
-      emptyTreeMessage.hidden = false;
-      emptyTreeMessage.textContent =
-        "The tree could not be displayed.";
-
-      treeChoice.innerHTML =
-        "<option>No tree loaded</option>";
-
-      treeChoice.disabled = true;
-      updateInformationPanels();
-    }
-
-    setStatus(
-      "<strong>Could not load the tree:</strong> " +
-      escapeHtml(error.message),
-      "error"
-    );
-  }
-}
-
- async function loadFile(file) {
-  if (!file) {
-    return;
-  }
-
-  setStatus(
-    `Adding <strong>${escapeHtml(file.name)}</strong>...`,
-    "loading"
-  );
-
-  try {
-    const text = await file.text();
-
-    /*
-     * append: true keeps all previously uploaded trees.
-     */
-    loadTreeText(text, file.name, {
-      append: true
-    });
-  } catch (error) {
-    setStatus(
-      "<strong>Could not read the file:</strong> " +
-      escapeHtml(error.message),
-      "error"
-    );
-  }
-}
-
-async function loadDefaultTree() {
-  try {
-    const response = await fetch(DEFAULT_TREE_FILE, {
-      cache: "no-store"
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`);
-    }
-
-    const text = await response.text();
-
-    /*
-     * Do not overwrite trees if the user uploaded a file
-     * before the default file finished downloading.
-     */
-    if (loadedTrees.length === 0) {
-      loadTreeText(
-        text,
-        DEFAULT_TREE_FILE,
-        { append: false }
-      );
-    }
-  } catch (error) {
-    console.warn(
-      "Automatic tree loading failed.",
-      error
-    );
-
-    /*
-     * Only show the default-file error if no uploaded tree
-     * is already available.
-     */
-    if (loadedTrees.length === 0) {
-      root = null;
-      treeSvg.innerHTML = "";
-      emptyTreeMessage.hidden = false;
+      const currentIndex =
+        loadedTrees.indexOf(treeRecord) + 1;
 
       setStatus(
-        `Could not automatically load <strong>${
-          escapeHtml(DEFAULT_TREE_FILE)
-        }</strong>. Upload or drop a tree file into the viewer.`,
-        "error"
+        `<strong>${escapeHtml(currentFileName)}</strong> — ` +
+        `tree ${currentIndex} of ${loadedTrees.length}: ` +
+        `${escapeHtml(treeRecord.name)}, ` +
+        `${countTips(root)} tips, ` +
+        `root age ${formatNumber(root.age)}`,
+        "success"
       );
     }
-  }
-}
+
+    function loadTreeText(
+      text,
+      fileName,
+      { append = true } = {}
+    ) {
+      try {
+        const fileTranslations =
+          extractTranslations(text);
+
+        const extractedTrees =
+          extractTrees(text);
+
+        if (extractedTrees.length === 0) {
+          throw new Error(
+            "No TREE/UTREE declaration or Newick tree was found."
+          );
+        }
+
+        const sourceFileName =
+          fileName || "Uploaded tree";
+
+        /*
+         * Store the source filename and translation map with
+         * every tree. This is necessary because separate NEXUS
+         * files may use different TRANSLATE blocks.
+         */
+        const newTreeRecords = extractedTrees.map(
+          (tree, index) => ({
+            ...tree,
+            fileName: sourceFileName,
+            translations: new Map(fileTranslations),
+            sourceTreeIndex: index
+          })
+        );
+
+        /*
+         * Validate every new tree before changing loadedTrees.
+         * If one is malformed, the existing collection remains.
+         */
+        for (const treeRecord of newTreeRecords) {
+          nodeSequence = 0;
+
+          const parser = new NewickParser(
+            treeRecord.newick
+          );
+
+          parser.parse();
+        }
+
+        if (!append) {
+          loadedTrees = [];
+        }
+
+        const firstNewTreeIndex = loadedTrees.length;
+
+        loadedTrees.push(...newTreeRecords);
+
+        populateTreeChoice(firstNewTreeIndex);
+
+        /*
+         * Display the first tree from the newly uploaded file.
+         */
+        parseAndDisplayTree(
+          loadedTrees[firstNewTreeIndex]
+        );
+      } catch (error) {
+        console.error(error);
+
+        /*
+         * Do not remove previously loaded trees when a later
+         * upload fails.
+         */
+        if (loadedTrees.length === 0) {
+          root = null;
+          treeSvg.innerHTML = "";
+
+          emptyTreeMessage.hidden = false;
+          emptyTreeMessage.textContent =
+            "The tree could not be displayed.";
+
+          treeChoice.innerHTML =
+            "<option>No tree loaded</option>";
+
+          treeChoice.disabled = true;
+          updateInformationPanels();
+        }
+
+        setStatus(
+          "<strong>Could not load the tree:</strong> " +
+          escapeHtml(error.message),
+          "error"
+        );
+      }
+    }
+
+    async function loadFile(file) {
+      if (!file) {
+        return;
+      }
+
+      setStatus(
+        `Adding <strong>${escapeHtml(file.name)}</strong>...`,
+        "loading"
+      );
+
+      try {
+        const text = await file.text();
+
+        /*
+         * append: true keeps all previously uploaded trees.
+         */
+        loadTreeText(text, file.name, {
+          append: true
+        });
+      } catch (error) {
+        setStatus(
+          "<strong>Could not read the file:</strong> " +
+          escapeHtml(error.message),
+          "error"
+        );
+      }
+    }
+
+    async function loadDefaultTree() {
+      try {
+        const response = await fetch(DEFAULT_TREE_FILE, {
+          cache: "no-store"
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+
+        const text = await response.text();
+
+        /*
+         * Do not overwrite trees if the user uploaded a file
+         * before the default file finished downloading.
+         */
+        if (loadedTrees.length === 0) {
+          loadTreeText(
+            text,
+            DEFAULT_TREE_FILE,
+            { append: false }
+          );
+        }
+      } catch (error) {
+        console.warn(
+          "Automatic tree loading failed.",
+          error
+        );
+
+        /*
+         * Only show the default-file error if no uploaded tree
+         * is already available.
+         */
+        if (loadedTrees.length === 0) {
+          root = null;
+          treeSvg.innerHTML = "";
+          emptyTreeMessage.hidden = false;
+
+          setStatus(
+            `Could not automatically load <strong>${
+              escapeHtml(DEFAULT_TREE_FILE)
+            }</strong>. Upload or drop a tree file into the viewer.`,
+            "error"
+          );
+        }
+      }
+    }
 
     function setZoom(nextZoom) {
       cancelPendingSvgClick();
@@ -2988,28 +3091,28 @@ async function loadDefaultTree() {
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
 
-	const selectedTree =
-	  loadedTrees[Number(treeChoice.value)];
+      const selectedTree =
+        loadedTrees[Number(treeChoice.value)];
 
-	const selectedFileName =
-	  selectedTree?.fileName ||
-	  currentFileName ||
-	  "timetree";
+      const selectedFileName =
+        selectedTree?.fileName ||
+        currentFileName ||
+        "timetree";
 
-	const fileBaseName =
-	  selectedFileName
-		.replace(/\.[^.]+$/, "")
-		.replace(/[^\w.-]+/g, "_") ||
-	  "timetree";
+      const fileBaseName =
+        selectedFileName
+          .replace(/\.[^.]+$/, "")
+          .replace(/[^\w.-]+/g, "_") ||
+        "timetree";
 
-	const treeName =
-	  selectedTree?.name
-		?.replace(/[^\w.-]+/g, "_") ||
-	  "tree";
+      const treeName =
+        selectedTree?.name
+          ?.replace(/[^\w.-]+/g, "_") ||
+        "tree";
 
       link.href = url;
-link.download =
-  `${fileBaseName}_${treeName}_geological.svg`;
+      link.download =
+        `${fileBaseName}_${treeName}_geological.svg`;
 
       document.body.appendChild(link);
       link.click();
@@ -3050,6 +3153,27 @@ link.download =
     });
 
     showGeologyInput.addEventListener("change", () => {
+      renderTree();
+    });
+
+    geologyUnitMaInput.addEventListener("input", () => {
+      renderTree();
+    });
+
+    geologyUnitMaInput.addEventListener("change", () => {
+      const value = Number(geologyUnitMaInput.value);
+
+      if (!Number.isFinite(value) || value <= 0) {
+        geologyUnitMaInput.value =
+          String(DEFAULT_GEOLOGY_UNIT_MA);
+
+        geologyScaleControl.classList.remove("invalid");
+        geologyUnitMaInput.setAttribute(
+          "aria-invalid",
+          "false"
+        );
+      }
+
       renderTree();
     });
 
@@ -3206,6 +3330,13 @@ link.download =
 
         sortClades.value = "original";
         timelineUnits.value = "100 Ma";
+        geologyUnitMaInput.value =
+          String(DEFAULT_GEOLOGY_UNIT_MA);
+        geologyScaleControl.classList.remove("invalid");
+        geologyUnitMaInput.setAttribute(
+          "aria-invalid",
+          "false"
+        );
         showGeologyInput.checked = true;
 
         /*
