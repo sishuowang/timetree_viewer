@@ -2,895 +2,334 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-
-  <meta
-    name="viewport"
-    content="width=device-width, initial-scale=1"
-  >
-
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>timetree_viewer</title>
-
   <style>
-    * {
-      box-sizing: border-box;
-    }
-
+    * { box-sizing: border-box; }
     :root {
-      --background: #f4f6f8;
-      --panel: #ffffff;
-      --border: #d5dae1;
-      --text: #222831;
-      --muted: #68717d;
-      --branch: #4d5968;
-      --blue: #2f6fdb;
-      --orange: #e26f30;
-      --grid: #e2e6eb;
-      --danger: #c74343;
-      --success: #2f9d50;
-      --warning: #d89a22;
+      --background:#f4f6f8; --panel:#fff; --border:#d5dae1; --text:#222831; --muted:#68717d;
+      --branch:#4d5968; --blue:#2f6fdb; --orange:#e26f30; --grid:#e2e6eb; --danger:#c74343;
+      --success:#2f9d50; --warning:#d89a22;
     }
-
     body {
-      margin: 0;
-      padding: 18px;
-      color: var(--text);
-      background: var(--background);
-      font-family: Arial, Helvetica, sans-serif;
-      font-size: 14px;
-      line-height: 1.4;
+      margin:0; padding:14px; color:var(--text); background:var(--background);
+      font-family:Arial,Helvetica,sans-serif; font-size:13px; line-height:1.35;
     }
-
-    .container {
-      max-width: 1700px;
-      margin: 0 auto;
-    }
-
-    h1 {
-      margin: 0 0 4px;
-      font-size: 24px;
-    }
-
-    .description {
-      margin: 0 0 13px;
-      color: var(--muted);
-    }
+    .container { max-width:1700px; margin:0 auto; }
+    h1 { margin:0 0 4px; font-size:22px; }
+    .description { margin:0 0 10px; color:var(--muted); font-size:12px; }
 
     .toolbar {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      gap: 7px;
-      margin-bottom: 9px;
-      padding: 10px;
-      background: var(--panel);
-      border: 1px solid var(--border);
-      border-radius: 6px;
+      display:flex; flex-wrap:wrap; align-items:center; gap:6px; margin-bottom:8px; padding:8px;
+      background:var(--panel); border:1px solid var(--border); border-radius:6px; font-size:12px;
     }
+    .toolbar label { font-weight:600; font-size:12px; }
 
-    .toolbar label {
-      font-weight: 600;
+    button, select, input[type="text"], input[type="number"], input[type="color"] {
+      min-height:28px; padding:4px 8px; color:var(--text); background:#fff;
+      border:1px solid #bfc5ce; border-radius:4px; font:inherit; font-size:12px;
     }
-
-    button,
-    select,
-    input[type="text"],
-    input[type="number"] {
-      min-height: 32px;
-      padding: 5px 9px;
-      color: var(--text);
-      background: #ffffff;
-      border: 1px solid #bfc5ce;
-      border-radius: 4px;
-      font: inherit;
-    }
-
-    button {
-      cursor: pointer;
-    }
-
-    button:hover,
-    select:hover,
-    input:hover {
-      border-color: #75869c;
-      background: #f7f9fb;
-    }
-
-    button:focus-visible,
-    select:focus-visible,
-    input:focus-visible {
-      outline: 2px solid var(--blue);
-      outline-offset: 1px;
-    }
-
-    button:disabled,
-    select:disabled {
-      color: #999999;
-      background: #f1f1f1;
-      cursor: not-allowed;
-    }
+    input[type="color"] { width:42px; padding:2px; }
+    button { cursor:pointer; }
+    button:hover, select:hover, input:hover { border-color:#75869c; background:#f7f9fb; }
+    button:focus-visible, select:focus-visible, input:focus-visible { outline:2px solid var(--blue); outline-offset:1px; }
+    button:disabled, select:disabled { color:#999; background:#f1f1f1; cursor:not-allowed; }
 
     input[type="file"] {
-      position: absolute;
-      width: 1px;
-      height: 1px;
-      overflow: hidden;
-      clip: rect(0, 0, 0, 0);
-      white-space: nowrap;
+      position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap;
     }
-
     .file-button {
-      display: inline-flex;
-      align-items: center;
-      min-height: 32px;
-      padding: 5px 10px;
-      color: #ffffff;
-      background: var(--blue);
-      border: 1px solid var(--blue);
-      border-radius: 4px;
-      font-weight: 600;
-      cursor: pointer;
+      display:inline-flex; align-items:center; min-height:28px; padding:4px 9px; color:#fff;
+      background:var(--blue); border:1px solid var(--blue); border-radius:4px; font-weight:600; cursor:pointer; font-size:12px;
     }
+    .file-button:hover { background:#245fbe; }
 
-    .file-button:hover {
-      background: #245fbe;
-    }
+    .toolbar-divider { width:1px; height:20px; margin:0 1px; background:var(--border); }
+    #tree-choice { max-width:260px; }
+    #timeline-units { width:110px; }
+    #tick-interval, #branch-width { width:72px; }
+    #geology-unit-ma { width:82px; }
 
-    .toolbar-divider {
-      width: 1px;
-      height: 25px;
-      margin: 0 2px;
-      background: var(--border);
-    }
-
-    #tree-choice {
-      max-width: 300px;
-    }
-
-    #timeline-units {
-      width: 145px;
-    }
-
-    #tick-interval {
-      width: 82px;
-    }
-
-    #geology-unit-ma {
-      width: 92px;
-    }
-
-    .geology-scale-control {
-      display: inline-flex;
-      align-items: center;
-      gap: 5px;
-    }
-
-    .geology-scale-control.invalid input {
-      border-color: var(--danger);
-      background: #fff4f4;
-    }
+    .geology-scale-control { display:inline-flex; align-items:center; gap:4px; }
+    .geology-scale-control.invalid input { border-color:var(--danger); background:#fff4f4; }
 
     .file-status {
-      display: flex;
-      align-items: center;
-      gap: 7px;
-      min-width: 0;
-      margin-bottom: 9px;
-      padding: 7px 10px;
-      color: var(--muted);
-      background: var(--panel);
-      border: 1px solid var(--border);
-      border-radius: 5px;
+      display:flex; align-items:center; gap:7px; min-width:0; margin-bottom:8px; padding:6px 9px;
+      color:var(--muted); background:var(--panel); border:1px solid var(--border); border-radius:5px; font-size:12px;
     }
-
-    .file-status strong {
-      color: var(--text);
-    }
-
-    .status-text {
-      min-width: 0;
-      overflow-wrap: anywhere;
-    }
-
-    .status-dot {
-      flex: 0 0 auto;
-      width: 8px;
-      height: 8px;
-      background: #999999;
-      border-radius: 50%;
-    }
-
-    .status-dot.loading {
-      background: var(--warning);
-    }
-
-    .status-dot.success {
-      background: var(--success);
-    }
-
-    .status-dot.error {
-      background: var(--danger);
-    }
+    .file-status strong { color:var(--text); }
+    .status-text { min-width:0; overflow-wrap:anywhere; }
+    .status-dot { flex:0 0 auto; width:8px; height:8px; background:#999; border-radius:50%; }
+    .status-dot.loading { background:var(--warning); }
+    .status-dot.success { background:var(--success); }
+    .status-dot.error { background:var(--danger); }
 
     .tree-library {
-      margin-bottom: 9px;
-      padding: 9px 10px;
-      background: var(--panel);
-      border: 1px solid var(--border);
-      border-radius: 6px;
+      margin-bottom:8px; padding:8px 9px; background:var(--panel); border:1px solid var(--border); border-radius:6px; font-size:12px;
     }
-
-    .tree-library[hidden] {
-      display: none;
-    }
-
-    .tree-library-header {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      justify-content: space-between;
-      gap: 6px;
-      margin-bottom: 7px;
-    }
-
-    .tree-library-header h2 {
-      margin: 0;
-      font-size: 15px;
-    }
-
-    .tree-library-count {
-      color: var(--muted);
-      font-size: 12px;
-    }
+    .tree-library[hidden] { display:none; }
+    .tree-library-header { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:6px; margin-bottom:7px; }
+    .tree-library-header h2 { margin:0; font-size:14px; }
+    .tree-library-count { color:var(--muted); font-size:11px; }
 
     .tree-library-list {
-      display: grid;
-      grid-template-columns: repeat(
-        auto-fit,
-        minmax(min(100%, 330px), 1fr)
-      );
-      gap: 6px;
-      margin: 0;
-      padding: 0;
-      list-style: none;
+      display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,330px),1fr));
+      gap:6px; margin:0; padding:0; list-style:none;
     }
-
     .tree-library-item {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) auto;
-      align-items: center;
-      gap: 7px;
-      min-width: 0;
-      padding: 6px 7px;
-      background: #f8f9fb;
-      border: 1px solid var(--border);
-      border-radius: 5px;
+      display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; gap:7px; min-width:0;
+      padding:6px 7px; background:#f8f9fb; border:1px solid var(--border); border-radius:5px;
     }
-
-    .tree-library-item.active {
-      background: #edf4ff;
-      border-color: #8eb1e8;
-      box-shadow: inset 3px 0 0 var(--blue);
-    }
-
-    .tree-library-description {
-      min-width: 0;
-    }
-
+    .tree-library-item.active { background:#edf4ff; border-color:#8eb1e8; box-shadow:inset 3px 0 0 var(--blue); }
+    .tree-library-description { min-width:0; }
     .tree-library-name {
-      display: block;
-      overflow: hidden;
-      color: var(--text);
-      font-weight: 700;
-      text-overflow: ellipsis;
-      white-space: nowrap;
+      display:block; overflow:hidden; color:var(--text); font-weight:700; text-overflow:ellipsis; white-space:nowrap; font-size:12px;
     }
-
     .tree-library-file {
-      display: block;
-      overflow: hidden;
-      color: var(--muted);
-      font-size: 12px;
-      text-overflow: ellipsis;
-      white-space: nowrap;
+      display:block; overflow:hidden; color:var(--muted); font-size:11px; text-overflow:ellipsis; white-space:nowrap;
     }
-
     .remove-tree-button {
-      min-height: 28px;
-      padding: 3px 8px;
-      color: var(--danger);
-      background: #ffffff;
-      border-color: #d9aaaa;
-      font-size: 12px;
-      font-weight: 700;
+      min-height:24px; padding:2px 7px; color:var(--danger); background:#fff; border-color:#d9aaaa; font-size:11px; font-weight:700;
     }
-
-    .remove-tree-button:hover {
-      color: #ffffff;
-      background: var(--danger);
-      border-color: var(--danger);
-    }
+    .remove-tree-button:hover { color:#fff; background:var(--danger); border-color:var(--danger); }
 
     .tree-container {
-      position: relative;
-      min-height: 540px;
-      max-height: 75vh;
-      overflow: auto;
-      background: #ffffff;
-      border: 1px solid var(--border);
-      border-radius: 6px;
+      position:relative; min-height:540px; max-height:75vh; overflow:auto; background:#fff;
+      border:1px solid var(--border); border-radius:6px;
     }
-
     .tree-container.dragover {
-      outline: 3px solid rgba(47, 111, 219, 0.35);
-      outline-offset: -3px;
-      background: #f5f9ff;
+      outline:3px solid rgba(47,111,219,.35); outline-offset:-3px; background:#f5f9ff;
     }
-
     #tree-svg {
-      display: block;
-      background: #ffffff;
-      user-select: none;
-      -webkit-user-select: none;
+      display:block; background:#fff; user-select:none; -webkit-user-select:none;
     }
-
     .empty-tree-message {
-      position: absolute;
-      inset: 0;
-      display: grid;
-      place-content: center;
-      padding: 30px;
-      color: var(--muted);
-      text-align: center;
-      pointer-events: none;
+      position:absolute; inset:0; display:grid; place-content:center; padding:30px; color:var(--muted);
+      text-align:center; pointer-events:none; font-size:12px;
     }
+    .empty-tree-message[hidden] { display:none; }
 
-    .empty-tree-message[hidden] {
-      display: none;
-    }
-
-    .information {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 9px;
-      margin-top: 9px;
-    }
-
+    .information { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:8px; }
     .info-panel {
-      min-width: 0;
-      padding: 9px 11px;
-      background: var(--panel);
-      border: 1px solid var(--border);
-      border-radius: 6px;
+      min-width:0; padding:8px 10px; background:var(--panel); border:1px solid var(--border);
+      border-radius:6px; font-size:12px;
     }
+    .info-panel h2 { margin:0 0 4px; font-size:14px; }
 
-    .info-panel h2 {
-      margin: 0 0 4px;
-      font-size: 15px;
-    }
+    .compact-details { display:flex; flex-wrap:wrap; align-items:center; gap:2px 6px; margin:0; }
+    .compact-item { white-space:nowrap; }
+    .compact-separator { color:#9aa1aa; }
+    .empty-message { margin:0; color:var(--muted); }
 
-    .compact-details {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      gap: 2px 7px;
-      margin: 0;
-    }
-
-    .compact-item {
-      white-space: nowrap;
-    }
-
-    .compact-separator {
-      color: #9aa1aa;
-    }
-
-    .empty-message {
-      margin: 0;
-      color: var(--muted);
-    }
-
-    .instructions {
-      margin: 9px 2px 0;
-      color: var(--muted);
-      font-size: 13px;
-    }
-
+    .instructions { margin:8px 2px 0; color:var(--muted); font-size:12px; }
     .credits {
-      margin: 12px 2px 0;
-      padding-top: 10px;
-      color: var(--muted);
-      font-size: 13px;
-      text-align: center;
-      border-top: 1px solid var(--border);
+      margin:10px 2px 0; padding-top:9px; color:var(--muted); font-size:12px; text-align:center; border-top:1px solid var(--border);
     }
-
-    .credits strong {
-      color: var(--text);
-    }
-
-    .credits cite {
-      font-style: italic;
-    }
+    .credits strong { color:var(--text); }
+    .credits cite { font-style:italic; }
 
     .timeline-title {
-      fill: #20252c;
-      font-size: 21px;
-      font-weight: 700;
-      text-anchor: middle;
-      pointer-events: none;
+      fill:#20252c; font-size:20px; font-weight:700; text-anchor:middle; pointer-events:none;
     }
-
     .timeline-label {
-      fill: #404a57;
-      font-size: 14px;
-      font-weight: 600;
-      text-anchor: middle;
-      pointer-events: none;
+      fill:#404a57; font-size:13px; font-weight:600; text-anchor:middle; pointer-events:none;
     }
+    .timeline-direction-label { fill:#596473; font-size:11px; font-weight:600; pointer-events:none; }
+    .timeline-axis { stroke:#414b58; stroke-width:1.5; vector-effect:non-scaling-stroke; }
+    .timeline-tick { stroke:#596473; stroke-width:1.2; vector-effect:non-scaling-stroke; }
 
-    .timeline-direction-label {
-      fill: #596473;
-      font-size: 12px;
-      font-weight: 600;
-      pointer-events: none;
-    }
-
-    .timeline-axis {
-      stroke: #414b58;
-      stroke-width: 1.5;
-      vector-effect: non-scaling-stroke;
-    }
-
-    .timeline-tick {
-      stroke: #596473;
-      stroke-width: 1.2;
-      vector-effect: non-scaling-stroke;
-    }
-
-    .grid-line {
-      stroke: var(--grid);
-      stroke-width: 1;
-      pointer-events: none;
-      vector-effect: non-scaling-stroke;
-    }
+    .grid-line { stroke:var(--grid); stroke-width:1; pointer-events:none; vector-effect:non-scaling-stroke; }
 
     .geology-row-label {
-      fill: #4d5662;
-      font-size: 10px;
-      font-weight: 700;
-      text-anchor: end;
-      dominant-baseline: middle;
-      pointer-events: none;
+      fill:#4d5662; font-size:10px; font-weight:700; text-anchor:end; dominant-baseline:middle; pointer-events:none;
     }
-
-    .geology-range {
-      stroke: rgba(30, 35, 42, 0.58);
-      stroke-width: 0.8;
-      cursor: help;
-      vector-effect: non-scaling-stroke;
-    }
-
-    .geology-range:hover {
-      stroke: #111111;
-      stroke-width: 2;
-      filter: brightness(1.04);
-    }
-
+    .geology-range { stroke:rgba(30,35,42,.58); stroke-width:.8; cursor:help; vector-effect:non-scaling-stroke; }
+    .geology-range:hover { stroke:#111; stroke-width:2; filter:brightness(1.04); }
     .geology-label {
-      fill: #17202a;
-      font-size: 10px;
-      font-weight: 700;
-      text-anchor: middle;
-      dominant-baseline: middle;
-      pointer-events: none;
+      fill:#17202a; font-size:10px; font-weight:700; text-anchor:middle; dominant-baseline:middle; pointer-events:none;
     }
-
     .geology-label.light {
-      fill: #ffffff;
-      text-shadow:
-        -1px -1px 0 rgba(0, 0, 0, 0.35),
-        1px -1px 0 rgba(0, 0, 0, 0.35),
-        -1px 1px 0 rgba(0, 0, 0, 0.35),
-        1px 1px 0 rgba(0, 0, 0, 0.35);
+      fill:#fff;
+      text-shadow:-1px -1px 0 rgba(0,0,0,.35),1px -1px 0 rgba(0,0,0,.35),-1px 1px 0 rgba(0,0,0,.35),1px 1px 0 rgba(0,0,0,.35);
     }
-
     .geology-boundary {
-      stroke: rgba(40, 45, 52, 0.45);
-      stroke-width: 0.7;
-      stroke-dasharray: 2 2;
-      pointer-events: none;
-      vector-effect: non-scaling-stroke;
+      stroke:rgba(40,45,52,.45); stroke-width:.7; stroke-dasharray:2 2; pointer-events:none; vector-effect:non-scaling-stroke;
     }
 
     .branch {
-      fill: none;
-      stroke: var(--branch);
-      stroke-width: 1.5;
-      vector-effect: non-scaling-stroke;
+      fill:none; stroke:var(--branch); stroke-width:1.5; vector-effect:non-scaling-stroke; cursor:pointer;
     }
-
-    .branch.highlighted {
-      stroke: var(--orange);
-      stroke-width: 3;
-    }
+    .branch:hover { opacity:.92; }
+    .branch.highlighted { stroke:var(--orange); stroke-width:3; }
+    .branch.selected-edge { stroke:#1f64d0; stroke-width:2.8; }
 
     .hpd-bar {
-      stroke: var(--blue);
-      stroke-width: 6;
-      stroke-linecap: round;
-      opacity: 0.23;
-      pointer-events: none;
-      vector-effect: non-scaling-stroke;
+      stroke:var(--blue); stroke-width:6; stroke-linecap:round; opacity:.23; pointer-events:none; vector-effect:non-scaling-stroke;
     }
 
     .internal-node {
-      fill: #ffffff;
-      stroke: #315f9c;
-      stroke-width: 1.8;
-      cursor: pointer;
-      vector-effect: non-scaling-stroke;
+      fill:#fff; stroke:#315f9c; stroke-width:1.8; cursor:pointer; vector-effect:non-scaling-stroke;
     }
-
-    .internal-node:hover {
-      fill: #dbe8ff;
-    }
-
-    .internal-node.selected {
-      fill: var(--blue);
-      stroke: #174a91;
-    }
+    .internal-node:hover { fill:#dbe8ff; }
+    .internal-node.selected { fill:var(--blue); stroke:#174a91; }
 
     .tip-point {
-      fill: #ffffff;
-      stroke: #485666;
-      stroke-width: 1.5;
-      cursor: text;
-      pointer-events: all;
-      vector-effect: non-scaling-stroke;
+      fill:#fff; stroke:#485666; stroke-width:1.5; cursor:text; pointer-events:all; vector-effect:non-scaling-stroke;
     }
-
-    .tip-point:hover {
-      fill: #fff0e8;
-      stroke: var(--orange);
-      stroke-width: 2.5;
-    }
-
-    .tip-point.selected {
-      fill: var(--orange);
-      stroke: #a94715;
-    }
+    .tip-point:hover { fill:#fff0e8; stroke:var(--orange); stroke-width:2.5; }
+    .tip-point.selected { fill:var(--orange); stroke:#a94715; }
 
     .tip-label {
-      fill: #222222;
-      font-size: 12px;
-      dominant-baseline: middle;
-      cursor: text;
-      pointer-events: all;
+      fill:#222; font-size:11px; dominant-baseline:middle; cursor:text; pointer-events:all;
     }
-
-    .tip-label:hover {
-      fill: #1f64d0;
-      font-weight: 700;
-      text-decoration: underline;
-    }
-
-    .tip-label.selected {
-      fill: #1f64d0;
-      font-weight: 700;
-    }
+    .tip-label:hover { fill:#1f64d0; font-weight:700; text-decoration:underline; }
+    .tip-label.selected { fill:#1f64d0; font-weight:700; }
 
     .collapsed-triangle {
-      fill: rgba(47, 111, 219, 0.15);
-      stroke: #315f9c;
-      stroke-width: 1.5;
-      cursor: pointer;
-      vector-effect: non-scaling-stroke;
+      fill:rgba(47,111,219,.15); stroke:#315f9c; stroke-width:1.5; cursor:pointer; vector-effect:non-scaling-stroke;
     }
-
-    .collapsed-triangle:hover {
-      fill: rgba(47, 111, 219, 0.28);
-    }
-
-    .collapsed-label {
-      fill: #344252;
-      font-size: 11px;
-      dominant-baseline: middle;
-      pointer-events: none;
-    }
+    .collapsed-triangle:hover { fill:rgba(47,111,219,.28); }
+    .collapsed-label { fill:#344252; font-size:10px; dominant-baseline:middle; pointer-events:none; }
 
     .tip-editor {
-      position: fixed;
-      z-index: 1000;
-      display: none;
-      width: min(390px, calc(100vw - 20px));
-      padding: 10px;
-      background: #ffffff;
-      border: 1px solid #8795a8;
-      border-radius: 6px;
-      box-shadow: 0 7px 24px rgba(0, 0, 0, 0.22);
+      position:fixed; z-index:1000; display:none; width:min(390px,calc(100vw - 20px)); padding:9px; background:#fff;
+      border:1px solid #8795a8; border-radius:6px; box-shadow:0 7px 24px rgba(0,0,0,.22); font-size:12px;
     }
+    .tip-editor.open { display:block; }
+    .tip-editor-label { display:block; margin-bottom:6px; color:#465364; font-size:11px; font-weight:700; }
+    .tip-editor-row { display:flex; gap:5px; }
+    .tip-editor input { flex:1; min-width:0; }
+    .tip-editor button { flex:0 0 auto; }
 
-    .tip-editor.open {
-      display: block;
-    }
-
-    .tip-editor-label {
-      display: block;
-      margin-bottom: 6px;
-      color: #465364;
-      font-size: 12px;
-      font-weight: 700;
-    }
-
-    .tip-editor-row {
-      display: flex;
-      gap: 5px;
-    }
-
-    .tip-editor input {
-      flex: 1;
-      min-width: 0;
-    }
-
-    .tip-editor button {
-      flex: 0 0 auto;
-    }
-
-    @media (max-width: 900px) {
-      body {
-        padding: 9px;
-      }
-
-      .information {
-        grid-template-columns: 1fr;
-      }
-
-      .toolbar-divider {
-        display: none;
-      }
-
-      .tree-container {
-        max-height: 71vh;
-      }
-
-      .tree-library-list {
-        grid-template-columns: 1fr;
-      }
+    @media (max-width:900px) {
+      body { padding:8px; }
+      .information { grid-template-columns:1fr; }
+      .toolbar-divider { display:none; }
+      .tree-container { max-height:71vh; }
+      .tree-library-list { grid-template-columns:1fr; }
     }
   </style>
 </head>
-
 <body>
   <main class="container">
     <h1>Timetree Viewer</h1>
-
-    <p class="description">
-      Explore Newick or NEXUS timetrees with geological ranges,
-      confidence intervals, MRCA timing, clade sorting, and editable tips.
-    </p>
+    <p class="description">Explore Newick or NEXUS timetrees with geological ranges, confidence intervals, MRCA timing, clade sorting, and editable tips.</p>
 
     <section class="toolbar" aria-label="Timetree controls">
-      <input
-        id="tree-file"
-        type="file"
-        accept=".tre,.tree,.trees,.nex,.nexus,.nwk,.newick,text/plain"
-        multiple
-      >
-
-      <label class="file-button" for="tree-file">
-        Upload NEXUS / Newick
-      </label>
+      <input id="tree-file" type="file" accept=".tre,.tree,.trees,.nex,.nexus,.nwk,.newick,text/plain" multiple>
+      <label class="file-button" for="tree-file">Upload NEXUS / Newick</label>
 
       <label for="tree-choice">Tree:</label>
-
-      <select id="tree-choice" disabled>
-        <option>No tree loaded</option>
-      </select>
+      <select id="tree-choice" disabled><option>No tree loaded</option></select>
 
       <span class="toolbar-divider" aria-hidden="true"></span>
 
       <label for="sort-clades">Sort:</label>
-
       <select id="sort-clades">
         <option value="original">Original order</option>
         <option value="increasing">Increasing clade size</option>
         <option value="decreasing">Decreasing clade size</option>
       </select>
 
-      <label for="timeline-units">Units:</label>
+      <label for="timeline-units">Title:</label>
+      <input id="timeline-units" type="text" value="" maxlength="20">
 
-      <input
-        id="timeline-units"
-        type="text"
-        value="100 Ma"
-        maxlength="20"
-      >
+      <label for="clade-color">Clade:</label>
+      <input id="clade-color" type="color" value="#2f6fdb" aria-label="Choose clade color">
+      <button type="button" id="apply-clade-color">Apply clade</button>
+      <button type="button" id="clear-clade-color">Clear clade</button>
+      <button type="button" id="clear-all-clade-colors">Clear all clades</button>
 
-      <label for="tick-interval">Tick interval:</label>
+      <label for="branch-color">Branch:</label>
+      <input id="branch-color" type="color" value="#e26f30" aria-label="Choose branch color">
+      <button type="button" id="apply-branch-color">Apply branch</button>
+      <button type="button" id="clear-branch-color">Clear branch</button>
+      <button type="button" id="clear-all-branch-colors">Clear all branches</button>
 
-      <input
-        id="tick-interval"
-        type="number"
-        value="1"
-        min="0.000000000001"
-        step="any"
-      >
+      <label for="tick-interval">Tick:</label>
+      <input id="tick-interval" type="number" value="1" min="0.000000000001" step="any">
 
-      <label>
-        <input id="show-geology" type="checkbox" checked>
-        Geological ranges
-      </label>
+      <label for="branch-width">Width:</label>
+      <input id="branch-width" type="number" value="1.5" min="0.1" step="0.1">
+
+      <label><input id="show-geology" type="checkbox" checked> Geology</label>
 
       <span class="geology-scale-control">
-        <label for="geology-unit-ma">1 tree unit =</label>
-
-        <input
-          id="geology-unit-ma"
-          type="number"
-          value="100"
-          min="0.000000000001"
-          step="any"
-          inputmode="decimal"
-          aria-label="Millions of years per tree unit"
-        >
-
+        <label for="geology-unit-ma">1 unit =</label>
+        <input id="geology-unit-ma" type="number" value="100" min="0.000000000001" step="any" inputmode="decimal" aria-label="Millions of years per tree unit">
         <span>Ma</span>
       </span>
 
       <span class="toolbar-divider" aria-hidden="true"></span>
-
       <button type="button" id="zoom-in">Zoom in</button>
       <button type="button" id="zoom-out">Zoom out</button>
-      <button type="button" id="focus-selection">Focus selection</button>
-      <button type="button" id="fit-tree">Fit tree</button>
+      <button type="button" id="focus-selection">Focus</button>
+      <button type="button" id="fit-tree">Fit</button>
       <button type="button" id="reset-tree">Reset</button>
 
       <span class="toolbar-divider" aria-hidden="true"></span>
-
-      <button type="button" id="clear-selections">
-        Clear selections
-      </button>
-
-      <button type="button" id="hide-selected-tips">
-        Hide selected tips
-      </button>
-
-      <button type="button" id="hide-selected-clade">
-        Hide selected clade
-      </button>
-
-      <button type="button" id="restore-hidden">
-        Restore hidden
-      </button>
-
-      <button type="button" id="collapse-selected-clade">
-        Collapse selected clade
-      </button>
-
-      <button type="button" id="expand-all-clades">
-        Expand all
-      </button>
+      <button type="button" id="clear-selections">Clear sel.</button>
+      <button type="button" id="hide-selected-tips">Hide tips</button>
+      <button type="button" id="hide-selected-clade">Hide clade</button>
+      <button type="button" id="restore-hidden">Restore</button>
+      <button type="button" id="collapse-selected-clade">Collapse</button>
+      <button type="button" id="expand-all-clades">Expand all</button>
 
       <span class="toolbar-divider" aria-hidden="true"></span>
-
-      <button type="button" id="download-svg">
-        Download SVG
-      </button>
+      <button type="button" id="download-svg">SVG</button>
     </section>
 
     <div class="file-status" role="status" aria-live="polite">
       <span id="status-dot" class="status-dot loading"></span>
-
-      <span id="status-text" class="status-text">
-        Loading
-        <strong>Wang_Luo_2025_FigTree.tre</strong>...
-      </span>
+      <span id="status-text" class="status-text">Loading <strong>Wang_Luo_2025_FigTree.tre</strong>...</span>
     </div>
 
-    <section
-      id="tree-library"
-      class="tree-library"
-      aria-labelledby="tree-library-heading"
-      hidden
-    >
+    <section id="tree-library" class="tree-library" aria-labelledby="tree-library-heading" hidden>
       <div class="tree-library-header">
         <h2 id="tree-library-heading">Loaded trees</h2>
-
-        <span
-          id="tree-library-count"
-          class="tree-library-count"
-        ></span>
+        <span id="tree-library-count" class="tree-library-count"></span>
       </div>
-
-      <ul
-        id="tree-library-list"
-        class="tree-library-list"
-      ></ul>
+      <ul id="tree-library-list" class="tree-library-list"></ul>
     </section>
 
-    <section
-      id="tree-container"
-      class="tree-container"
-      aria-label="Timetree display"
-    >
-      <svg
-        id="tree-svg"
-        role="img"
-        aria-label="Interactive timetree with geological timeline"
-      ></svg>
-
-      <div id="empty-tree-message" class="empty-tree-message">
-        Upload one or more NEXUS or Newick files, or drop them here.
-      </div>
+    <section id="tree-container" class="tree-container" aria-label="Timetree display">
+      <svg id="tree-svg" role="img" aria-label="Interactive timetree with geological timeline"></svg>
+      <div id="empty-tree-message" class="empty-tree-message">Upload one or more NEXUS or Newick files, or drop them here.</div>
     </section>
 
     <section class="information">
       <article class="info-panel" aria-live="polite">
         <h2>MRCA / selected tips</h2>
-
-        <div id="mrca-details">
-          <p class="empty-message">
-            Click two tip names to calculate their MRCA.
-          </p>
-        </div>
+        <div id="mrca-details"><p class="empty-message">Click two tip names to calculate their MRCA.</p></div>
       </article>
 
       <article class="info-panel" aria-live="polite">
         <h2>Selected node</h2>
-
-        <div id="selected-node-details">
-          <p class="empty-message">
-            Click an internal node to view its timing and clade size.
-          </p>
-        </div>
+        <div id="selected-node-details"><p class="empty-message">Click an internal node to view its timing and clade size.</p></div>
       </article>
     </section>
 
     <p class="instructions">
-      Click a tip once to select it.
-      <strong>Double-click a tip name or circle to rename it.</strong>
+      Click a tip once to select it. <strong>Double-click a tip name or circle to rename it.</strong>
       Double-click an internal node to collapse or expand its clade.
-      Geological ranges use Ma before present.
-      Set <strong>1 tree unit</strong> to the number of Ma represented
-      by one branch-length unit. Geological ranges rescale automatically.
-      The <strong>Units</strong> field changes only the timeline title.
+      <strong>Single-click a branch to paint it</strong> using current Branch color.
+      Geological ranges use Ma before present. Set <strong>1 tree unit</strong> to Ma represented by one branch-length unit.
+      The <strong>Title</strong> field changes only timeline title.
+      To color a clade, select an internal node and click <strong>Apply clade</strong>.
+      (Clade color affects descendants only, not its parent branch.)
     </p>
 
     <footer class="credits">
-      <strong>Interactive Timetree Viewer</strong> was developed by
-      ChatGPT with help from
-      <a
-        href="https://sishuowang2022.wordpress.com/"
-        target="_blank"
-        rel="noopener noreferrer"
-      >Sishuo Wang</a>.
-      The default tree is from Wang &amp; Luo (2025),
-      <cite>Systematic Biology</cite>.
+      <strong>Interactive Timetree Viewer</strong> is developed by ChatGPT with help from
+      <a href="https://sishuowang2022.wordpress.com/" target="_blank" rel="noopener noreferrer">Sishuo Wang</a>, distributed under CC-1.0. No data is collected.
+      The default tree is from Wang &amp; Luo (2025), <cite>Syst. Biol.</cite>.
     </footer>
   </main>
 
-  <aside
-    id="tip-editor"
-    class="tip-editor"
-    role="dialog"
-    aria-labelledby="tip-editor-label"
-  >
-    <label
-      id="tip-editor-label"
-      class="tip-editor-label"
-      for="tip-editor-input"
-    >
-      Edit tip name
-    </label>
-
+  <aside id="tip-editor" class="tip-editor" role="dialog" aria-labelledby="tip-editor-label">
+    <label id="tip-editor-label" class="tip-editor-label" for="tip-editor-input">Edit tip name</label>
     <div class="tip-editor-row">
-      <input
-        id="tip-editor-input"
-        type="text"
-        autocomplete="off"
-        spellcheck="false"
-      >
-
+      <input id="tip-editor-input" type="text" autocomplete="off" spellcheck="false">
       <button type="button" id="tip-editor-save">Save</button>
       <button type="button" id="tip-editor-cancel">Cancel</button>
     </div>
@@ -903,118 +342,27 @@
     const DOUBLE_CLICK_DELAY = 280;
     const SVG_NS = "http://www.w3.org/2000/svg";
     const DEFAULT_GEOLOGY_UNIT_MA = 100;
+    const DEFAULT_BRANCH_WIDTH = 1.5;
 
     const GEOLOGICAL_EONS = [
-      {
-        name: "Phanerozoic",
-        younger: 0,
-        older: 5.41,
-        color: "#9ad9dd",
-        text: "dark"
-      },
-      {
-        name: "Proterozoic",
-        younger: 5.41,
-        older: 25,
-        color: "#f2a7b8",
-        text: "dark"
-      },
-      {
-        name: "Archean",
-        younger: 25,
-        older: 40,
-        color: "#d85b91",
-        text: "light"
-      },
-      {
-        name: "Hadean",
-        younger: 40,
-        older: 46,
-        color: "#984779",
-        text: "light",
-        approximate: true
-      }
+      { name:"Phanerozoic", younger:0, older:5.41, color:"#9ad9dd", text:"dark" },
+      { name:"Proterozoic", younger:5.41, older:25, color:"#f2a7b8", text:"dark" },
+      { name:"Archean", younger:25, older:40, color:"#d85b91", text:"light" },
+      { name:"Hadean", younger:40, older:46, color:"#984779", text:"light", approximate:true }
     ];
 
     const GEOLOGICAL_ERAS = [
-      {
-        name: "Cenozoic",
-        younger: 0,
-        older: 0.66,
-        color: "#f2f91d",
-        text: "dark"
-      },
-      {
-        name: "Mesozoic",
-        younger: 0.66,
-        older: 2.52,
-        color: "#67c5ca",
-        text: "dark"
-      },
-      {
-        name: "Paleozoic",
-        younger: 2.52,
-        older: 5.41,
-        color: "#99c08d",
-        text: "dark"
-      },
-      {
-        name: "Neoproterozoic",
-        younger: 5.41,
-        older: 10,
-        color: "#f29eaa",
-        text: "dark"
-      },
-      {
-        name: "Mesoproterozoic",
-        younger: 10,
-        older: 16,
-        color: "#f5b3c2",
-        text: "dark"
-      },
-      {
-        name: "Paleoproterozoic",
-        younger: 16,
-        older: 25,
-        color: "#ef7fa1",
-        text: "dark"
-      },
-      {
-        name: "Neoarchean",
-        younger: 25,
-        older: 28,
-        color: "#df719d",
-        text: "dark"
-      },
-      {
-        name: "Mesoarchean",
-        younger: 28,
-        older: 32,
-        color: "#d85b91",
-        text: "light"
-      },
-      {
-        name: "Paleoarchean",
-        younger: 32,
-        older: 36,
-        color: "#c64f89",
-        text: "light"
-      },
-      {
-        name: "Eoarchean",
-        younger: 36,
-        older: 40,
-        color: "#ad467e",
-        text: "light"
-      },
-      {
-        name: "No formal eras",
-        younger: 40,
-        older: 46,
-        color: "#7f3d69",
-        text: "light",
-        approximate: true
-      }
+      { name:"Cenozoic", younger:0, older:0.66, color:"#f2f91d", text:"dark" },
+      { name:"Mesozoic", younger:0.66, older:2.52, color:"#67c5ca", text:"dark" },
+      { name:"Paleozoic", younger:2.52, older:5.41, color:"#99c08d", text:"dark" },
+      { name:"Neoproterozoic", younger:5.41, older:10, color:"#f29eaa", text:"dark" },
+      { name:"Mesoproterozoic", younger:10, older:16, color:"#f5b3c2", text:"dark" },
+      { name:"Paleoproterozoic", younger:16, older:25, color:"#ef7fa1", text:"dark" },
+      { name:"Neoarchean", younger:25, older:28, color:"#df719d", text:"dark" },
+      { name:"Mesoarchean", younger:28, older:32, color:"#d85b91", text:"light" },
+      { name:"Paleoarchean", younger:32, older:36, color:"#c64f89", text:"light" },
+      { name:"Eoarchean", younger:36, older:40, color:"#ad467e", text:"light" },
+      { name:"No formal eras", younger:40, older:46, color:"#7f3d69", text:"light", approximate:true }
     ];
 
     const fileInput = document.getElementById("tree-file");
@@ -1022,53 +370,32 @@
     const sortClades = document.getElementById("sort-clades");
     const timelineUnits = document.getElementById("timeline-units");
     const tickIntervalInput = document.getElementById("tick-interval");
+    const branchWidthInput = document.getElementById("branch-width");
     const showGeologyInput = document.getElementById("show-geology");
+    const cladeColorInput = document.getElementById("clade-color");
+    const branchColorInput = document.getElementById("branch-color");
 
-    const geologyUnitMaInput = document.getElementById(
-      "geology-unit-ma"
-    );
-
-    const geologyScaleControl = document.querySelector(
-      ".geology-scale-control"
-    );
+    const geologyUnitMaInput = document.getElementById("geology-unit-ma");
+    const geologyScaleControl = document.querySelector(".geology-scale-control");
 
     const treeLibrary = document.getElementById("tree-library");
-    const treeLibraryList = document.getElementById(
-      "tree-library-list"
-    );
-    const treeLibraryCount = document.getElementById(
-      "tree-library-count"
-    );
+    const treeLibraryList = document.getElementById("tree-library-list");
+    const treeLibraryCount = document.getElementById("tree-library-count");
 
     const treeContainer = document.getElementById("tree-container");
     const treeSvg = document.getElementById("tree-svg");
-
-    const emptyTreeMessage = document.getElementById(
-      "empty-tree-message"
-    );
+    const emptyTreeMessage = document.getElementById("empty-tree-message");
 
     const statusDot = document.getElementById("status-dot");
     const statusText = document.getElementById("status-text");
 
     const mrcaDetails = document.getElementById("mrca-details");
-
-    const selectedNodeDetails = document.getElementById(
-      "selected-node-details"
-    );
+    const selectedNodeDetails = document.getElementById("selected-node-details");
 
     const tipEditor = document.getElementById("tip-editor");
-
-    const tipEditorInput = document.getElementById(
-      "tip-editor-input"
-    );
-
-    const tipEditorSave = document.getElementById(
-      "tip-editor-save"
-    );
-
-    const tipEditorCancel = document.getElementById(
-      "tip-editor-cancel"
-    );
+    const tipEditorInput = document.getElementById("tip-editor-input");
+    const tipEditorSave = document.getElementById("tip-editor-save");
+    const tipEditorCancel = document.getElementById("tip-editor-cancel");
 
     let loadedTrees = [];
     let root = null;
@@ -1080,6 +407,7 @@
 
     let selectedNode = null;
     let selectedTips = [];
+    let selectedBranchChildId = null;
     let editingTip = null;
 
     let baseWidth = 1200;
@@ -1088,11 +416,6 @@
 
     let lastLayoutById = new Map();
     let pendingSvgClickTimer = null;
-
-    /*
-     * Once the user selects or drops a file, the delayed default-tree
-     * request is not allowed to replace the user's collection.
-     */
     let userFileInteraction = false;
 
     function cancelPendingSvgClick() {
@@ -1104,7 +427,6 @@
 
     function scheduleSvgSingleClick(callback) {
       cancelPendingSvgClick();
-
       pendingSvgClickTimer = setTimeout(() => {
         pendingSvgClickTimer = null;
         callback();
@@ -1124,522 +446,233 @@
         .replaceAll('"', "&quot;")
         .replaceAll("'", "&#039;");
     }
+    function escapeXml(value) { return escapeHtml(value); }
 
-    function escapeXml(value) {
-      return escapeHtml(value);
+    function sanitizeHexColor(value) {
+      const text = String(value || "").trim();
+      return /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(text) ? text : null;
     }
 
     function formatNumber(value) {
-      if (!Number.isFinite(value)) {
-        return "—";
-      }
-
-      if (Math.abs(value) >= 1000) {
-        return value.toFixed(1).replace(/\.0$/, "");
-      }
-
-      if (Math.abs(value) >= 100) {
-        return value.toFixed(2).replace(/\.?0+$/, "");
-      }
-
-      return value
-        .toFixed(6)
-        .replace(/0+$/, "")
-        .replace(/\.$/, "");
+      if (!Number.isFinite(value)) return "—";
+      if (Math.abs(value) >= 1000) return value.toFixed(1).replace(/\.0$/, "");
+      if (Math.abs(value) >= 100) return value.toFixed(2).replace(/\.?0+$/, "");
+      return value.toFixed(6).replace(/0+$/, "").replace(/\.$/, "");
     }
 
     function formatInputNumber(value) {
-      if (!Number.isFinite(value) || value <= 0) {
-        return "1";
-      }
-
+      if (!Number.isFinite(value) || value <= 0) return "1";
       return String(Number(value.toPrecision(12)));
     }
 
     function stripOuterQuotes(value) {
       const text = value.trim();
-
-      if (
-        text.length >= 2 &&
-        text.startsWith("'") &&
-        text.endsWith("'")
-      ) {
-        return text.slice(1, -1).replaceAll("''", "'");
-      }
-
-      if (
-        text.length >= 2 &&
-        text.startsWith('"') &&
-        text.endsWith('"')
-      ) {
-        return text.slice(1, -1);
-      }
-
+      if (text.length >= 2 && text.startsWith("'") && text.endsWith("'")) return text.slice(1, -1).replaceAll("''", "'");
+      if (text.length >= 2 && text.startsWith('"') && text.endsWith('"')) return text.slice(1, -1);
       return text;
     }
 
     function splitOutsideQuotes(text, delimiter = ",") {
       const parts = [];
-
-      let buffer = "";
-      let quote = null;
-      let bracketDepth = 0;
-      let parenthesisDepth = 0;
-
+      let buffer = "", quote = null, bracketDepth = 0, parenthesisDepth = 0;
       for (let index = 0; index < text.length; index += 1) {
         const character = text[index];
-
         if (quote) {
           buffer += character;
-
           if (character === quote) {
-            if (quote === "'" && text[index + 1] === "'") {
-              buffer += text[index + 1];
-              index += 1;
-            } else {
-              quote = null;
-            }
+            if (quote === "'" && text[index + 1] === "'") { buffer += text[index + 1]; index += 1; }
+            else quote = null;
           }
-
           continue;
         }
+        if (character === "'" || character === '"') { quote = character; buffer += character; continue; }
+        if (character === "[") bracketDepth += 1;
+        else if (character === "]") bracketDepth = Math.max(0, bracketDepth - 1);
+        else if (character === "(") parenthesisDepth += 1;
+        else if (character === ")") parenthesisDepth = Math.max(0, parenthesisDepth - 1);
 
-        if (character === "'" || character === '"') {
-          quote = character;
-          buffer += character;
-          continue;
-        }
-
-        if (character === "[") {
-          bracketDepth += 1;
-        } else if (character === "]") {
-          bracketDepth = Math.max(0, bracketDepth - 1);
-        } else if (character === "(") {
-          parenthesisDepth += 1;
-        } else if (character === ")") {
-          parenthesisDepth = Math.max(
-            0,
-            parenthesisDepth - 1
-          );
-        }
-
-        if (
-          character === delimiter &&
-          bracketDepth === 0 &&
-          parenthesisDepth === 0
-        ) {
-          parts.push(buffer.trim());
-          buffer = "";
-        } else {
-          buffer += character;
-        }
+        if (character === delimiter && bracketDepth === 0 && parenthesisDepth === 0) {
+          parts.push(buffer.trim()); buffer = "";
+        } else buffer += character;
       }
-
-      if (buffer.trim()) {
-        parts.push(buffer.trim());
-      }
-
+      if (buffer.trim()) parts.push(buffer.trim());
       return parts;
     }
 
     function extractTranslations(text) {
       const map = new Map();
       const match = text.match(/\bTRANSLATE\b([\s\S]*?);/i);
-
-      if (!match) {
-        return map;
-      }
-
+      if (!match) return map;
       for (const entry of splitOutsideQuotes(match[1], ",")) {
-        const itemMatch = entry
-          .trim()
-          .match(/^(\S+)\s+([\s\S]+)$/);
-
-        if (!itemMatch) {
-          continue;
-        }
-
-        map.set(
-          stripOuterQuotes(itemMatch[1]),
-          stripOuterQuotes(itemMatch[2].trim())
-        );
+        const itemMatch = entry.trim().match(/^(\S+)\s+([\s\S]+)$/);
+        if (!itemMatch) continue;
+        map.set(stripOuterQuotes(itemMatch[1]), stripOuterQuotes(itemMatch[2].trim()));
       }
-
       return map;
     }
 
     function extractStandaloneNewickTrees(text) {
       const statements = [];
-
-      let start = -1;
-      let quote = null;
-      let bracketDepth = 0;
-      let parenthesisDepth = 0;
+      let start = -1, quote = null, bracketDepth = 0, parenthesisDepth = 0;
 
       function addStatement(end) {
-        if (start < 0) {
-          return;
-        }
-
-        const statement = text
-          .slice(start, end)
-          .trim()
-          .replace(/;\s*$/, "")
-          .trim();
-
-        if (statement.includes("(")) {
-          statements.push(statement);
-        }
-
-        start = -1;
-        parenthesisDepth = 0;
+        if (start < 0) return;
+        const statement = text.slice(start, end).trim().replace(/;\s*$/, "").trim();
+        if (statement.includes("(")) statements.push(statement);
+        start = -1; parenthesisDepth = 0;
       }
 
       for (let index = 0; index < text.length; index += 1) {
         const character = text[index];
-
         if (quote) {
           if (character === quote) {
-            if (
-              quote === "'" &&
-              text[index + 1] === "'"
-            ) {
-              index += 1;
-            } else {
-              quote = null;
-            }
+            if (quote === "'" && text[index + 1] === "'") index += 1;
+            else quote = null;
           }
-
           continue;
         }
-
-        if (character === "'" || character === '"') {
-          quote = character;
-          continue;
-        }
-
-        if (character === "[") {
-          bracketDepth += 1;
-          continue;
-        }
-
-        if (character === "]") {
-          bracketDepth = Math.max(0, bracketDepth - 1);
-          continue;
-        }
-
-        if (bracketDepth > 0) {
-          continue;
-        }
+        if (character === "'" || character === '"') { quote = character; continue; }
+        if (character === "[") { bracketDepth += 1; continue; }
+        if (character === "]") { bracketDepth = Math.max(0, bracketDepth - 1); continue; }
+        if (bracketDepth > 0) continue;
 
         if (character === "(") {
-          if (parenthesisDepth === 0) {
-            if (start >= 0) {
-              addStatement(index);
-            }
-
-            start = index;
-          }
-
-          parenthesisDepth += 1;
-          continue;
+          if (parenthesisDepth === 0) { if (start >= 0) addStatement(index); start = index; }
+          parenthesisDepth += 1; continue;
         }
-
-        if (character === ")" && parenthesisDepth > 0) {
-          parenthesisDepth -= 1;
-          continue;
-        }
-
-        if (
-          character === ";" &&
-          parenthesisDepth === 0 &&
-          start >= 0
-        ) {
-          addStatement(index);
-        }
+        if (character === ")" && parenthesisDepth > 0) { parenthesisDepth -= 1; continue; }
+        if (character === ";" && parenthesisDepth === 0 && start >= 0) addStatement(index);
       }
+      if (start >= 0 && parenthesisDepth === 0) addStatement(text.length);
 
-      if (start >= 0 && parenthesisDepth === 0) {
-        addStatement(text.length);
-      }
-
-      return statements.map((newick, index) => ({
-        name: `Tree ${index + 1}`,
-        newick
-      }));
+      return statements.map((newick, index) => ({ name:`Tree ${index + 1}`, newick }));
     }
 
     function extractTrees(text) {
       const trees = [];
-
-      const declarationPattern =
-        /\b(UTREE|TREE)\b\s+(?:\*\s*)?([^=;]+?)\s*=/ig;
-
+      const declarationPattern = /\b(UTREE|TREE)\b\s+(?:\*\s*)?([^=;]+?)\s*=/ig;
       let match;
 
-      while (
-        (match = declarationPattern.exec(text)) !== null
-      ) {
+      while ((match = declarationPattern.exec(text)) !== null) {
         const declarationType = match[1].toUpperCase();
         const name = stripOuterQuotes(match[2].trim());
         const start = declarationPattern.lastIndex;
 
-        let quote = null;
-        let bracketDepth = 0;
-        let end = -1;
-
-        for (
-          let index = start;
-          index < text.length;
-          index += 1
-        ) {
+        let quote = null, bracketDepth = 0, end = -1;
+        for (let index = start; index < text.length; index += 1) {
           const character = text[index];
-
           if (quote) {
             if (character === quote) {
-              if (
-                quote === "'" &&
-                text[index + 1] === "'"
-              ) {
-                index += 1;
-              } else {
-                quote = null;
-              }
+              if (quote === "'" && text[index + 1] === "'") index += 1;
+              else quote = null;
             }
-
             continue;
           }
-
-          if (character === "'" || character === '"') {
-            quote = character;
-            continue;
-          }
-
-          if (character === "[") {
-            bracketDepth += 1;
-            continue;
-          }
-
-          if (character === "]") {
-            bracketDepth = Math.max(0, bracketDepth - 1);
-            continue;
-          }
-
-          if (
-            character === ";" &&
-            bracketDepth === 0
-          ) {
-            end = index;
-            break;
-          }
+          if (character === "'" || character === '"') { quote = character; continue; }
+          if (character === "[") { bracketDepth += 1; continue; }
+          if (character === "]") { bracketDepth = Math.max(0, bracketDepth - 1); continue; }
+          if (character === ";" && bracketDepth === 0) { end = index; break; }
         }
 
         if (end >= 0) {
-          trees.push({
-            name: name || `Tree ${trees.length + 1}`,
-            type: declarationType,
-            newick: text.slice(start, end).trim()
-          });
-
+          trees.push({ name:name || `Tree ${trees.length + 1}`, type:declarationType, newick:text.slice(start, end).trim() });
           declarationPattern.lastIndex = end + 1;
         }
       }
 
-      if (trees.length > 0) {
-        return trees;
-      }
-
+      if (trees.length > 0) return trees;
       return extractStandaloneNewickTrees(text);
     }
 
     class NewickParser {
-      constructor(text) {
-        this.text = text.trim();
-        this.position = 0;
-      }
-
-      peek() {
-        return this.text[this.position];
-      }
+      constructor(text) { this.text = text.trim(); this.position = 0; }
+      peek() { return this.text[this.position]; }
 
       skipWhitespace() {
-        while (
-          this.position < this.text.length &&
-          /\s/.test(this.text[this.position])
-        ) {
-          this.position += 1;
-        }
+        while (this.position < this.text.length && /\s/.test(this.text[this.position])) this.position += 1;
       }
 
       parseComment() {
         this.skipWhitespace();
-
-        if (this.peek() !== "[") {
-          return "";
-        }
-
+        if (this.peek() !== "[") return "";
         const start = this.position;
-
-        let depth = 0;
-        let quote = null;
-
+        let depth = 0, quote = null;
         while (this.position < this.text.length) {
           const character = this.text[this.position];
-
           if (quote) {
-            if (character === quote) {
-              quote = null;
-            }
-
-            this.position += 1;
-            continue;
+            if (character === quote) quote = null;
+            this.position += 1; continue;
           }
-
-          if (character === "'" || character === '"') {
-            quote = character;
-            this.position += 1;
-            continue;
-          }
-
-          if (character === "[") {
-            depth += 1;
-          } else if (character === "]") {
+          if (character === "'" || character === '"') { quote = character; this.position += 1; continue; }
+          if (character === "[") depth += 1;
+          else if (character === "]") {
             depth -= 1;
-
-            if (depth === 0) {
-              this.position += 1;
-              break;
-            }
+            if (depth === 0) { this.position += 1; break; }
           }
-
           this.position += 1;
         }
-
         return this.text.slice(start, this.position);
       }
 
       skipLeadingComments() {
         this.skipWhitespace();
-
-        while (this.peek() === "[") {
-          this.parseComment();
-          this.skipWhitespace();
-        }
+        while (this.peek() === "[") { this.parseComment(); this.skipWhitespace(); }
       }
 
       parseQuotedName() {
         const quote = this.peek();
         this.position += 1;
-
         let result = "";
-
         while (this.position < this.text.length) {
           const character = this.text[this.position];
-
           if (character === quote) {
-            if (
-              quote === "'" &&
-              this.text[this.position + 1] === "'"
-            ) {
-              result += "'";
-              this.position += 2;
-              continue;
+            if (quote === "'" && this.text[this.position + 1] === "'") {
+              result += "'"; this.position += 2; continue;
             }
-
-            this.position += 1;
-            break;
+            this.position += 1; break;
           }
-
-          result += character;
-          this.position += 1;
+          result += character; this.position += 1;
         }
-
         return result;
       }
 
       parseName() {
         this.skipWhitespace();
-
-        if (this.peek() === "'" || this.peek() === '"') {
-          return this.parseQuotedName();
-        }
-
+        if (this.peek() === "'" || this.peek() === '"') return this.parseQuotedName();
         const start = this.position;
-
         while (this.position < this.text.length) {
           const character = this.text[this.position];
-
-          if (
-            character === ":" ||
-            character === "," ||
-            character === "(" ||
-            character === ")" ||
-            character === "[" ||
-            character === ";" ||
-            /\s/.test(character)
-          ) {
-            break;
-          }
-
+          if (character === ":" || character === "," || character === "(" || character === ")" || character === "[" || character === ";" || /\s/.test(character)) break;
           this.position += 1;
         }
-
         return this.text.slice(start, this.position).trim();
       }
 
       parseNumber() {
         this.skipWhitespace();
-
         const remaining = this.text.slice(this.position);
-
-        const match = remaining.match(
-          /^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?/
-        );
-
-        if (!match) {
-          throw new Error(
-            `Expected a branch length near position ${this.position}.`
-          );
-        }
-
+        const match = remaining.match(/^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?/);
+        if (!match) throw new Error(`Expected a branch length near position ${this.position}.`);
         this.position += match[0].length;
         return Number(match[0]);
       }
 
       parseMetadata(node) {
         this.skipWhitespace();
-
         const comments = [];
-
-        while (this.peek() === "[") {
-          comments.push(this.parseComment());
-          this.skipWhitespace();
-        }
-
+        while (this.peek() === "[") { comments.push(this.parseComment()); this.skipWhitespace(); }
         if (this.peek() === ":") {
           this.position += 1;
           node.length = this.parseNumber();
-
           this.skipWhitespace();
-
-          while (this.peek() === "[") {
-            comments.push(this.parseComment());
-            this.skipWhitespace();
-          }
+          while (this.peek() === "[") { comments.push(this.parseComment()); this.skipWhitespace(); }
         }
-
         node.comments = comments.join(" ");
 
         const hpdMatch = node.comments.match(
           /(?:95%\s*HPD|height_95%\s*HPD|height_95%_HPD)\s*=\s*\{\s*([+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?)\s*,\s*([+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?)\s*\}/i
         );
-
-        if (hpdMatch) {
-          node.hpd = [
-            Number(hpdMatch[1]),
-            Number(hpdMatch[2])
-          ].sort((a, b) => a - b);
-        }
+        if (hpdMatch) node.hpd = [Number(hpdMatch[1]), Number(hpdMatch[2])].sort((a, b) => a - b);
       }
 
       parseSubtree(parent = null) {
@@ -1647,59 +680,39 @@
         this.skipWhitespace();
 
         const node = {
-          id: `node-${++nodeSequence}`,
-          name: "",
-          length: 0,
-          comments: "",
-          hpd: null,
-          children: [],
+          id:`node-${++nodeSequence}`,
+          name:"",
+          length:0,
+          comments:"",
+          hpd:null,
+          children:[],
           parent,
-          hidden: false,
-          collapsed: false,
-          originalIndex: 0,
-          age: 0
+          hidden:false,
+          collapsed:false,
+          originalIndex:0,
+          age:0,
+          lineageColor:null, // clade-descendant color (outgoing only)
+          branchColor:null   // incoming branch color override
         };
 
         if (this.peek() === "(") {
           this.position += 1;
-
           let childIndex = 0;
-
           while (true) {
             const child = this.parseSubtree(node);
-
             child.originalIndex = childIndex;
             childIndex += 1;
-
             node.children.push(child);
             this.skipWhitespace();
-
-            if (this.peek() === ",") {
-              this.position += 1;
-              continue;
-            }
-
-            if (this.peek() === ")") {
-              this.position += 1;
-              break;
-            }
-
-            throw new Error(
-              `Expected "," or ")" near position ${this.position}.`
-            );
+            if (this.peek() === ",") { this.position += 1; continue; }
+            if (this.peek() === ")") { this.position += 1; break; }
+            throw new Error(`Expected "," or ")" near position ${this.position}.`);
           }
-
           node.name = this.parseName();
           this.parseMetadata(node);
         } else {
           node.name = this.parseName();
-
-          if (!node.name) {
-            throw new Error(
-              `Expected a tip name near position ${this.position}.`
-            );
-          }
-
+          if (!node.name) throw new Error(`Expected a tip name near position ${this.position}.`);
           this.parseMetadata(node);
         }
 
@@ -1708,394 +721,189 @@
 
       parse() {
         this.skipLeadingComments();
-
         const parsedRoot = this.parseSubtree(null);
-
         this.skipWhitespace();
-
-        if (this.peek() === ";") {
-          this.position += 1;
-        }
-
+        if (this.peek() === ";") this.position += 1;
         this.skipWhitespace();
-
-        if (this.position < this.text.length) {
-          throw new Error(
-            `Unexpected content near position ${this.position}.`
-          );
-        }
-
+        if (this.position < this.text.length) throw new Error(`Unexpected content near position ${this.position}.`);
         return parsedRoot;
       }
     }
 
     function walk(node, callback) {
       callback(node);
-
-      for (const child of node.children) {
-        walk(child, callback);
-      }
+      for (const child of node.children) walk(child, callback);
     }
 
     function applyTranslations(treeRoot, translationMap) {
       walk(treeRoot, node => {
-        if (
-          node.children.length === 0 &&
-          translationMap.has(node.name)
-        ) {
-          node.name = translationMap.get(node.name);
-        }
+        if (node.children.length === 0 && translationMap.has(node.name)) node.name = translationMap.get(node.name);
       });
     }
 
     function calculateAges(node) {
-      if (node.children.length === 0) {
-        node.age = 0;
-        return 0;
-      }
-
+      if (node.children.length === 0) { node.age = 0; return 0; }
       let age = 0;
-
-      for (const child of node.children) {
-        age = Math.max(
-          age,
-          calculateAges(child) + (child.length || 0)
-        );
-      }
-
+      for (const child of node.children) age = Math.max(age, calculateAges(child) + (child.length || 0));
       node.age = age;
       return age;
     }
 
     function countTips(node, visibleOnly = false) {
-      if (visibleOnly && node.hidden) {
-        return 0;
-      }
-
-      if (node.children.length === 0) {
-        return 1;
-      }
-
-      return node.children.reduce(
-        (sum, child) => sum + countTips(child, visibleOnly),
-        0
-      );
+      if (visibleOnly && node.hidden) return 0;
+      if (node.children.length === 0) return 1;
+      return node.children.reduce((sum, child) => sum + countTips(child, visibleOnly), 0);
     }
 
     function maximumTimelineAge(treeRoot) {
       let maximum = treeRoot?.age || 0;
-
-      if (!treeRoot) {
-        return 1;
-      }
-
-      walk(treeRoot, node => {
-        if (node.hpd) {
-          maximum = Math.max(
-            maximum,
-            node.hpd[0],
-            node.hpd[1]
-          );
-        }
-      });
-
+      if (!treeRoot) return 1;
+      walk(treeRoot, node => { if (node.hpd) maximum = Math.max(maximum, node.hpd[0], node.hpd[1]); });
       return maximum > 0 ? maximum : 1;
     }
 
-    function calculateAutomaticTickInterval(
-      maximumAge,
-      targetTickCount = 8
-    ) {
-      if (!Number.isFinite(maximumAge) || maximumAge <= 0) {
-        return 1;
-      }
-
-      const rawInterval =
-        maximumAge / Math.max(2, targetTickCount);
-
-      const power = Math.pow(
-        10,
-        Math.floor(Math.log10(rawInterval))
-      );
-
+    function calculateAutomaticTickInterval(maximumAge, targetTickCount = 8) {
+      if (!Number.isFinite(maximumAge) || maximumAge <= 0) return 1;
+      const rawInterval = maximumAge / Math.max(2, targetTickCount);
+      const power = Math.pow(10, Math.floor(Math.log10(rawInterval)));
       const normalized = rawInterval / power;
-
       let niceValue;
-
-      if (normalized <= 1) {
-        niceValue = 1;
-      } else if (normalized <= 2) {
-        niceValue = 2;
-      } else if (normalized <= 2.5) {
-        niceValue = 2.5;
-      } else if (normalized <= 5) {
-        niceValue = 5;
-      } else {
-        niceValue = 10;
-      }
-
+      if (normalized <= 1) niceValue = 1;
+      else if (normalized <= 2) niceValue = 2;
+      else if (normalized <= 2.5) niceValue = 2.5;
+      else if (normalized <= 5) niceValue = 5;
+      else niceValue = 10;
       return niceValue * power;
     }
 
     function applyAutomaticTimelineScale(treeRoot = root) {
-      if (!treeRoot) {
-        tickIntervalInput.value = "1";
-        return 1;
-      }
-
+      if (!treeRoot) { tickIntervalInput.value = "1"; return 1; }
       const maximumAge = maximumTimelineAge(treeRoot);
-
-      const interval = calculateAutomaticTickInterval(
-        maximumAge
-      );
-
+      const interval = calculateAutomaticTickInterval(maximumAge);
       tickIntervalInput.value = formatInputNumber(interval);
-
       return interval;
     }
 
     function getTickInterval() {
       const value = Number(tickIntervalInput.value);
-
-      if (!Number.isFinite(value) || value <= 0) {
-        return root
-          ? calculateAutomaticTickInterval(
-              maximumTimelineAge(root)
-            )
-          : 1;
-      }
-
+      if (!Number.isFinite(value) || value <= 0) return root ? calculateAutomaticTickInterval(maximumTimelineAge(root)) : 1;
       return value;
+    }
+
+    function getBranchWidth() {
+      const value = Number(branchWidthInput.value);
+      return (Number.isFinite(value) && value > 0) ? value : DEFAULT_BRANCH_WIDTH;
     }
 
     function getGeologyUnitMa() {
       const value = Number(geologyUnitMaInput.value);
-
       if (Number.isFinite(value) && value > 0) {
         geologyScaleControl.classList.remove("invalid");
-
-        geologyUnitMaInput.setAttribute(
-          "aria-invalid",
-          "false"
-        );
-
+        geologyUnitMaInput.setAttribute("aria-invalid", "false");
         return value;
       }
-
       geologyScaleControl.classList.add("invalid");
-
-      geologyUnitMaInput.setAttribute(
-        "aria-invalid",
-        "true"
-      );
-
+      geologyUnitMaInput.setAttribute("aria-invalid", "true");
       return DEFAULT_GEOLOGY_UNIT_MA;
     }
 
     function orderedChildren(node) {
       const children = [...node.children];
       const mode = sortClades.value;
-
       if (mode === "increasing") {
-        children.sort((a, b) => {
-          return (
-            countTips(a, true) -
-              countTips(b, true) ||
-            a.originalIndex -
-              b.originalIndex
-          );
-        });
+        children.sort((a, b) => countTips(a, true) - countTips(b, true) || a.originalIndex - b.originalIndex);
       } else if (mode === "decreasing") {
-        children.sort((a, b) => {
-          return (
-            countTips(b, true) -
-              countTips(a, true) ||
-            a.originalIndex -
-              b.originalIndex
-          );
-        });
+        children.sort((a, b) => countTips(b, true) - countTips(a, true) || a.originalIndex - b.originalIndex);
       } else {
-        children.sort(
-          (a, b) => a.originalIndex - b.originalIndex
-        );
+        children.sort((a, b) => a.originalIndex - b.originalIndex);
       }
-
       return children;
     }
 
     function buildVisibleLayout(node, state) {
-      if (node.hidden) {
-        return null;
-      }
-
-      if (
-        node.children.length === 0 ||
-        node.collapsed
-      ) {
-        const layout = {
-          node,
-          x: 0,
-          y: state.nextY,
-          children: []
-        };
-
+      if (node.hidden) return null;
+      if (node.children.length === 0 || node.collapsed) {
+        const layout = { node, x:0, y:state.nextY, children:[] };
         state.nextY += state.rowHeight;
         state.items += 1;
-
         return layout;
       }
 
       const childLayouts = [];
-
       for (const child of orderedChildren(node)) {
         const childLayout = buildVisibleLayout(child, state);
-
-        if (childLayout) {
-          childLayouts.push(childLayout);
-        }
+        if (childLayout) childLayouts.push(childLayout);
       }
-
-      if (childLayouts.length === 0) {
-        return null;
-      }
+      if (childLayouts.length === 0) return null;
 
       return {
         node,
-        x: 0,
-        y:
-          (
-            childLayouts[0].y +
-            childLayouts[childLayouts.length - 1].y
-          ) / 2,
-        children: childLayouts
+        x:0,
+        y:(childLayouts[0].y + childLayouts[childLayouts.length - 1].y) / 2,
+        children:childLayouts
       };
     }
 
     function assignCoordinates(layout, xScale) {
       layout.x = xScale(layout.node.age);
-
-      for (const child of layout.children) {
-        assignCoordinates(child, xScale);
-      }
+      for (const child of layout.children) assignCoordinates(child, xScale);
     }
 
     function indexLayout(layout) {
       lastLayoutById.set(layout.node.id, layout);
-
-      for (const child of layout.children) {
-        indexLayout(child);
-      }
+      for (const child of layout.children) indexLayout(child);
     }
 
     function findSelectedMrca() {
-      if (selectedTips.length !== 2) {
-        return null;
-      }
-
+      if (selectedTips.length !== 2) return null;
       const ancestors = new Set();
-
       let current = selectedTips[0];
-
-      while (current) {
-        ancestors.add(current);
-        current = current.parent;
-      }
-
+      while (current) { ancestors.add(current); current = current.parent; }
       current = selectedTips[1];
-
       while (current) {
-        if (ancestors.has(current)) {
-          return current;
-        }
-
+        if (ancestors.has(current)) return current;
         current = current.parent;
       }
-
       return null;
     }
 
     function highlightedBranchIds() {
       const result = new Set();
       const mrca = findSelectedMrca();
-
-      if (!mrca) {
-        return result;
-      }
-
+      if (!mrca) return result;
       for (const tip of selectedTips) {
         let current = tip;
-
-        while (current && current !== mrca) {
-          result.add(current.id);
-          current = current.parent;
-        }
+        while (current && current !== mrca) { result.add(current.id); current = current.parent; }
       }
-
       return result;
     }
 
     function longestVisibleLabel(node) {
       let longest = 15;
-
       walk(node, item => {
-        if (
-          !item.hidden &&
-          item.children.length === 0
-        ) {
-          longest = Math.max(longest, item.name.length);
-        }
+        if (!item.hidden && item.children.length === 0) longest = Math.max(longest, item.name.length);
       });
-
       return longest;
     }
 
-    function renderGeologyRow({
-      ranges,
-      y,
-      height,
-      xScale,
-      timelineMaximum,
-      rowName
-    }) {
+    function renderGeologyRow({ ranges, y, height, xScale, timelineMaximum, rowName }) {
       let markup = `
-        <text
-          class="geology-row-label"
-          x="${xScale(timelineMaximum) - 7}"
-          y="${y + height / 2}"
-        >${escapeXml(rowName)}</text>
+        <text class="geology-row-label" x="${xScale(timelineMaximum) - 7}" y="${y + height / 2}">
+          ${escapeXml(rowName)}
+        </text>
       `;
-
       const geologyUnitMa = getGeologyUnitMa();
-
-      const coordinateMultiplier =
-        DEFAULT_GEOLOGY_UNIT_MA / geologyUnitMa;
+      const coordinateMultiplier = DEFAULT_GEOLOGY_UNIT_MA / geologyUnitMa;
 
       ranges.forEach(range => {
-        const youngerTreeAge =
-          range.younger * coordinateMultiplier;
+        const youngerTreeAge = range.younger * coordinateMultiplier;
+        const olderTreeAge = range.older * coordinateMultiplier;
+        const youngerMa = range.younger * DEFAULT_GEOLOGY_UNIT_MA;
+        const olderMa = range.older * DEFAULT_GEOLOGY_UNIT_MA;
 
-        const olderTreeAge =
-          range.older * coordinateMultiplier;
-
-        const youngerMa =
-          range.younger * DEFAULT_GEOLOGY_UNIT_MA;
-
-        const olderMa =
-          range.older * DEFAULT_GEOLOGY_UNIT_MA;
-
-        const visibleYounger = Math.max(
-          0,
-          youngerTreeAge
-        );
-
-        const visibleOlder = Math.min(
-          timelineMaximum,
-          olderTreeAge
-        );
-
-        if (visibleOlder <= visibleYounger) {
-          return;
-        }
+        const visibleYounger = Math.max(0, youngerTreeAge);
+        const visibleOlder = Math.min(timelineMaximum, olderTreeAge);
+        if (visibleOlder <= visibleYounger) return;
 
         const left = xScale(visibleOlder);
         const right = xScale(visibleYounger);
@@ -2105,294 +913,152 @@
 
         markup += `
           <g>
-            <rect
-              class="geology-range"
-              x="${left}"
-              y="${y}"
-              width="${width}"
-              height="${height}"
-              fill="${range.color}"
-            >
+            <rect class="geology-range" x="${left}" y="${y}" width="${width}" height="${height}" fill="${range.color}">
               <title>${escapeXml(range.name)}
 Start: ${range.approximate ? "~" : ""}${formatNumber(olderMa)} Ma
-End: ${
-  youngerMa === 0
-    ? "0 Ma (Present)"
-    : `${formatNumber(youngerMa)} Ma`
-}
-Duration: ${range.approximate ? "~" : ""}${formatNumber(
-          olderMa - youngerMa
-        )} million years</title>
+End: ${youngerMa === 0 ? "0 Ma (Present)" : `${formatNumber(youngerMa)} Ma`}
+Duration: ${range.approximate ? "~" : ""}${formatNumber(olderMa - youngerMa)} million years</title>
             </rect>
         `;
 
         if (showLabel) {
           markup += `
-            <text
-              class="geology-label${
-                range.text === "light" ? " light" : ""
-              }"
-              x="${left + width / 2}"
-              y="${y + height / 2}"
-            >${escapeXml(range.name)}</text>
+            <text class="geology-label${range.text === "light" ? " light" : ""}" x="${left + width / 2}" y="${y + height / 2}">
+              ${escapeXml(range.name)}
+            </text>
           `;
         }
-
         markup += `</g>`;
 
-        if (
-          youngerTreeAge > 0 &&
-          youngerTreeAge < timelineMaximum
-        ) {
+        if (youngerTreeAge > 0 && youngerTreeAge < timelineMaximum) {
           const boundaryX = xScale(youngerTreeAge);
-
-          markup += `
-            <line
-              class="geology-boundary"
-              x1="${boundaryX}"
-              y1="${y}"
-              x2="${boundaryX}"
-              y2="${y + height}"
-            ></line>
-          `;
+          markup += `<line class="geology-boundary" x1="${boundaryX}" y1="${y}" x2="${boundaryX}" y2="${y + height}"></line>`;
         }
       });
 
       return markup;
     }
 
-    function renderTimeline({
-      ticks,
-      plotLeft,
-      plotRight,
-      axisY,
-      treeBottom,
-      xScale,
-      timelineMaximum,
-      geologyEnabled
-    }) {
-      const units =
-        timelineUnits.value.trim() || "Ma";
-
+    function renderTimeline({ ticks, plotLeft, plotRight, axisY, treeBottom, xScale, timelineMaximum, geologyEnabled }) {
+      const units = timelineUnits.value.trim();
+      const titleText = units || "";
       let markup = "";
 
       for (const tick of ticks) {
         const x = xScale(tick);
-
         markup += `
-          <line
-            class="grid-line"
-            x1="${x}"
-            y1="${axisY}"
-            x2="${x}"
-            y2="${treeBottom}"
-          ></line>
-
-          <line
-            class="timeline-tick"
-            x1="${x}"
-            y1="${axisY - 6}"
-            x2="${x}"
-            y2="${axisY + 6}"
-          ></line>
-
-          <text
-            class="timeline-label"
-            x="${x}"
-            y="${axisY - 11}"
-          >${escapeXml(formatNumber(tick))}</text>
+          <line class="grid-line" x1="${x}" y1="${axisY}" x2="${x}" y2="${treeBottom}"></line>
+          <line class="timeline-tick" x1="${x}" y1="${axisY - 6}" x2="${x}" y2="${axisY + 6}"></line>
+          <text class="timeline-label" x="${x}" y="${axisY - 11}">${escapeXml(formatNumber(tick))}</text>
         `;
       }
 
       markup += `
-        <line
-          class="timeline-axis"
-          x1="${plotLeft}"
-          y1="${axisY}"
-          x2="${plotRight}"
-          y2="${axisY}"
-        ></line>
-
-        <text
-          class="timeline-title"
-          x="${(plotLeft + plotRight) / 2}"
-          y="25"
-        >
-          Time before present (${escapeXml(units)})
-        </text>
-
-        <text
-          class="timeline-direction-label"
-          x="${plotLeft}"
-          y="${axisY + 17}"
-          text-anchor="start"
-        >Older</text>
-
-        <text
-          class="timeline-direction-label"
-          x="${plotRight}"
-          y="${axisY + 17}"
-          text-anchor="end"
-        >Present</text>
+        <line class="timeline-axis" x1="${plotLeft}" y1="${axisY}" x2="${plotRight}" y2="${axisY}"></line>
+        <text class="timeline-title" x="${(plotLeft + plotRight) / 2}" y="25">${escapeXml(titleText)}</text>
+        <text class="timeline-direction-label" x="${plotLeft}" y="${axisY + 17}" text-anchor="start">Older</text>
+        <text class="timeline-direction-label" x="${plotRight}" y="${axisY + 17}" text-anchor="end">Present</text>
       `;
 
       if (geologyEnabled) {
-        markup += renderGeologyRow({
-          ranges: GEOLOGICAL_EONS,
-          y: axisY + 27,
-          height: 25,
-          xScale,
-          timelineMaximum,
-          rowName: "Eon"
-        });
-
-        markup += renderGeologyRow({
-          ranges: GEOLOGICAL_ERAS,
-          y: axisY + 53,
-          height: 29,
-          xScale,
-          timelineMaximum,
-          rowName: "Era"
-        });
+        markup += renderGeologyRow({ ranges:GEOLOGICAL_EONS, y:axisY + 27, height:25, xScale, timelineMaximum, rowName:"Eon" });
+        markup += renderGeologyRow({ ranges:GEOLOGICAL_ERAS, y:axisY + 53, height:29, xScale, timelineMaximum, rowName:"Era" });
       }
 
       return markup;
     }
 
-    function renderBranches(layout, highlighted, xScale) {
+    // IMPORTANT: clade color is "outgoing-descendant" color only.
+    // Edge (parent -> node) color is never taken from node.lineageColor.
+    function renderBranches(layout, highlighted, inheritedCladeColor = null, branchWidth = DEFAULT_BRANCH_WIDTH) {
       let markup = "";
+      const activeCladeColor = layout.node.lineageColor || inheritedCladeColor;
 
       if (layout.node.hpd) {
         markup += `
-          <line
-            class="hpd-bar"
-            x1="${xScale(layout.node.hpd[1])}"
-            y1="${layout.y}"
-            x2="${xScale(layout.node.hpd[0])}"
-            y2="${layout.y}"
-          ></line>
+          <line class="hpd-bar" x1="${xScaleGlobal(layout.node.hpd[1])}" y1="${layout.y}" x2="${xScaleGlobal(layout.node.hpd[0])}" y2="${layout.y}"></line>
         `;
       }
 
       for (const child of layout.children) {
-        const highlightClass =
-          highlighted.has(child.node.id)
-            ? " highlighted"
-            : "";
+        const isHighlighted = highlighted.has(child.node.id);
+        const isSelectedEdge = selectedBranchChildId === child.node.id;
+
+        const edgeColor = isHighlighted
+          ? "var(--orange)"
+          : (child.node.branchColor || activeCladeColor || "var(--branch)");
+
+        const lineWidth = isHighlighted ? branchWidth * 2 : (isSelectedEdge ? branchWidth * 1.7 : branchWidth);
 
         markup += `
           <path
-            class="branch${highlightClass}"
-            d="
-              M ${layout.x} ${layout.y}
-              V ${child.y}
-              H ${child.x}
-            "
-          ></path>
+            class="branch${isHighlighted ? " highlighted" : ""}${isSelectedEdge ? " selected-edge" : ""}"
+            data-branch-child-id="${child.node.id}"
+            style="stroke:${escapeXml(edgeColor)};stroke-width:${lineWidth};"
+            d="M ${layout.x} ${layout.y} V ${child.y} H ${child.x}">
+            <title>Single-click to paint this branch</title>
+          </path>
         `;
 
-        markup += renderBranches(
-          child,
-          highlighted,
-          xScale
-        );
+        markup += renderBranches(child, highlighted, activeCladeColor, branchWidth);
       }
 
       return markup;
     }
 
-    function renderNodes(layout, plotRight) {
+    function renderNodes(layout, plotRight, inheritedColor = null) {
       const node = layout.node;
-
+      const currentColor = node.lineageColor || inheritedColor;
       let markup = "";
 
-      if (
-        node.collapsed &&
-        node.children.length > 0
-      ) {
+      if (node.collapsed && node.children.length > 0) {
         const visibleTips = countTips(node, true);
-
-        const triangleHeight = Math.min(
-          22,
-          Math.max(7, 4 + Math.log2(visibleTips + 1) * 3)
-        );
+        const triangleHeight = Math.min(22, Math.max(7, 4 + Math.log2(visibleTips + 1) * 3));
+        const triangleStyle = currentColor ? ` style="stroke:${escapeXml(currentColor)};"` : "";
 
         markup += `
-          <polygon
-            class="collapsed-triangle"
-            data-node-id="${node.id}"
-            points="
-              ${layout.x},${layout.y}
-              ${plotRight},${layout.y - triangleHeight}
-              ${plotRight},${layout.y + triangleHeight}
-            "
-          >
+          <polygon class="collapsed-triangle" data-node-id="${node.id}" points="${layout.x},${layout.y} ${plotRight},${layout.y - triangleHeight} ${plotRight},${layout.y + triangleHeight}"${triangleStyle}>
             <title>Double-click to expand this clade</title>
           </polygon>
-
-          <text
-            class="collapsed-label"
-            x="${plotRight + 7}"
-            y="${layout.y}"
-          >
+          <text class="collapsed-label" x="${plotRight + 7}" y="${layout.y}">
             Collapsed clade (${visibleTips} tips)
           </text>
         `;
-
         return markup;
       }
 
       if (node.children.length === 0) {
-        const selectedClass =
-          selectedTips.includes(node) ? " selected" : "";
+        const selectedClass = selectedTips.includes(node) ? " selected" : "";
+        const tipCircleStyle = currentColor && !selectedTips.includes(node) ? ` style="stroke:${escapeXml(currentColor)};"` : "";
+        const tipLabelStyle = currentColor && !selectedTips.includes(node) ? ` style="fill:${escapeXml(currentColor)};"` : "";
 
         markup += `
-          <circle
-            class="tip-point${selectedClass}"
-            data-tip-id="${node.id}"
-            cx="${layout.x}"
-            cy="${layout.y}"
-            r="4"
-          >
-            <title>
-              Double-click to rename ${escapeXml(node.name)}
-            </title>
+          <circle class="tip-point${selectedClass}" data-tip-id="${node.id}" cx="${layout.x}" cy="${layout.y}" r="4"${tipCircleStyle}>
+            <title>Double-click to rename ${escapeXml(node.name)}</title>
           </circle>
-
-          <text
-            class="tip-label${selectedClass}"
-            data-tip-id="${node.id}"
-            x="${layout.x + 8}"
-            y="${layout.y}"
-          >${escapeXml(node.name)}</text>
+          <text class="tip-label${selectedClass}" data-tip-id="${node.id}" x="${layout.x + 8}" y="${layout.y}"${tipLabelStyle}>
+            ${escapeXml(node.name)}
+          </text>
         `;
       } else {
+        const nodeStyle = currentColor && selectedNode !== node ? ` style="stroke:${escapeXml(currentColor)};"` : "";
         markup += `
-          <circle
-            class="internal-node${
-              selectedNode === node ? " selected" : ""
-            }"
-            data-node-id="${node.id}"
-            cx="${layout.x}"
-            cy="${layout.y}"
-            r="4.3"
-          >
+          <circle class="internal-node${selectedNode === node ? " selected" : ""}" data-node-id="${node.id}" cx="${layout.x}" cy="${layout.y}" r="4.3"${nodeStyle}>
             <title>Double-click to collapse this clade</title>
           </circle>
         `;
       }
 
       for (const child of layout.children) {
-        markup += renderNodes(child, plotRight);
+        markup += renderNodes(child, plotRight, currentColor);
       }
 
       return markup;
     }
 
-    function renderTree({
-      preserveScroll = true,
-      preserveZoom = true
-    } = {}) {
+    let xScaleGlobal = null;
+
+    function renderTree({ preserveScroll = true, preserveZoom = true } = {}) {
       cancelPendingSvgClick();
       closeTipEditor();
 
@@ -2405,132 +1071,68 @@ Duration: ${range.approximate ? "~" : ""}${formatNumber(
 
       const oldScrollLeft = treeContainer.scrollLeft;
       const oldScrollTop = treeContainer.scrollTop;
-
-      if (!preserveZoom) {
-        zoomScale = 1;
-      }
+      if (!preserveZoom) zoomScale = 1;
 
       const geologyEnabled = showGeologyInput.checked;
       const rowHeight = 22;
-
       const topMargin = geologyEnabled ? 178 : 108;
       const bottomMargin = 35;
       const plotLeft = 80;
 
-      const labelWidth = Math.min(
-        760,
-        Math.max(
-          220,
-          longestVisibleLabel(root) * 7.1 + 20
-        )
-      );
-
+      const labelWidth = Math.min(760, Math.max(220, longestVisibleLabel(root) * 7.1 + 20));
       baseWidth = Math.max(1150, 850 + labelWidth);
 
       const plotRight = baseWidth - labelWidth;
       const interval = getTickInterval();
       const rawMaximum = maximumTimelineAge(root);
 
-      const timelineMaximum = Math.max(
-        interval,
-        Math.ceil(
-          (rawMaximum - Number.EPSILON) / interval
-        ) * interval
-      );
+      const timelineMaximum = Math.max(interval, Math.ceil((rawMaximum - Number.EPSILON) / interval) * interval);
 
       const ticks = [];
       const maximumTickCount = 1000;
-
-      for (
-        let index = 0;
-        index < maximumTickCount;
-        index += 1
-      ) {
+      for (let index = 0; index < maximumTickCount; index += 1) {
         const value = index * interval;
-
-        if (value > timelineMaximum + interval / 2) {
-          break;
-        }
-
+        if (value > timelineMaximum + interval / 2) break;
         ticks.push(Number(value.toPrecision(12)));
       }
 
-      const layoutState = {
-        nextY: topMargin,
-        rowHeight,
-        items: 0
-      };
-
+      const layoutState = { nextY:topMargin, rowHeight, items:0 };
       const layout = buildVisibleLayout(root, layoutState);
 
       if (!layout) {
         treeSvg.innerHTML = "";
         emptyTreeMessage.hidden = false;
-        emptyTreeMessage.textContent =
-          "All tips are hidden. Use Restore hidden.";
-
+        emptyTreeMessage.textContent = "All tips are hidden. Use Restore hidden.";
         updateInformationPanels();
         return;
       }
 
-      baseHeight = Math.max(
-        540,
-        layoutState.nextY + bottomMargin
-      );
+      baseHeight = Math.max(540, layoutState.nextY + bottomMargin);
 
       const xScale = age => {
-        const normalized = Math.max(
-          0,
-          Math.min(1, age / timelineMaximum)
-        );
-
-        return (
-          plotRight -
-          normalized * (plotRight - plotLeft)
-        );
+        const normalized = Math.max(0, Math.min(1, age / timelineMaximum));
+        return plotRight - normalized * (plotRight - plotLeft);
       };
+      xScaleGlobal = xScale;
 
       assignCoordinates(layout, xScale);
-
       lastLayoutById = new Map();
       indexLayout(layout);
 
       const timeline = renderTimeline({
-        ticks,
-        plotLeft,
-        plotRight,
-        axisY: 59,
-        treeBottom: baseHeight - 20,
-        xScale,
-        timelineMaximum,
-        geologyEnabled
+        ticks, plotLeft, plotRight, axisY:59, treeBottom:baseHeight - 20, xScale, timelineMaximum, geologyEnabled
       });
 
-      const branches = renderBranches(
-        layout,
-        highlightedBranchIds(),
-        xScale
-      );
-
+      const branchWidth = getBranchWidth();
+      const branches = renderBranches(layout, highlightedBranchIds(), null, branchWidth);
       const nodes = renderNodes(layout, plotRight);
 
-      treeSvg.setAttribute(
-        "viewBox",
-        `0 0 ${baseWidth} ${baseHeight}`
-      );
-
+      treeSvg.setAttribute("viewBox", `0 0 ${baseWidth} ${baseHeight}`);
       treeSvg.setAttribute("width", baseWidth * zoomScale);
       treeSvg.setAttribute("height", baseHeight * zoomScale);
 
       treeSvg.innerHTML = `
-        <rect
-          x="0"
-          y="0"
-          width="${baseWidth}"
-          height="${baseHeight}"
-          fill="#ffffff"
-        ></rect>
-
+        <rect x="0" y="0" width="${baseWidth}" height="${baseHeight}" fill="#ffffff"></rect>
         ${timeline}
         ${branches}
         ${nodes}
@@ -2550,131 +1152,58 @@ Duration: ${range.approximate ? "~" : ""}${formatNumber(
 
     function updateInformationPanels() {
       if (!selectedNode) {
-        selectedNodeDetails.innerHTML = `
-          <p class="empty-message">
-            Click an internal node to view its timing and clade size.
-          </p>
-        `;
+        selectedNodeDetails.innerHTML = `<p class="empty-message">Click an internal node to view its timing and clade size.</p>`;
       } else {
-        const hpd = selectedNode.hpd
-          ? `${formatNumber(selectedNode.hpd[0])}–${
-              formatNumber(selectedNode.hpd[1])
-            } Ma`
-          : "not provided";
-
+        const hpd = selectedNode.hpd ? `${formatNumber(selectedNode.hpd[0])}–${formatNumber(selectedNode.hpd[1])} Ma` : "not provided";
         selectedNodeDetails.innerHTML = `
           <p class="compact-details">
-            <span class="compact-item">
-              <strong>Node:</strong>
-              ${escapeHtml(
-                selectedNode.name || "unnamed internal node"
-              )}
-            </span>
-
+            <span class="compact-item"><strong>Node:</strong> ${escapeHtml(selectedNode.name || "unnamed internal node")}</span>
             <span class="compact-separator">•</span>
-
-            <span class="compact-item">
-              <strong>Time:</strong>
-              ${formatNumber(selectedNode.age)} Ma
-            </span>
-
+            <span class="compact-item"><strong>Time:</strong> ${formatNumber(selectedNode.age)} Ma</span>
             <span class="compact-separator">•</span>
-
-            <span class="compact-item">
-              <strong>Clade:</strong>
-              ${countTips(selectedNode)} tips
-            </span>
-
+            <span class="compact-item"><strong>Clade:</strong> ${countTips(selectedNode)} tips</span>
             <span class="compact-separator">•</span>
-
-            <span class="compact-item">
-              <strong>95% HPD:</strong>
-              ${hpd}
-            </span>
+            <span class="compact-item"><strong>95% HPD:</strong> ${hpd}</span>
+            <span class="compact-separator">•</span>
+            <span class="compact-item"><strong>Clade color:</strong> ${selectedNode.lineageColor ? escapeHtml(selectedNode.lineageColor) : "default"}</span>
           </p>
         `;
       }
 
       if (selectedTips.length !== 2) {
         mrcaDetails.innerHTML = `
-          <p class="empty-message">
-            ${
-              selectedTips.length === 1
-                ? `Selected: ${escapeHtml(
-                    selectedTips[0].name
-                  )}. Select one more tip.`
-                : "Click two tip names to calculate their MRCA."
-            }
-          </p>
+          <p class="empty-message">${
+            selectedTips.length === 1
+              ? `Selected: ${escapeHtml(selectedTips[0].name)}. Select one more tip.`
+              : "Click two tip names to calculate their MRCA."
+          }</p>
         `;
-
         return;
       }
 
       const mrca = findSelectedMrca();
-
       if (!mrca) {
-        mrcaDetails.innerHTML = `
-          <p class="empty-message">
-            The MRCA could not be calculated.
-          </p>
-        `;
-
+        mrcaDetails.innerHTML = `<p class="empty-message">The MRCA could not be calculated.</p>`;
         return;
       }
 
       mrcaDetails.innerHTML = `
         <p class="compact-details">
-          <span class="compact-item">
-            <strong>Tips:</strong>
-            ${escapeHtml(selectedTips[0].name)}
-            +
-            ${escapeHtml(selectedTips[1].name)}
-          </span>
-
+          <span class="compact-item"><strong>Tips:</strong> ${escapeHtml(selectedTips[0].name)} + ${escapeHtml(selectedTips[1].name)}</span>
           <span class="compact-separator">•</span>
-
-          <span class="compact-item">
-            <strong>MRCA:</strong>
-            ${formatNumber(mrca.age)} Ma
-          </span>
-
+          <span class="compact-item"><strong>MRCA:</strong> ${formatNumber(mrca.age)} Ma</span>
           <span class="compact-separator">•</span>
-
-          <span class="compact-item">
-            <strong>Clade:</strong>
-            ${countTips(mrca)} tips
-          </span>
-
+          <span class="compact-item"><strong>Clade:</strong> ${countTips(mrca)} tips</span>
           <span class="compact-separator">•</span>
-
-          <span class="compact-item">
-            <strong>95% HPD:</strong>
-            ${
-              mrca.hpd
-                ? `${formatNumber(mrca.hpd[0])}–${
-                    formatNumber(mrca.hpd[1])
-                  } Ma`
-                : "not provided"
-            }
-          </span>
+          <span class="compact-item"><strong>95% HPD:</strong> ${mrca.hpd ? `${formatNumber(mrca.hpd[0])}–${formatNumber(mrca.hpd[1])} Ma` : "not provided"}</span>
         </p>
       `;
     }
 
     function findNodeById(id) {
       let result = null;
-
-      if (!root) {
-        return result;
-      }
-
-      walk(root, node => {
-        if (node.id === id) {
-          result = node;
-        }
-      });
-
+      if (!root) return result;
+      walk(root, node => { if (node.id === id) result = node; });
       return result;
     }
 
@@ -2684,95 +1213,54 @@ Duration: ${range.approximate ? "~" : ""}${formatNumber(
 
     function selectTip(tip) {
       const existingIndex = selectedTips.indexOf(tip);
-
-      if (existingIndex >= 0) {
-        selectedTips.splice(existingIndex, 1);
-      } else {
-        if (selectedTips.length >= 2) {
-          selectedTips.shift();
-        }
-
+      if (existingIndex >= 0) selectedTips.splice(existingIndex, 1);
+      else {
+        if (selectedTips.length >= 2) selectedTips.shift();
         selectedTips.push(tip);
       }
-
       renderTree();
     }
 
     function selectNode(node) {
-      selectedNode =
-        selectedNode === node ? null : node;
-
+      selectedNode = selectedNode === node ? null : node;
       renderTree();
     }
 
     function resetNodeState(node) {
       node.hidden = false;
       node.collapsed = false;
-
-      for (const child of node.children) {
-        resetNodeState(child);
-      }
+      node.lineageColor = null;
+      node.branchColor = null;
+      for (const child of node.children) resetNodeState(child);
     }
 
     function openTipEditor(tip, event) {
       cancelPendingSvgClick();
-
       editingTip = tip;
       tipEditorInput.value = tip.name;
       tipEditor.classList.add("open");
 
       const rect = tipEditor.getBoundingClientRect();
       const margin = 10;
-
       let left = event.clientX + margin;
       let top = event.clientY + margin;
 
-      if (left + rect.width > window.innerWidth - margin) {
-        left = event.clientX - rect.width - margin;
-      }
+      if (left + rect.width > window.innerWidth - margin) left = event.clientX - rect.width - margin;
+      if (top + rect.height > window.innerHeight - margin) top = event.clientY - rect.height - margin;
 
-      if (top + rect.height > window.innerHeight - margin) {
-        top = event.clientY - rect.height - margin;
-      }
-
-      left = Math.max(
-        margin,
-        Math.min(
-          left,
-          window.innerWidth - rect.width - margin
-        )
-      );
-
-      top = Math.max(
-        margin,
-        Math.min(
-          top,
-          window.innerHeight - rect.height - margin
-        )
-      );
+      left = Math.max(margin, Math.min(left, window.innerWidth - rect.width - margin));
+      top = Math.max(margin, Math.min(top, window.innerHeight - rect.height - margin));
 
       tipEditor.style.left = `${left}px`;
       tipEditor.style.top = `${top}px`;
 
-      requestAnimationFrame(() => {
-        tipEditorInput.focus();
-        tipEditorInput.select();
-      });
+      requestAnimationFrame(() => { tipEditorInput.focus(); tipEditorInput.select(); });
     }
 
     function saveTipName() {
-      if (!editingTip) {
-        closeTipEditor();
-        return;
-      }
-
+      if (!editingTip) { closeTipEditor(); return; }
       const newName = tipEditorInput.value.trim();
-
-      if (!newName) {
-        tipEditorInput.focus();
-        return;
-      }
-
+      if (!newName) { tipEditorInput.focus(); return; }
       editingTip.name = newName;
       closeTipEditor();
       renderTree();
@@ -2783,9 +1271,85 @@ Duration: ${range.approximate ? "~" : ""}${formatNumber(
       editingTip = null;
     }
 
+    function applyColorToSelectedClade() {
+      if (!root || !selectedNode || selectedNode.children.length === 0) {
+        setStatus("Select an internal node first, then apply clade color.", "error");
+        return;
+      }
+      const color = sanitizeHexColor(cladeColorInput.value);
+      if (!color) { setStatus("Invalid color value.", "error"); return; }
+
+      selectedNode.lineageColor = color;
+      renderTree();
+      setStatus(`Applied clade color <strong>${escapeHtml(color)}</strong> (descendant branches only).`, "success");
+    }
+
+    function clearSelectedCladeColor() {
+      if (!root || !selectedNode || selectedNode.children.length === 0) {
+        setStatus("Select an internal node first to clear clade color.", "error");
+        return;
+      }
+      selectedNode.lineageColor = null;
+      renderTree();
+      setStatus("Cleared color on selected clade.", "success");
+    }
+
+    function clearAllCladeColors() {
+      if (!root) return;
+      walk(root, node => { node.lineageColor = null; });
+      renderTree();
+      setStatus("Cleared all clade colors.", "success");
+    }
+
+    function paintBranchByChildId(childId, { silent = false } = {}) {
+      if (!root || !childId) return;
+      const child = findNodeById(childId);
+      if (!child || !child.parent) return;
+
+      const color = sanitizeHexColor(branchColorInput.value);
+      if (!color) { if (!silent) setStatus("Invalid branch color value.", "error"); return; }
+
+      selectedBranchChildId = child.id;
+      child.branchColor = color;
+      renderTree();
+      if (!silent) setStatus(`Painted branch with <strong>${escapeHtml(color)}</strong>.`, "success");
+    }
+
+    function applyColorToSelectedBranch() {
+      if (!selectedBranchChildId) {
+        setStatus("Single-click a branch first, then apply branch color.", "error");
+        return;
+      }
+      paintBranchByChildId(selectedBranchChildId);
+    }
+
+    function clearSelectedBranchColor() {
+      if (!root || !selectedBranchChildId) {
+        setStatus("Single-click a branch first, then clear branch color.", "error");
+        return;
+      }
+      const child = findNodeById(selectedBranchChildId);
+      if (!child || !child.parent) {
+        setStatus("Selected branch is no longer available.", "error");
+        selectedBranchChildId = null;
+        renderTree();
+        return;
+      }
+      child.branchColor = null;
+      renderTree();
+      setStatus("Cleared selected branch color.", "success");
+    }
+
+    function clearAllBranchColors() {
+      if (!root) return;
+      walk(root, node => { node.branchColor = null; });
+      selectedBranchChildId = null;
+      renderTree();
+      setStatus("Cleared all branch colors.", "success");
+    }
+
     function renderTreeLibrary() {
       treeLibraryList.innerHTML = "";
-
       if (loadedTrees.length === 0) {
         treeLibrary.hidden = true;
         treeLibraryCount.textContent = "";
@@ -2793,20 +1357,12 @@ Duration: ${range.approximate ? "~" : ""}${formatNumber(
       }
 
       treeLibrary.hidden = false;
-
-      treeLibraryCount.textContent =
-        `${loadedTrees.length} tree${
-          loadedTrees.length === 1 ? "" : "s"
-        } loaded`;
+      treeLibraryCount.textContent = `${loadedTrees.length} tree${loadedTrees.length === 1 ? "" : "s"} loaded`;
 
       loadedTrees.forEach((tree, index) => {
         const item = document.createElement("li");
-
         item.className = "tree-library-item";
-
-        if (tree.id === activeTreeId) {
-          item.classList.add("active");
-        }
+        if (tree.id === activeTreeId) item.classList.add("active");
 
         const description = document.createElement("div");
         description.className = "tree-library-description";
@@ -2824,116 +1380,70 @@ Duration: ${range.approximate ? "~" : ""}${formatNumber(
         description.append(name, file);
 
         const removeButton = document.createElement("button");
-
         removeButton.type = "button";
         removeButton.className = "remove-tree-button";
         removeButton.dataset.removeTreeId = tree.id;
         removeButton.textContent = "Remove";
-
-        removeButton.setAttribute(
-          "aria-label",
-          `Remove ${tree.name} from ${
-            tree.fileName || "Uploaded tree"
-          }`
-        );
+        removeButton.setAttribute("aria-label", `Remove ${tree.name} from ${tree.fileName || "Uploaded tree"}`);
 
         item.append(description, removeButton);
         treeLibraryList.appendChild(item);
       });
     }
 
-    function populateTreeChoice(
-      selectedTreeId = activeTreeId
-    ) {
+    function populateTreeChoice(selectedTreeId = activeTreeId) {
       treeChoice.innerHTML = "";
-
       if (loadedTrees.length === 0) {
         const option = document.createElement("option");
-
         option.textContent = "No tree loaded";
         option.value = "";
-
         treeChoice.appendChild(option);
         treeChoice.disabled = true;
-
         renderTreeLibrary();
         return;
       }
 
       loadedTrees.forEach((tree, index) => {
         const option = document.createElement("option");
-
         option.value = tree.id;
-
-        const fileLabel =
-          tree.fileName || "Uploaded tree";
-
-        option.textContent =
-          `${index + 1}. ${fileLabel} — ${tree.name}`;
-
-        option.title =
-          `${fileLabel} — ${tree.name}`;
-
+        const fileLabel = tree.fileName || "Uploaded tree";
+        option.textContent = `${index + 1}. ${fileLabel} — ${tree.name}`;
+        option.title = `${fileLabel} — ${tree.name}`;
         treeChoice.appendChild(option);
       });
 
       treeChoice.disabled = loadedTrees.length <= 1;
-
-      const selectedTree =
-        findTreeById(selectedTreeId) || loadedTrees[0];
-
+      const selectedTree = findTreeById(selectedTreeId) || loadedTrees[0];
       treeChoice.value = selectedTree.id;
-
       renderTreeLibrary();
     }
 
     function updateCurrentTreeStatus(treeRecord) {
-      if (!treeRecord || !root) {
-        return;
-      }
-
-      const currentIndex =
-        loadedTrees.findIndex(
-          tree => tree.id === treeRecord.id
-        ) + 1;
-
+      if (!treeRecord || !root) return;
+      const currentIndex = loadedTrees.findIndex(tree => tree.id === treeRecord.id) + 1;
       setStatus(
-        `<strong>${escapeHtml(
-          treeRecord.fileName || "Uploaded tree"
-        )}</strong> — ` +
-        `tree ${currentIndex} of ${loadedTrees.length}: ` +
-        `${escapeHtml(treeRecord.name)}, ` +
-        `${countTips(root)} tips, ` +
-        `root age ${formatNumber(root.age)}`,
+        `<strong>${escapeHtml(treeRecord.fileName || "Uploaded tree")}</strong> — tree ${currentIndex} of ${loadedTrees.length}: ${escapeHtml(treeRecord.name)}, ${countTips(root)} tips, root age ${formatNumber(root.age)}`,
         "success"
       );
     }
 
     function parseAndDisplayTree(treeRecord) {
-      if (!treeRecord) {
-        return;
-      }
-
+      if (!treeRecord) return;
       nodeSequence = 0;
 
       const parser = new NewickParser(treeRecord.newick);
       const parsedRoot = parser.parse();
 
-      applyTranslations(
-        parsedRoot,
-        treeRecord.translations || new Map()
-      );
-
+      applyTranslations(parsedRoot, treeRecord.translations || new Map());
       calculateAges(parsedRoot);
 
       root = parsedRoot;
       activeTreeId = treeRecord.id;
-
-      currentFileName =
-        treeRecord.fileName || "Uploaded tree";
+      currentFileName = treeRecord.fileName || "Uploaded tree";
 
       selectedNode = null;
       selectedTips = [];
+      selectedBranchChildId = null;
       zoomScale = 1;
 
       sortClades.value = "original";
@@ -2942,11 +1452,7 @@ Duration: ${range.approximate ? "~" : ""}${formatNumber(
       applyAutomaticTimelineScale(root);
       populateTreeChoice(activeTreeId);
 
-      renderTree({
-        preserveScroll: false,
-        preserveZoom: false
-      });
-
+      renderTree({ preserveScroll:false, preserveZoom:false });
       treeContainer.scrollLeft = 0;
       treeContainer.scrollTop = 0;
 
@@ -2963,16 +1469,13 @@ Duration: ${range.approximate ? "~" : ""}${formatNumber(
       root = null;
       activeTreeId = null;
       currentFileName = "";
-
       selectedNode = null;
       selectedTips = [];
+      selectedBranchChildId = null;
       editingTip = null;
 
       lastLayoutById = new Map();
-
-      zoomScale = 1;
-      baseWidth = 1200;
-      baseHeight = 600;
+      zoomScale = 1; baseWidth = 1200; baseHeight = 600;
 
       treeSvg.innerHTML = "";
       treeSvg.removeAttribute("viewBox");
@@ -2992,241 +1495,125 @@ Duration: ${range.approximate ? "~" : ""}${formatNumber(
     }
 
     function removeLoadedTree(treeId) {
-      const removalIndex = loadedTrees.findIndex(
-        tree => tree.id === treeId
-      );
-
-      if (removalIndex < 0) {
-        return;
-      }
+      const removalIndex = loadedTrees.findIndex(tree => tree.id === treeId);
+      if (removalIndex < 0) return;
 
       cancelPendingSvgClick();
       closeTipEditor();
 
       const removedTree = loadedTrees[removalIndex];
-      const removingActiveTree =
-        removedTree.id === activeTreeId;
-
+      const removingActiveTree = removedTree.id === activeTreeId;
       loadedTrees.splice(removalIndex, 1);
 
       if (loadedTrees.length === 0) {
         clearDisplayedTree({
-          message:
-            "All trees have been removed. Upload or drop another tree file.",
-          statusMessage:
-            `<strong>${escapeHtml(
-              removedTree.name
-            )}</strong> was removed. No trees are loaded.`
+          message:"All trees have been removed. Upload or drop another tree file.",
+          statusMessage:`<strong>${escapeHtml(removedTree.name)}</strong> was removed. No trees are loaded.`
         });
-
         return;
       }
 
       if (removingActiveTree) {
-        const nextIndex = Math.min(
-          removalIndex,
-          loadedTrees.length - 1
-        );
-
+        const nextIndex = Math.min(removalIndex, loadedTrees.length - 1);
         const nextTree = loadedTrees[nextIndex];
-
         populateTreeChoice(nextTree.id);
         parseAndDisplayTree(nextTree);
         return;
       }
 
       populateTreeChoice(activeTreeId);
-
       const activeTree = findTreeById(activeTreeId);
-
-      if (activeTree && root) {
-        updateCurrentTreeStatus(activeTree);
-      }
+      if (activeTree && root) updateCurrentTreeStatus(activeTree);
     }
 
-    function loadTreeText(
-      text,
-      fileName,
-      { append = true } = {}
-    ) {
+    function loadTreeText(text, fileName, { append = true } = {}) {
       try {
-        const fileTranslations =
-          extractTranslations(text);
+        const fileTranslations = extractTranslations(text);
+        const extractedTrees = extractTrees(text);
+        if (extractedTrees.length === 0) throw new Error("No TREE/UTREE declaration or Newick tree was found.");
 
-        const extractedTrees =
-          extractTrees(text);
+        const sourceFileName = fileName || "Uploaded tree";
+        const newTreeRecords = extractedTrees.map((tree, index) => ({
+          ...tree,
+          id:`tree-record-${++treeRecordSequence}`,
+          fileName:sourceFileName,
+          translations:new Map(fileTranslations),
+          sourceTreeIndex:index
+        }));
 
-        if (extractedTrees.length === 0) {
-          throw new Error(
-            "No TREE/UTREE declaration or Newick tree was found."
-          );
-        }
-
-        const sourceFileName =
-          fileName || "Uploaded tree";
-
-        const newTreeRecords = extractedTrees.map(
-          (tree, index) => ({
-            ...tree,
-            id: `tree-record-${++treeRecordSequence}`,
-            fileName: sourceFileName,
-            translations: new Map(fileTranslations),
-            sourceTreeIndex: index
-          })
-        );
-
-        /*
-         * Validate every tree before modifying the collection.
-         */
         for (const treeRecord of newTreeRecords) {
           nodeSequence = 0;
-
-          const parser = new NewickParser(
-            treeRecord.newick
-          );
-
+          const parser = new NewickParser(treeRecord.newick);
           parser.parse();
         }
 
-        if (!append) {
-          loadedTrees = [];
-          activeTreeId = null;
-        }
-
+        if (!append) { loadedTrees = []; activeTreeId = null; }
         loadedTrees.push(...newTreeRecords);
 
         const firstNewTree = newTreeRecords[0];
-
         populateTreeChoice(firstNewTree.id);
         parseAndDisplayTree(firstNewTree);
-
         return true;
       } catch (error) {
         console.error(error);
-
         if (loadedTrees.length === 0) {
-          root = null;
-          activeTreeId = null;
-
+          root = null; activeTreeId = null;
           treeSvg.innerHTML = "";
-
           emptyTreeMessage.hidden = false;
-          emptyTreeMessage.textContent =
-            "The tree could not be displayed.";
-
+          emptyTreeMessage.textContent = "The tree could not be displayed.";
           populateTreeChoice(null);
           updateInformationPanels();
         }
-
-        setStatus(
-          "<strong>Could not load the tree:</strong> " +
-          escapeHtml(error.message),
-          "error"
-        );
-
+        setStatus("<strong>Could not load the tree:</strong> " + escapeHtml(error.message), "error");
         return false;
       }
     }
 
     async function loadFile(file) {
-      if (!file) {
-        return false;
-      }
-
-      setStatus(
-        `Adding <strong>${escapeHtml(file.name)}</strong>...`,
-        "loading"
-      );
-
+      if (!file) return false;
+      setStatus(`Adding <strong>${escapeHtml(file.name)}</strong>...`, "loading");
       try {
         const text = await file.text();
-
-        return loadTreeText(text, file.name, {
-          append: true
-        });
+        return loadTreeText(text, file.name, { append:true });
       } catch (error) {
-        setStatus(
-          "<strong>Could not read the file:</strong> " +
-          escapeHtml(error.message),
-          "error"
-        );
-
+        setStatus("<strong>Could not read the file:</strong> " + escapeHtml(error.message), "error");
         return false;
       }
     }
 
     async function loadFiles(fileList) {
       const files = Array.from(fileList || []);
-
-      if (files.length === 0) {
-        return;
-      }
+      if (files.length === 0) return;
 
       userFileInteraction = true;
-
       let successfulFiles = 0;
 
       for (const file of files) {
         const loaded = await loadFile(file);
-
-        if (loaded) {
-          successfulFiles += 1;
-        }
+        if (loaded) successfulFiles += 1;
       }
 
       if (successfulFiles > 0) {
         const activeTree = findTreeById(activeTreeId);
-
-        if (activeTree && root) {
-          updateCurrentTreeStatus(activeTree);
-        }
+        if (activeTree && root) updateCurrentTreeStatus(activeTree);
       }
     }
 
     async function loadDefaultTree() {
       try {
-        const response = await fetch(DEFAULT_TREE_FILE, {
-          cache: "no-store"
-        });
-
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}`);
-        }
-
+        const response = await fetch(DEFAULT_TREE_FILE, { cache:"no-store" });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const text = await response.text();
 
-        if (
-          loadedTrees.length === 0 &&
-          !userFileInteraction
-        ) {
-          loadTreeText(
-            text,
-            DEFAULT_TREE_FILE,
-            { append: false }
-          );
-        }
+        if (loadedTrees.length === 0 && !userFileInteraction) loadTreeText(text, DEFAULT_TREE_FILE, { append:false });
       } catch (error) {
-        console.warn(
-          "Automatic tree loading failed.",
-          error
-        );
-
-        if (
-          loadedTrees.length === 0 &&
-          !userFileInteraction
-        ) {
+        console.warn("Automatic tree loading failed.", error);
+        if (loadedTrees.length === 0 && !userFileInteraction) {
           root = null;
           activeTreeId = null;
           treeSvg.innerHTML = "";
           emptyTreeMessage.hidden = false;
-
-          setStatus(
-            `Could not automatically load <strong>${
-              escapeHtml(DEFAULT_TREE_FILE)
-            }</strong>. Upload or drop a tree file into the viewer.`,
-            "error"
-          );
-
+          setStatus(`Could not automatically load <strong>${escapeHtml(DEFAULT_TREE_FILE)}</strong>. Upload or drop a tree file into the viewer.`, "error");
           populateTreeChoice(null);
           updateInformationPanels();
         }
@@ -3237,148 +1624,81 @@ Duration: ${range.approximate ? "~" : ""}${formatNumber(
       cancelPendingSvgClick();
       closeTipEditor();
 
-      const centerX =
-        treeContainer.scrollLeft +
-        treeContainer.clientWidth / 2;
-
-      const centerY =
-        treeContainer.scrollTop +
-        treeContainer.clientHeight / 2;
-
+      const centerX = treeContainer.scrollLeft + treeContainer.clientWidth / 2;
+      const centerY = treeContainer.scrollTop + treeContainer.clientHeight / 2;
       const oldZoom = zoomScale;
 
-      zoomScale = Math.max(
-        0.4,
-        Math.min(3.5, nextZoom)
-      );
-
+      zoomScale = Math.max(0.4, Math.min(3.5, nextZoom));
       treeSvg.setAttribute("width", baseWidth * zoomScale);
       treeSvg.setAttribute("height", baseHeight * zoomScale);
 
       const ratio = zoomScale / oldZoom;
-
       requestAnimationFrame(() => {
-        treeContainer.scrollLeft =
-          centerX * ratio -
-          treeContainer.clientWidth / 2;
-
-        treeContainer.scrollTop =
-          centerY * ratio -
-          treeContainer.clientHeight / 2;
+        treeContainer.scrollLeft = centerX * ratio - treeContainer.clientWidth / 2;
+        treeContainer.scrollTop = centerY * ratio - treeContainer.clientHeight / 2;
       });
     }
 
     function focusSelection() {
       const targets = [];
-
       if (selectedNode) {
         const layout = lastLayoutById.get(selectedNode.id);
-
-        if (layout) {
-          targets.push(layout);
-        }
+        if (layout) targets.push(layout);
       }
-
       for (const tip of selectedTips) {
         const layout = lastLayoutById.get(tip.id);
-
-        if (layout) {
-          targets.push(layout);
-        }
+        if (layout) targets.push(layout);
       }
-
-      if (targets.length === 0) {
-        return;
+      if (targets.length === 0 && selectedBranchChildId) {
+        const layout = lastLayoutById.get(selectedBranchChildId);
+        if (layout) targets.push(layout);
       }
+      if (targets.length === 0) return;
 
-      const averageX =
-        targets.reduce((sum, item) => sum + item.x, 0) /
-        targets.length;
-
-      const averageY =
-        targets.reduce((sum, item) => sum + item.y, 0) /
-        targets.length;
+      const averageX = targets.reduce((sum, item) => sum + item.x, 0) / targets.length;
+      const averageY = targets.reduce((sum, item) => sum + item.y, 0) / targets.length;
 
       treeContainer.scrollTo({
-        left:
-          averageX * zoomScale -
-          treeContainer.clientWidth / 2,
-        top:
-          averageY * zoomScale -
-          treeContainer.clientHeight / 2,
-        behavior: "smooth"
+        left:averageX * zoomScale - treeContainer.clientWidth / 2,
+        top:averageY * zoomScale - treeContainer.clientHeight / 2,
+        behavior:"smooth"
       });
     }
 
     function downloadSvg() {
-      if (!root) {
-        return;
-      }
+      if (!root) return;
 
       const clone = treeSvg.cloneNode(true);
-
       clone.setAttribute("xmlns", SVG_NS);
       clone.setAttribute("width", baseWidth);
       clone.setAttribute("height", baseHeight);
 
-      const styleText = Array.from(document.styleSheets)
-        .map(sheet => {
-          try {
-            return Array.from(sheet.cssRules)
-              .map(rule => rule.cssText)
-              .join("\n");
-          } catch {
-            return "";
-          }
-        })
-        .join("\n");
+      const styleText = Array.from(document.styleSheets).map(sheet => {
+        try { return Array.from(sheet.cssRules).map(rule => rule.cssText).join("\n"); }
+        catch { return ""; }
+      }).join("\n");
 
-      const style = document.createElementNS(
-        SVG_NS,
-        "style"
-      );
-
+      const style = document.createElementNS(SVG_NS, "style");
       style.textContent = styleText;
       clone.insertBefore(style, clone.firstChild);
 
-      const source =
-        '<?xml version="1.0" encoding="UTF-8"?>\n' +
-        new XMLSerializer().serializeToString(clone);
-
-      const blob = new Blob([source], {
-        type: "image/svg+xml;charset=utf-8"
-      });
-
+      const source = '<?xml version="1.0" encoding="UTF-8"?>\n' + new XMLSerializer().serializeToString(clone);
+      const blob = new Blob([source], { type:"image/svg+xml;charset=utf-8" });
       const url = URL.createObjectURL(blob);
+
       const link = document.createElement("a");
-
       const selectedTree = findTreeById(activeTreeId);
+      const selectedFileName = selectedTree?.fileName || currentFileName || "timetree";
 
-      const selectedFileName =
-        selectedTree?.fileName ||
-        currentFileName ||
-        "timetree";
-
-      const fileBaseName =
-        selectedFileName
-          .replace(/\.[^.]+$/, "")
-          .replace(/[^\w.-]+/g, "_") ||
-        "timetree";
-
-      const treeName =
-        selectedTree?.name
-          ?.replace(/[^\w.-]+/g, "_") ||
-        "tree";
+      const fileBaseName = selectedFileName.replace(/\.[^.]+$/, "").replace(/[^\w.-]+/g, "_") || "timetree";
+      const treeName = selectedTree?.name?.replace(/[^\w.-]+/g, "_") || "tree";
 
       link.href = url;
-
-      link.download =
-        `${fileBaseName}_${treeName}_geological.svg`;
+      link.download = `${fileBaseName}_${treeName}_geological.svg`;
 
       document.body.appendChild(link);
       link.click();
       link.remove();
-
       URL.revokeObjectURL(url);
     }
 
@@ -3389,129 +1709,90 @@ Duration: ${range.approximate ? "~" : ""}${formatNumber(
 
     treeChoice.addEventListener("change", () => {
       const tree = findTreeById(treeChoice.value);
-
-      if (tree) {
-        parseAndDisplayTree(tree);
-      }
+      if (tree) parseAndDisplayTree(tree);
     });
 
     treeLibraryList.addEventListener("click", event => {
-      const removeButton = event.target.closest?.(
-        "[data-remove-tree-id]"
-      );
-
-      if (!removeButton) {
-        return;
-      }
-
-      removeLoadedTree(
-        removeButton.dataset.removeTreeId
-      );
+      const removeButton = event.target.closest?.("[data-remove-tree-id]");
+      if (!removeButton) return;
+      removeLoadedTree(removeButton.dataset.removeTreeId);
     });
 
-    sortClades.addEventListener("change", () => {
-      renderTree();
-    });
-
-    timelineUnits.addEventListener("input", () => {
-      renderTree();
-    });
+    sortClades.addEventListener("change", () => renderTree());
+    timelineUnits.addEventListener("input", () => renderTree());
 
     tickIntervalInput.addEventListener("change", () => {
       const value = Number(tickIntervalInput.value);
-
-      if (!Number.isFinite(value) || value <= 0) {
-        applyAutomaticTimelineScale(root);
-      }
-
+      if (!Number.isFinite(value) || value <= 0) applyAutomaticTimelineScale(root);
       renderTree();
     });
 
-    showGeologyInput.addEventListener("change", () => {
+    branchWidthInput.addEventListener("input", () => renderTree());
+    branchWidthInput.addEventListener("change", () => {
+      const value = Number(branchWidthInput.value);
+      if (!Number.isFinite(value) || value <= 0) branchWidthInput.value = String(DEFAULT_BRANCH_WIDTH);
       renderTree();
     });
 
-    geologyUnitMaInput.addEventListener("input", () => {
-      renderTree();
-    });
+    showGeologyInput.addEventListener("change", () => renderTree());
 
+    geologyUnitMaInput.addEventListener("input", () => renderTree());
     geologyUnitMaInput.addEventListener("change", () => {
       const value = Number(geologyUnitMaInput.value);
-
       if (!Number.isFinite(value) || value <= 0) {
-        geologyUnitMaInput.value =
-          String(DEFAULT_GEOLOGY_UNIT_MA);
-
+        geologyUnitMaInput.value = String(DEFAULT_GEOLOGY_UNIT_MA);
         geologyScaleControl.classList.remove("invalid");
-
-        geologyUnitMaInput.setAttribute(
-          "aria-invalid",
-          "false"
-        );
+        geologyUnitMaInput.setAttribute("aria-invalid", "false");
       }
-
       renderTree();
     });
 
-    treeSvg.addEventListener("click", event => {
-      const tipElement = event.target.closest?.(
-        "[data-tip-id]"
-      );
+    document.getElementById("apply-clade-color").addEventListener("click", applyColorToSelectedClade);
+    document.getElementById("clear-clade-color").addEventListener("click", clearSelectedCladeColor);
+    document.getElementById("clear-all-clade-colors").addEventListener("click", clearAllCladeColors);
 
+    document.getElementById("apply-branch-color").addEventListener("click", applyColorToSelectedBranch);
+    document.getElementById("clear-branch-color").addEventListener("click", clearSelectedBranchColor);
+    document.getElementById("clear-all-branch-colors").addEventListener("click", clearAllBranchColors);
+
+    treeSvg.addEventListener("click", event => {
+      const tipElement = event.target.closest?.("[data-tip-id]");
       if (tipElement) {
         const tip = findNodeById(tipElement.dataset.tipId);
-
-        if (tip) {
-          scheduleSvgSingleClick(() => selectTip(tip));
-        }
-
+        if (tip) scheduleSvgSingleClick(() => selectTip(tip));
         return;
       }
 
-      const nodeElement = event.target.closest?.(
-        "[data-node-id]"
-      );
-
+      const nodeElement = event.target.closest?.("[data-node-id]");
       if (nodeElement) {
-        const node = findNodeById(
-          nodeElement.dataset.nodeId
-        );
+        const node = findNodeById(nodeElement.dataset.nodeId);
+        if (node) scheduleSvgSingleClick(() => selectNode(node));
+        return;
+      }
 
-        if (node) {
-          scheduleSvgSingleClick(() => selectNode(node));
-        }
+      const branchElement = event.target.closest?.("[data-branch-child-id]");
+      if (branchElement) {
+        cancelPendingSvgClick();
+        const childId = branchElement.dataset.branchChildId;
+        paintBranchByChildId(childId);
       }
     });
 
     treeSvg.addEventListener("dblclick", event => {
       cancelPendingSvgClick();
-
       event.preventDefault();
       event.stopPropagation();
 
-      const tipElement = event.target.closest?.(
-        "[data-tip-id]"
-      );
-
+      const tipElement = event.target.closest?.("[data-tip-id]");
       if (tipElement) {
         const tip = findNodeById(tipElement.dataset.tipId);
-
-        if (tip) {
-          openTipEditor(tip, event);
-        }
-
+        if (tip) openTipEditor(tip, event);
         return;
       }
 
-      const nodeElement = event.target.closest?.(
-        "[data-node-id]"
-      );
-
+      const nodeElement = event.target.closest?.("[data-node-id]");
       if (nodeElement) {
-        const node = findNodeById(
-          nodeElement.dataset.nodeId
-        );
-
+        const node = findNodeById(nodeElement.dataset.nodeId);
         if (node && node.children.length > 0) {
           node.collapsed = !node.collapsed;
           selectedNode = node;
@@ -3521,27 +1802,15 @@ Duration: ${range.approximate ? "~" : ""}${formatNumber(
     });
 
     treeSvg.addEventListener("mousedown", event => {
-      if (
-        event.detail > 1 &&
-        event.target.closest?.(
-          "[data-tip-id], [data-node-id]"
-        )
-      ) {
-        event.preventDefault();
-      }
+      if (event.detail > 1 && event.target.closest?.("[data-tip-id], [data-node-id]")) event.preventDefault();
     });
 
     tipEditorSave.addEventListener("click", saveTipName);
     tipEditorCancel.addEventListener("click", closeTipEditor);
 
     tipEditorInput.addEventListener("keydown", event => {
-      if (event.key === "Enter") {
-        event.preventDefault();
-        saveTipName();
-      } else if (event.key === "Escape") {
-        event.preventDefault();
-        closeTipEditor();
-      }
+      if (event.key === "Enter") { event.preventDefault(); saveTipName(); }
+      else if (event.key === "Escape") { event.preventDefault(); closeTipEditor(); }
     });
 
     document.addEventListener("pointerdown", event => {
@@ -3549,197 +1818,109 @@ Duration: ${range.approximate ? "~" : ""}${formatNumber(
         tipEditor.classList.contains("open") &&
         !tipEditor.contains(event.target) &&
         !event.target.closest?.("[data-tip-id]")
-      ) {
-        closeTipEditor();
+      ) closeTipEditor();
+    });
+
+    document.getElementById("zoom-in").addEventListener("click", () => { if (root) setZoom(zoomScale * 1.2); });
+    document.getElementById("zoom-out").addEventListener("click", () => { if (root) setZoom(zoomScale / 1.2); });
+
+    document.getElementById("fit-tree").addEventListener("click", () => {
+      if (!root) return;
+      const widthScale = (treeContainer.clientWidth - 4) / baseWidth;
+      setZoom(Math.min(1, Math.max(0.4, widthScale)));
+      treeContainer.scrollTo({ left:0, top:0, behavior:"smooth" });
+    });
+
+    document.getElementById("focus-selection").addEventListener("click", focusSelection);
+
+    document.getElementById("reset-tree").addEventListener("click", () => {
+      if (!root) return;
+
+      resetNodeState(root);
+      selectedNode = null;
+      selectedTips = [];
+      selectedBranchChildId = null;
+      zoomScale = 1;
+
+      sortClades.value = "original";
+      timelineUnits.value = "";
+      cladeColorInput.value = "#2f6fdb";
+      branchColorInput.value = "#e26f30";
+      branchWidthInput.value = String(DEFAULT_BRANCH_WIDTH);
+
+      geologyUnitMaInput.value = String(DEFAULT_GEOLOGY_UNIT_MA);
+      geologyScaleControl.classList.remove("invalid");
+      geologyUnitMaInput.setAttribute("aria-invalid", "false");
+      showGeologyInput.checked = true;
+
+      applyAutomaticTimelineScale(root);
+      renderTree({ preserveScroll:false, preserveZoom:false });
+
+      treeContainer.scrollLeft = 0;
+      treeContainer.scrollTop = 0;
+    });
+
+    document.getElementById("clear-selections").addEventListener("click", () => {
+      selectedNode = null;
+      selectedTips = [];
+      selectedBranchChildId = null;
+      renderTree();
+    });
+
+    document.getElementById("hide-selected-tips").addEventListener("click", () => {
+      if (selectedTips.length === 0) return;
+      selectedTips.forEach(tip => { tip.hidden = true; });
+      selectedTips = [];
+      renderTree();
+    });
+
+    document.getElementById("hide-selected-clade").addEventListener("click", () => {
+      if (!selectedNode || selectedNode === root) return;
+      selectedNode.hidden = true;
+      selectedNode = null;
+      renderTree();
+    });
+
+    document.getElementById("restore-hidden").addEventListener("click", () => {
+      if (!root) return;
+      walk(root, node => { node.hidden = false; });
+      renderTree();
+    });
+
+    document.getElementById("collapse-selected-clade").addEventListener("click", () => {
+      if (selectedNode && selectedNode.children.length > 0) {
+        selectedNode.collapsed = true;
+        renderTree();
       }
     });
 
-    document
-      .getElementById("zoom-in")
-      .addEventListener("click", () => {
-        if (root) {
-          setZoom(zoomScale * 1.2);
-        }
-      });
+    document.getElementById("expand-all-clades").addEventListener("click", () => {
+      if (!root) return;
+      walk(root, node => { node.collapsed = false; });
+      renderTree();
+    });
 
-    document
-      .getElementById("zoom-out")
-      .addEventListener("click", () => {
-        if (root) {
-          setZoom(zoomScale / 1.2);
-        }
-      });
-
-    document
-      .getElementById("fit-tree")
-      .addEventListener("click", () => {
-        if (!root) {
-          return;
-        }
-
-        const widthScale =
-          (treeContainer.clientWidth - 4) / baseWidth;
-
-        setZoom(
-          Math.min(1, Math.max(0.4, widthScale))
-        );
-
-        treeContainer.scrollTo({
-          left: 0,
-          top: 0,
-          behavior: "smooth"
-        });
-      });
-
-    document
-      .getElementById("focus-selection")
-      .addEventListener("click", focusSelection);
-
-    document
-      .getElementById("reset-tree")
-      .addEventListener("click", () => {
-        if (!root) {
-          return;
-        }
-
-        resetNodeState(root);
-
-        selectedNode = null;
-        selectedTips = [];
-        zoomScale = 1;
-
-        sortClades.value = "original";
-        timelineUnits.value = "100 Ma";
-
-        geologyUnitMaInput.value =
-          String(DEFAULT_GEOLOGY_UNIT_MA);
-
-        geologyScaleControl.classList.remove("invalid");
-
-        geologyUnitMaInput.setAttribute(
-          "aria-invalid",
-          "false"
-        );
-
-        showGeologyInput.checked = true;
-
-        applyAutomaticTimelineScale(root);
-
-        renderTree({
-          preserveScroll: false,
-          preserveZoom: false
-        });
-
-        treeContainer.scrollLeft = 0;
-        treeContainer.scrollTop = 0;
-      });
-
-    document
-      .getElementById("clear-selections")
-      .addEventListener("click", () => {
-        selectedNode = null;
-        selectedTips = [];
-        renderTree();
-      });
-
-    document
-      .getElementById("hide-selected-tips")
-      .addEventListener("click", () => {
-        if (selectedTips.length === 0) {
-          return;
-        }
-
-        selectedTips.forEach(tip => {
-          tip.hidden = true;
-        });
-
-        selectedTips = [];
-        renderTree();
-      });
-
-    document
-      .getElementById("hide-selected-clade")
-      .addEventListener("click", () => {
-        if (!selectedNode || selectedNode === root) {
-          return;
-        }
-
-        selectedNode.hidden = true;
-        selectedNode = null;
-        renderTree();
-      });
-
-    document
-      .getElementById("restore-hidden")
-      .addEventListener("click", () => {
-        if (!root) {
-          return;
-        }
-
-        walk(root, node => {
-          node.hidden = false;
-        });
-
-        renderTree();
-      });
-
-    document
-      .getElementById("collapse-selected-clade")
-      .addEventListener("click", () => {
-        if (
-          selectedNode &&
-          selectedNode.children.length > 0
-        ) {
-          selectedNode.collapsed = true;
-          renderTree();
-        }
-      });
-
-    document
-      .getElementById("expand-all-clades")
-      .addEventListener("click", () => {
-        if (!root) {
-          return;
-        }
-
-        walk(root, node => {
-          node.collapsed = false;
-        });
-
-        renderTree();
-      });
-
-    document
-      .getElementById("download-svg")
-      .addEventListener("click", downloadSvg);
+    document.getElementById("download-svg").addEventListener("click", downloadSvg);
 
     treeContainer.addEventListener("scroll", closeTipEditor);
 
     treeContainer.addEventListener("dragover", event => {
       event.preventDefault();
-
-      if (event.dataTransfer) {
-        event.dataTransfer.dropEffect = "copy";
-      }
-
+      if (event.dataTransfer) event.dataTransfer.dropEffect = "copy";
       treeContainer.classList.add("dragover");
     });
 
     treeContainer.addEventListener("dragleave", event => {
-      if (!treeContainer.contains(event.relatedTarget)) {
-        treeContainer.classList.remove("dragover");
-      }
+      if (!treeContainer.contains(event.relatedTarget)) treeContainer.classList.remove("dragover");
     });
 
     treeContainer.addEventListener("drop", event => {
       event.preventDefault();
       treeContainer.classList.remove("dragover");
-
       loadFiles(event.dataTransfer.files);
     });
 
     window.addEventListener("resize", closeTipEditor);
-
     loadDefaultTree();
   </script>
 </body>
