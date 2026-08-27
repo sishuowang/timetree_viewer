@@ -1030,7 +1030,7 @@ Duration: ${range.approximate ? "~" : ""}${formatNumber(olderMa - youngerMa)} mi
       markup += `
         <line class="timeline-axis" x1="${plotLeft}" y1="${axisY}" x2="${plotRight}" y2="${axisY}"></line>
         <text class="timeline-title" x="${(plotLeft + plotRight) / 2}" y="25">${escapeXml(titleText)}</text>
-        <text class="timeline-direction-label" x="${plotLeft}" y="${axisY + 17}" text-anchor="start">Older</text>
+        <text class="timeline-direction-label" x="${plotLeft}" y="${axisY + 17}" text-anchor="start"></text>
         <text class="timeline-direction-label" x="${plotRight}" y="${axisY + 17}" text-anchor="end">Present</text>
       `;
 
