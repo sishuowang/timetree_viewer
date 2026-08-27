@@ -260,13 +260,12 @@
       <input id="branch-width" type="number" value="1.5" min="0.1" step="0.1">
 
       <label for="branch-spacing">Spacing:</label>
-      <input id="branch-spacing" type="number" value="22" min="6" step="1" title="Vertical spacing between branches">
+      <input id="branch-spacing" type="number" value="22" min="4" step="1" title="Vertical spacing between branches">
 
       <label for="tip-font-size">Tip font:</label>
-      <input id="tip-font-size" type="number" value="11" min="6" step="1" title="Tip label font size (px)">
+      <input id="tip-font-size" type="number" value="11" min="4" step="1" title="Tip label font size (px)">
 
-	  <label><input id="show-geology" type="checkbox"> Geology</label>
-
+      <label><input id="show-geology" type="checkbox"> Geology</label>
 
       <span class="geology-scale-control">
         <label for="geology-unit-ma">1 unit =</label>
@@ -329,11 +328,13 @@
       Click a tip once to select it. <strong>Double-click a tip name or circle to rename it.</strong>
       Double-click an internal node to collapse or expand its clade.
       <strong>Single-click a branch to paint it</strong> using current Branch color.
+	  <!--
       Geological ranges use Ma before present. Set <strong>1 tree unit</strong> to Ma represented by one branch-length unit.
       The <strong>Title</strong> field changes only timeline title.
       To color a clade, select an internal node and click <strong>Apply clade</strong>.
       (Clade color affects descendants only, not its parent branch.)
       Use <strong>Undo (Ctrl+Z)</strong> and <strong>Redo (Ctrl+Y)</strong>.
+	  --!>
     </p>
 
     <footer class="credits">
@@ -369,24 +370,24 @@
     const MAX_HISTORY_STEPS = 200;
 
     const GEOLOGICAL_EONS = [
-      { name:"Phanerozoic", younger:0, older:5.41, color:"#9ad9dd", text:"dark" },
-      { name:"Proterozoic", younger:5.41, older:25, color:"#f2a7b8", text:"dark" },
-      { name:"Archean", younger:25, older:40, color:"#d85b91", text:"light" },
-      { name:"Hadean", younger:40, older:46, color:"#984779", text:"light", approximate:true }
+      { name:"Phanerozoic", short:"Phan.", younger:0, older:5.41, color:"#9ad9dd", text:"dark" },
+      { name:"Proterozoic", short:"Prot.", younger:5.41, older:25, color:"#f2a7b8", text:"dark" },
+      { name:"Archean", short:"Arch.", younger:25, older:40, color:"#d85b91", text:"light" },
+      { name:"Hadean", short:"Had.", younger:40, older:46, color:"#984779", text:"light", approximate:true }
     ];
 
     const GEOLOGICAL_ERAS = [
-      { name:"Cenozoic", younger:0, older:0.66, color:"#f2f91d", text:"dark" },
-      { name:"Mesozoic", younger:0.66, older:2.52, color:"#67c5ca", text:"dark" },
-      { name:"Paleozoic", younger:2.52, older:5.41, color:"#99c08d", text:"dark" },
-      { name:"Neoproterozoic", younger:5.41, older:10, color:"#f29eaa", text:"dark" },
-      { name:"Mesoproterozoic", younger:10, older:16, color:"#f5b3c2", text:"dark" },
-      { name:"Paleoproterozoic", younger:16, older:25, color:"#ef7fa1", text:"dark" },
-      { name:"Neoarchean", younger:25, older:28, color:"#df719d", text:"dark" },
-      { name:"Mesoarchean", younger:28, older:32, color:"#d85b91", text:"light" },
-      { name:"Paleoarchean", younger:32, older:36, color:"#c64f89", text:"light" },
-      { name:"Eoarchean", younger:36, older:40, color:"#ad467e", text:"light" },
-      { name:"No formal eras", younger:40, older:46, color:"#7f3d69", text:"light", approximate:true }
+      { name:"Cenozoic", short:"Ceno", younger:0, older:0.66, color:"#f2f91d", text:"dark" },
+      { name:"Mesozoic", short:"Meso", younger:0.66, older:2.52, color:"#67c5ca", text:"dark" },
+      { name:"Paleozoic", short:"Paleo", younger:2.52, older:5.41, color:"#99c08d", text:"dark" },
+      { name:"Neoproterozoic", short:"NeoPtz", younger:5.41, older:10, color:"#f29eaa", text:"dark" },
+      { name:"Mesoproterozoic", short:"MesoPtz", younger:10, older:16, color:"#f5b3c2", text:"dark" },
+      { name:"Paleoproterozoic", short:"PaleoPtz", younger:16, older:25, color:"#ef7fa1", text:"dark" },
+      { name:"Neoarchean", short:"NeoArch", younger:25, older:28, color:"#df719d", text:"dark" },
+      { name:"Mesoarchean", short:"MesoArch", younger:28, older:32, color:"#d85b91", text:"light" },
+      { name:"Paleoarchean", short:"PaleoArch", younger:32, older:36, color:"#c64f89", text:"light" },
+      { name:"Eoarchean", short:"EoArch", younger:36, older:40, color:"#ad467e", text:"light" },
+      { name:"No formal eras", short:"", younger:40, older:46, color:"#7f3d69", text:"light", approximate:true }
     ];
 
     const fileInput = document.getElementById("tree-file");
@@ -831,12 +832,12 @@
 
     function getBranchSpacing() {
       const value = Number(branchSpacingInput.value);
-      return (Number.isFinite(value) && value >= 6) ? value : DEFAULT_BRANCH_SPACING;
+      return (Number.isFinite(value) && value >= 4) ? value : DEFAULT_BRANCH_SPACING;
     }
 
     function getTipFontSize() {
       const value = Number(tipFontSizeInput.value);
-      return (Number.isFinite(value) && value >= 6) ? value : DEFAULT_TIP_FONT_SIZE;
+      return (Number.isFinite(value) && value >= 0) ? value : DEFAULT_TIP_FONT_SIZE;
     }
 
     function getGeologyUnitMa() {
@@ -849,6 +850,35 @@
       geologyScaleControl.classList.add("invalid");
       geologyUnitMaInput.setAttribute("aria-invalid", "true");
       return DEFAULT_GEOLOGY_UNIT_MA;
+    }
+
+    function estimateLabelWidth(text, fontSizePx) {
+      return String(text || "").length * fontSizePx * 0.58;
+    }
+
+    function fitGeologyLabel(range, blockWidthPx) {
+      const minFont = 4;
+      const maxFont = 10;
+      const horizontalPadding = 6;
+      const available = Math.max(0, blockWidthPx - horizontalPadding * 2);
+
+      if (available < 10) return null;
+
+      const candidates = [];
+      if (range.name) candidates.push(range.name);
+      if (range.short && range.short !== range.name) candidates.push(range.short);
+
+      for (const candidate of candidates) {
+        const charCount = Math.max(1, String(candidate).length);
+        const estimatedMax = Math.floor(available / (charCount * 0.58));
+        const fontSize = Math.min(maxFont, estimatedMax);
+
+        if (fontSize >= minFont && estimateLabelWidth(candidate, fontSize) <= available) {
+          return { text:candidate, fontSize };
+        }
+      }
+
+      return null;
     }
 
     function orderedChildren(node) {
@@ -952,8 +982,8 @@
         const left = xScale(visibleOlder);
         const right = xScale(visibleYounger);
         const width = Math.max(0, right - left);
-        const labelWidth = range.name.length * 6.2;
-        const showLabel = width >= labelWidth + 8;
+
+        const fitted = fitGeologyLabel(range, width);
 
         markup += `
           <g>
@@ -965,10 +995,10 @@ Duration: ${range.approximate ? "~" : ""}${formatNumber(olderMa - youngerMa)} mi
             </rect>
         `;
 
-        if (showLabel) {
+        if (fitted) {
           markup += `
-            <text class="geology-label${range.text === "light" ? " light" : ""}" x="${left + width / 2}" y="${y + height / 2}">
-              ${escapeXml(range.name)}
+            <text class="geology-label${range.text === "light" ? " light" : ""}" style="font-size:${fitted.fontSize}px;" x="${left + width / 2}" y="${y + height / 2}">
+              ${escapeXml(fitted.text)}
             </text>
           `;
         }
@@ -1988,14 +2018,14 @@ Duration: ${range.approximate ? "~" : ""}${formatNumber(olderMa - youngerMa)} mi
     branchSpacingInput.addEventListener("input", () => renderTree());
     branchSpacingInput.addEventListener("change", () => {
       const value = Number(branchSpacingInput.value);
-      if (!Number.isFinite(value) || value < 6) branchSpacingInput.value = String(DEFAULT_BRANCH_SPACING);
+      if (!Number.isFinite(value) || value < 4) branchSpacingInput.value = String(DEFAULT_BRANCH_SPACING);
       renderTree();
     });
 
     tipFontSizeInput.addEventListener("input", () => renderTree());
     tipFontSizeInput.addEventListener("change", () => {
       const value = Number(tipFontSizeInput.value);
-      if (!Number.isFinite(value) || value < 6) tipFontSizeInput.value = String(DEFAULT_TIP_FONT_SIZE);
+      if (!Number.isFinite(value) || value < 0) tipFontSizeInput.value = String(DEFAULT_TIP_FONT_SIZE);
       renderTree();
     });
 
