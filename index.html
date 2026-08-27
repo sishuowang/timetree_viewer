@@ -1234,12 +1234,12 @@ Duration: ${range.approximate ? "~" : ""}${formatNumber(olderMa - youngerMa)} mi
       if (!selectedNode) {
         selectedNodeDetails.innerHTML = `<p class="empty-message">Click an internal node to view its timing and clade size.</p>`;
       } else {
-        const hpd = selectedNode.hpd ? `${formatNumber(selectedNode.hpd[0])}–${formatNumber(selectedNode.hpd[1])} Ma` : "not provided";
+        const hpd = selectedNode.hpd ? `${formatNumber(selectedNode.hpd[0])}–${formatNumber(selectedNode.hpd[1])} time unit` : "not provided";
         selectedNodeDetails.innerHTML = `
           <p class="compact-details">
             <span class="compact-item"><strong>Node:</strong> ${escapeHtml(selectedNode.name || "unnamed internal node")}</span>
             <span class="compact-separator">•</span>
-            <span class="compact-item"><strong>Time:</strong> ${formatNumber(selectedNode.age)} Ma</span>
+            <span class="compact-item"><strong>Time:</strong> ${formatNumber(selectedNode.age)} time unit</span>
             <span class="compact-separator">•</span>
             <span class="compact-item"><strong>Clade:</strong> ${countTips(selectedNode)} tips</span>
             <span class="compact-separator">•</span>
@@ -1271,11 +1271,11 @@ Duration: ${range.approximate ? "~" : ""}${formatNumber(olderMa - youngerMa)} mi
         <p class="compact-details">
           <span class="compact-item"><strong>Tips:</strong> ${escapeHtml(selectedTips[0].name)} + ${escapeHtml(selectedTips[1].name)}</span>
           <span class="compact-separator">•</span>
-          <span class="compact-item"><strong>MRCA:</strong> ${formatNumber(mrca.age)} Ma</span>
+          <span class="compact-item"><strong>MRCA:</strong> ${formatNumber(mrca.age)} time unit</span>
           <span class="compact-separator">•</span>
           <span class="compact-item"><strong>Clade:</strong> ${countTips(mrca)} tips</span>
           <span class="compact-separator">•</span>
-          <span class="compact-item"><strong>95% HPD:</strong> ${mrca.hpd ? `${formatNumber(mrca.hpd[0])}–${formatNumber(mrca.hpd[1])} Ma` : "not provided"}</span>
+          <span class="compact-item"><strong>95% HPD:</strong> ${mrca.hpd ? `${formatNumber(mrca.hpd[0])}–${formatNumber(mrca.hpd[1])} time unit` : "not provided"}</span>
         </p>
       `;
     }
