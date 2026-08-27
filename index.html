@@ -265,7 +265,8 @@
       <label for="tip-font-size">Tip font:</label>
       <input id="tip-font-size" type="number" value="11" min="6" step="1" title="Tip label font size (px)">
 
-      <label><input id="show-geology" type="checkbox" checked> Geology</label>
+	  <label><input id="show-geology" type="checkbox"> Geology</label>
+
 
       <span class="geology-scale-control">
         <label for="geology-unit-ma">1 unit =</label>
@@ -1668,7 +1669,7 @@ Duration: ${range.approximate ? "~" : ""}${formatNumber(olderMa - youngerMa)} mi
       clearHistory();
 
       sortClades.value = "original";
-      showGeologyInput.checked = true;
+      showGeologyInput.checked = false;
       branchSpacingInput.value = String(DEFAULT_BRANCH_SPACING);
       tipFontSizeInput.value = String(DEFAULT_TIP_FONT_SIZE);
 
