@@ -48,7 +48,7 @@
     #tree-choice { max-width:260px; }
     #example-choice { max-width:210px; }
     #timeline-units { width:110px; }
-    #tick-interval, #branch-width, #branch-spacing, #tip-font-size { width:72px; }
+    #tick-interval, #branch-width, #branch-spacing, #tip-font-size { width:92px; }
     #geology-unit-ma { width:82px; }
 
     .geology-scale-control { display:inline-flex; align-items:center; gap:4px; }
@@ -256,7 +256,7 @@
       <label for="tick-interval">Tick:</label>
       <input id="tick-interval" type="number" value="1" min="0.000000000001" step="any">
 
-      <label for="branch-width">Width:</label>
+      <label for="branch-width">Branch width:</label>
       <input id="branch-width" type="number" value="1.5" min="0.1" step="0.1">
 
       <label for="branch-spacing">Spacing:</label>
@@ -280,6 +280,7 @@
       <button type="button" id="fit-tree">Fit</button>
       <button type="button" id="reset-tree">Reset</button>
       <button type="button" id="undo-action" disabled>Undo (Ctrl+Z)</button>
+      <button type="button" id="redo-action" disabled>Redo (Ctrl+Y)</button>
 
       <span class="toolbar-divider" aria-hidden="true"></span>
       <button type="button" id="clear-selections">Clear sel.</button>
@@ -331,7 +332,7 @@
       The <strong>Title</strong> field changes only timeline title.
       To color a clade, select an internal node and click <strong>Apply clade</strong>.
       (Clade color affects descendants only, not its parent branch.)
-      Use <strong>Undo (Ctrl/Cmd+Z)</strong> to revert the last tree-edit action.
+      Use <strong>Undo (Ctrl+Z)</strong> and <strong>Redo (Ctrl+Y)</strong>.
     </p>
 
     <footer class="credits">
@@ -364,7 +365,7 @@
     const DEFAULT_BRANCH_WIDTH = 1.5;
     const DEFAULT_BRANCH_SPACING = 22;
     const DEFAULT_TIP_FONT_SIZE = 11;
-    const MAX_UNDO_STEPS = 200;
+    const MAX_HISTORY_STEPS = 200;
 
     const GEOLOGICAL_EONS = [
       { name:"Phanerozoic", younger:0, older:5.41, color:"#9ad9dd", text:"dark" },
@@ -402,6 +403,7 @@
     const cladeColorInput = document.getElementById("clade-color");
     const branchColorInput = document.getElementById("branch-color");
     const undoActionButton = document.getElementById("undo-action");
+    const redoActionButton = document.getElementById("redo-action");
 
     const geologyUnitMaInput = document.getElementById("geology-unit-ma");
     const geologyScaleControl = document.querySelector(".geology-scale-control");
@@ -446,7 +448,8 @@
     let pendingSvgClickTimer = null;
 
     let undoStack = [];
-    let isUndoRestoring = false;
+    let redoStack = [];
+    let isHistoryRestoring = false;
 
     function cancelPendingSvgClick() {
       if (pendingSvgClickTimer !== null) {
@@ -1108,7 +1111,7 @@ Duration: ${range.approximate ? "~" : ""}${formatNumber(olderMa - youngerMa)} mi
         treeSvg.innerHTML = "";
         emptyTreeMessage.hidden = false;
         updateInformationPanels();
-        updateUndoButton();
+        updateHistoryButtons();
         return;
       }
 
@@ -1147,7 +1150,7 @@ Duration: ${range.approximate ? "~" : ""}${formatNumber(olderMa - youngerMa)} mi
         emptyTreeMessage.hidden = false;
         emptyTreeMessage.textContent = "All tips are hidden. Use Restore hidden.";
         updateInformationPanels();
-        updateUndoButton();
+        updateHistoryButtons();
         return;
       }
 
@@ -1193,7 +1196,7 @@ Duration: ${range.approximate ? "~" : ""}${formatNumber(olderMa - youngerMa)} mi
       }
 
       updateInformationPanels();
-      updateUndoButton();
+      updateHistoryButtons();
     }
 
     function updateInformationPanels() {
@@ -1317,28 +1320,35 @@ Duration: ${range.approximate ? "~" : ""}${formatNumber(olderMa - youngerMa)} mi
       };
     }
 
-    function clearUndoHistory() {
+    function clearHistory() {
       undoStack = [];
-      updateUndoButton();
+      redoStack = [];
+      updateHistoryButtons();
     }
 
     function pushUndoSnapshot() {
-      if (isUndoRestoring || !root) return;
+      if (isHistoryRestoring || !root) return;
       undoStack.push(createSnapshot());
-      if (undoStack.length > MAX_UNDO_STEPS) undoStack.shift();
-      updateUndoButton();
+      if (undoStack.length > MAX_HISTORY_STEPS) undoStack.shift();
+      redoStack = [];
+      updateHistoryButtons();
     }
 
-    function updateUndoButton() {
+    function updateHistoryButtons() {
       undoActionButton.disabled = !root || undoStack.length === 0;
+      redoActionButton.disabled = !root || redoStack.length === 0;
+
       undoActionButton.textContent = undoStack.length > 0
         ? `Undo (Ctrl+Z) [${undoStack.length}]`
         : "Undo (Ctrl+Z)";
+      redoActionButton.textContent = redoStack.length > 0
+        ? `Redo (Ctrl+Y) [${redoStack.length}]`
+        : "Redo (Ctrl+Y)";
     }
 
     function restoreSnapshot(snapshot) {
       if (!snapshot || !snapshot.rootState) return;
-      isUndoRestoring = true;
+      isHistoryRestoring = true;
       try {
         root = rebuildNodeState(snapshot.rootState, null);
 
@@ -1365,16 +1375,30 @@ Duration: ${range.approximate ? "~" : ""}${formatNumber(olderMa - youngerMa)} mi
           treeContainer.scrollTop = Number.isFinite(snapshot.scrollTop) ? snapshot.scrollTop : 0;
         });
       } finally {
-        isUndoRestoring = false;
+        isHistoryRestoring = false;
       }
     }
 
     function undoLastAction() {
       if (!root || undoStack.length === 0) return;
+      const current = createSnapshot();
       const snapshot = undoStack.pop();
+      redoStack.push(current);
+      if (redoStack.length > MAX_HISTORY_STEPS) redoStack.shift();
       restoreSnapshot(snapshot);
       setStatus("Undid last action.", "success");
-      updateUndoButton();
+      updateHistoryButtons();
+    }
+
+    function redoLastAction() {
+      if (!root || redoStack.length === 0) return;
+      const current = createSnapshot();
+      const snapshot = redoStack.pop();
+      undoStack.push(current);
+      if (undoStack.length > MAX_HISTORY_STEPS) undoStack.shift();
+      restoreSnapshot(snapshot);
+      setStatus("Redid action.", "success");
+      updateHistoryButtons();
     }
 
     function selectTip(tip) {
@@ -1641,7 +1665,7 @@ Duration: ${range.approximate ? "~" : ""}${formatNumber(olderMa - youngerMa)} mi
       selectedTips = [];
       selectedBranchChildId = null;
       zoomScale = 1;
-      clearUndoHistory();
+      clearHistory();
 
       sortClades.value = "original";
       showGeologyInput.checked = true;
@@ -1675,7 +1699,7 @@ Duration: ${range.approximate ? "~" : ""}${formatNumber(olderMa - youngerMa)} mi
 
       lastLayoutById = new Map();
       zoomScale = 1; baseWidth = 1200; baseHeight = 600;
-      clearUndoHistory();
+      clearHistory();
 
       treeSvg.innerHTML = "";
       treeSvg.removeAttribute("viewBox");
@@ -1692,7 +1716,7 @@ Duration: ${range.approximate ? "~" : ""}${formatNumber(olderMa - youngerMa)} mi
       treeContainer.scrollTop = 0;
 
       setStatus(statusMessage);
-      updateUndoButton();
+      updateHistoryButtons();
     }
 
     function removeLoadedTree(treeId) {
@@ -1764,7 +1788,7 @@ Duration: ${range.approximate ? "~" : ""}${formatNumber(olderMa - youngerMa)} mi
           emptyTreeMessage.textContent = "The tree could not be displayed.";
           populateTreeChoice(null);
           updateInformationPanels();
-          updateUndoButton();
+          updateHistoryButtons();
         }
         setStatus("<strong>Could not load the tree:</strong> " + escapeHtml(error.message), "error");
         return false;
@@ -1996,6 +2020,7 @@ Duration: ${range.approximate ? "~" : ""}${formatNumber(olderMa - youngerMa)} mi
     document.getElementById("clear-all-branch-colors").addEventListener("click", clearAllBranchColors);
 
     undoActionButton.addEventListener("click", undoLastAction);
+    redoActionButton.addEventListener("click", redoLastAction);
 
     treeSvg.addEventListener("click", event => {
       const tipElement = event.target.closest?.("[data-tip-id]");
@@ -2065,12 +2090,23 @@ Duration: ${range.approximate ? "~" : ""}${formatNumber(olderMa - youngerMa)} mi
     });
 
     document.addEventListener("keydown", event => {
-      const key = String(event.key || "").toLowerCase();
-      const wantsUndo = (event.ctrlKey || event.metaKey) && !event.shiftKey && key === "z";
-      if (!wantsUndo) return;
       if (isTypingTarget(event.target)) return;
-      event.preventDefault();
-      undoLastAction();
+
+      const key = String(event.key || "").toLowerCase();
+
+      const wantsUndo = (event.ctrlKey || event.metaKey) && !event.shiftKey && key === "z";
+      const wantsRedoCtrlY = (event.ctrlKey || event.metaKey) && !event.shiftKey && key === "y";
+      const wantsRedoMacAlt = (event.ctrlKey || event.metaKey) && event.shiftKey && key === "z";
+
+      if (wantsUndo) {
+        event.preventDefault();
+        undoLastAction();
+        return;
+      }
+      if (wantsRedoCtrlY || wantsRedoMacAlt) {
+        event.preventDefault();
+        redoLastAction();
+      }
     });
 
     document.getElementById("zoom-in").addEventListener("click", () => { if (root) setZoom(zoomScale * 1.2); });
@@ -2192,7 +2228,7 @@ Duration: ${range.approximate ? "~" : ""}${formatNumber(olderMa - youngerMa)} mi
 
     populateExampleChoice();
     populateTreeChoice();
-    updateUndoButton();
+    updateHistoryButtons();
     setStatus("No trees are loaded. Upload a file or use <strong>Load example</strong>.");
   </script>
 </body>
