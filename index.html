@@ -46,7 +46,7 @@
 
     .toolbar-divider { width:1px; height:20px; margin:0 1px; background:var(--border); }
     #tree-choice { max-width:260px; }
-    #example-choice { max-width:210px; }
+    #example-choice { max-width:260px; }
     #timeline-units { width:110px; }
     #tick-interval, #branch-width, #branch-spacing, #tip-font-size { width:92px; }
     #geology-unit-ma { width:82px; }
@@ -328,19 +328,19 @@
       Click a tip once to select it. <strong>Double-click a tip name or circle to rename it.</strong>
       Double-click an internal node to collapse or expand its clade.
       <strong>Single-click a branch to paint it</strong> using current Branch color.
-	  <!--
+      <!--
       Geological ranges use Ma before present. Set <strong>1 tree unit</strong> to Ma represented by one branch-length unit.
       The <strong>Title</strong> field changes only timeline title.
       To color a clade, select an internal node and click <strong>Apply clade</strong>.
       (Clade color affects descendants only, not its parent branch.)
       Use <strong>Undo (Ctrl+Z)</strong> and <strong>Redo (Ctrl+Y)</strong>.
-	  --!>
+      -->
     </p>
 
     <footer class="credits">
       <strong>Interactive Timetree Viewer</strong> is developed by ChatGPT with help from
       <a href="https://sishuowang2022.wordpress.com/" target="_blank" rel="noopener noreferrer">Sishuo Wang</a>, distributed under CC0 1.0 Universal. No data is collected.
-      Example tree includes Wang &amp; Luo (2025), <cite>Syst. Biol.</cite>.
+      Example trees: Wang_Luo_2025_FigTree.tre; Brady_FigTree.LG+G+C60.1pf.tre; Brady_FigTree.LG+G+C60.2pf.tre.
     </footer>
   </main>
 
@@ -358,7 +358,9 @@
 
     const DEFAULT_TREE_FILE = "Wang_Luo_2025_FigTree.tre";
     const EXAMPLE_TREES = [
-      { id:"wang-luo-2025", label:"Wang & Luo 2025", fileName:DEFAULT_TREE_FILE }
+      { id:"wang-luo-2025-figtree", label:"Wang_Luo_2025_FigTree.tre", fileName:"Wang_Luo_2025_FigTree.tre" },
+      { id:"brady-figtree-lg-g-c60-1pf", label:"Brady_FigTree.LG+G+C60.1pf.tre", fileName:"Brady_FigTree.LG+G+C60.1pf.tre" },
+      { id:"brady-figtree-lg-g-c60-2pf", label:"Brady_FigTree.LG+G+C60.2pf.tre", fileName:"Brady_FigTree.LG+G+C60.2pf.tre" }
     ];
 
     const DOUBLE_CLICK_DELAY = 280;
