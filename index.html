@@ -1,807 +1,537 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>timetree_viewer</title>
-  <style>
-    * { box-sizing: border-box; }
-    :root {
-      --background:#f4f6f8; --panel:#fff; --border:#d5dae1; --text:#222831; --muted:#68717d;
-      --branch:#4d5968; --blue:#2f6fdb; --orange:#e26f30; --grid:#e2e6eb; --danger:#c74343;
-      --success:#2f9d50; --warning:#d89a22;
-    }
-    body {
-      margin:0; padding:14px; color:var(--text); background:var(--background);
-      font-family:Arial,Helvetica,sans-serif; font-size:13px; line-height:1.35;
-    }
-    .container { max-width:1700px; margin:0 auto; }
-    h1 { margin:0 0 4px; font-size:22px; }
-    .description { margin:0 0 10px; color:var(--muted); font-size:12px; }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>timetree_viewer</title>
+<style>
+* { box-sizing: border-box; }
+body { margin:0; padding:14px; font-family: Arial, Helvetica, sans-serif; font-size:13px; background:#f4f6f8; color:#222831; }
+.container { max-width:1700px; margin:0 auto; }
+h1 { margin:0 0 4px; font-size:22px; }
+.description { margin:0 0 10px; color:#68717d; font-size:12px; }
+.toolbar { display:flex; flex-wrap:wrap; align-items:center; gap:6px; margin-bottom:8px; padding:8px; background:#fff; border:1px solid #d5dae1; border-radius:6px; font-size:12px; }
+.toolbar label { font-weight:600; }
+button, select, input[type="text"], input[type="number"], input[type="color"] { min-height:28px; padding:4px 8px; border:1px solid #bfc5ce; border-radius:4px; font:inherit; font-size:12px; background:#fff; }
+button { cursor:pointer; }
+button:hover { background:#f7f9fb; }
+.toolbar-divider { width:1px; height:20px; background:#d5dae1; margin:0 2px; }
+#example-choice { min-width:180px; }
+.file-status { display:flex; align-items:center; gap:7px; margin-bottom:8px; padding:6px 9px; background:#fff; border:1px solid #d5dae1; border-radius:5px; font-size:12px; color:#68717d; }
+.status-dot { width:8px; height:8px; border-radius:50%; background:#999; }
+.status-dot.loading { background:#d89a22; }
+.status-dot.success { background:#2f9d50; }
+.status-dot.error { background:#c74343; }
+.tree-library { margin-bottom:8px; padding:8px; background:#fff; border:1px solid #d5dae1; border-radius:6px; }
+.tree-library[hidden] { display:none; }
+.tree-library-header { display:flex; justify-content:space-between; margin-bottom:7px; }
+.tree-library-header h2 { margin:0; font-size:14px; }
+.tree-library-list { display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:6px; margin:0; padding:0; list-style:none; }
+.tree-library-item { display:flex; justify-content:space-between; align-items:center; padding:6px 8px; background:#f8f9fb; border:1px solid #d5dae1; border-radius:5px; }
+.tree-library-item.active { background:#edf4ff; border-color:#8eb1e8; }
+.tree-library-name { font-weight:700; }
+.tree-library-file { color:#68717d; font-size:11px; }
+.remove-tree-button { min-height:24px; padding:2px 8px; color:#c74343; background:#fff; border:1px solid #c74343; border-radius:4px; cursor:pointer; font-size:11px; }
+.remove-tree-button:hover { background:#c74343; color:#fff; }
+.tree-container { position:relative; min-height:500px; max-height:80vh; overflow:auto; background:#fff; border:1px solid #d5dae1; border-radius:6px; }
+#tree-svg { display:block; background:#fff; }
+.empty-tree-message { position:absolute; inset:0; display:grid; place-content:center; color:#68717d; text-align:center; pointer-events:none; }
+.information { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:8px; }
+.info-panel { padding:8px 10px; background:#fff; border:1px solid #d5dae1; border-radius:6px; font-size:12px; }
+.info-panel h2 { margin:0 0 4px; font-size:14px; }
+.empty-message { color:#68717d; font-size:12px; }
+.timeline-title { fill:#20252c; font-size:20px; font-weight:700; text-anchor:middle; }
+.timeline-label { fill:#404a57; font-size:13px; font-weight:600; text-anchor:middle; }
+.timeline-axis { stroke:#414b58; stroke-width:1.5; }
+.timeline-tick { stroke:#596473; stroke-width:1.2; }
+.grid-line { stroke:#e2e6eb; stroke-width:1; }
+.branch { fill:none; stroke:#4d5968; stroke-width:1.5; cursor:pointer; }
+.branch:hover { stroke-width:2.5; }
+.branch.highlighted { stroke:#e26f30; stroke-width:3; }
+.internal-node { fill:#fff; stroke:#315f9c; stroke-width:1.8; cursor:pointer; }
+.internal-node:hover { fill:#dbe8ff; }
+.internal-node.selected { fill:#2f6fdb; }
+.tip-point { fill:#fff; stroke:#485666; stroke-width:1.5; cursor:text; }
+.tip-point:hover { stroke:#e26f30; stroke-width:2.5; }
+.tip-point.selected { fill:#e26f30; }
+.tip-label { fill:#222; font-size:11px; dominant-baseline:middle; cursor:text; }
+.tip-label:hover { fill:#1f64d0; font-weight:700; }
+.tip-label.selected { fill:#1f64d0; font-weight:700; }
+.collapsed-triangle { fill:rgba(47,111,219,.15); stroke:#315f9c; stroke-width:1.5; cursor:pointer; }
+.collapsed-label { fill:#344252; font-size:10px; }
+.collapsed-area rect { fill:#fff; stroke:#999; stroke-dasharray:2 2; cursor:pointer; }
+.arrow { fill:none; stroke:#333; stroke-width:2; }
+.hpd-bar { stroke:#2f6fdb; stroke-width:6; stroke-linecap:round; opacity:.25; }
+.geology-row-label { fill:#4d5662; font-size:10px; font-weight:700; text-anchor:end; }
+.geology-range { stroke:rgba(30,35,42,.58); stroke-width:.8; cursor:help; }
+.geology-label { fill:#17202a; font-size:10px; font-weight:700; text-anchor:middle; dominant-baseline:middle; }
+.geology-label.light { fill:#fff; text-shadow:-1px -1px 0 rgba(0,0,0,.35),1px -1px 0 rgba(0,0,0,.35),-1px 1px 0 rgba(0,0,0,.35),1px 1px 0 rgba(0,0,0,.35); }
+.tip-editor { position:fixed; z-index:1000; display:none; width:350px; padding:9px; background:#fff; border:1px solid #8795a8; border-radius:6px; box-shadow:0 7px 24px rgba(0,0,0,.22); font-size:12px; }
+.tip-editor.open { display:block; }
+.tip-editor-row { display:flex; gap:5px; }
+.tip-editor-row input { flex:1; }
+.instructions { margin:8px 2px 0; color:#68717d; font-size:12px; }
 
-    .toolbar {
-      display:flex; flex-wrap:wrap; align-items:center; gap:6px; margin-bottom:8px; padding:8px;
-      background:var(--panel); border:1px solid var(--border); border-radius:6px; font-size:12px;
-    }
-    .toolbar label { font-weight:600; font-size:12px; }
-
-    button, select, input[type="text"], input[type="number"], input[type="color"] {
-      min-height:28px; padding:4px 8px; color:var(--text); background:#fff;
-      border:1px solid #bfc5ce; border-radius:4px; font:inherit; font-size:12px;
-    }
-    input[type="color"] { width:42px; padding:2px; }
-    button { cursor:pointer; }
-    button:hover, select:hover, input:hover { border-color:#75869c; background:#f7f9fb; }
-    button:focus-visible, select:focus-visible, input:focus-visible { outline:2px solid var(--blue); outline-offset:1px; }
-    button:disabled, select:disabled { color:#999; background:#f1f1f1; cursor:not-allowed; }
-
-    input[type="file"] {
-      position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap;
-    }
-    .file-button {
-      display:inline-flex; align-items:center; min-height:28px; padding:4px 9px; color:#fff;
-      background:var(--blue); border:1px solid var(--blue); border-radius:4px; font-weight:600; cursor:pointer; font-size:12px;
-    }
-    .file-button:hover { background:#245fbe; }
-
-    .toolbar-divider { width:1px; height:20px; margin:0 1px; background:var(--border); }
-    #tree-choice { max-width:260px; }
-    #example-choice { max-width:210px; }
-    #timeline-units { width:110px; }
-    #tick-interval, #branch-width, #branch-spacing, #tip-font-size { width:92px; }
-    #geology-unit-ma { width:82px; }
-
-    .geology-scale-control { display:inline-flex; align-items:center; gap:4px; }
-    .geology-scale-control.invalid input { border-color:var(--danger); background:#fff4f4; }
-
-    .file-status {
-      display:flex; align-items:center; gap:7px; min-width:0; margin-bottom:8px; padding:6px 9px;
-      color:var(--muted); background:var(--panel); border:1px solid var(--border); border-radius:5px; font-size:12px;
-    }
-    .file-status strong { color:var(--text); }
-    .status-text { min-width:0; overflow-wrap:anywhere; }
-    .status-dot { flex:0 0 auto; width:8px; height:8px; background:#999; border-radius:50%; }
-    .status-dot.loading { background:var(--warning); }
-    .status-dot.success { background:var(--success); }
-    .status-dot.error { background:var(--danger); }
-
-    .tree-library {
-      margin-bottom:8px; padding:8px 9px; background:var(--panel); border:1px solid var(--border); border-radius:6px; font-size:12px;
-    }
-    .tree-library[hidden] { display:none; }
-    .tree-library-header { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:6px; margin-bottom:7px; }
-    .tree-library-header h2 { margin:0; font-size:14px; }
-    .tree-library-count { color:var(--muted); font-size:11px; }
-
-    .tree-library-list {
-      display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,330px),1fr));
-      gap:6px; margin:0; padding:0; list-style:none;
-    }
-    .tree-library-item {
-      display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; gap:7px; min-width:0;
-      padding:6px 7px; background:#f8f9fb; border:1px solid var(--border); border-radius:5px;
-    }
-    .tree-library-item.active { background:#edf4ff; border-color:#8eb1e8; box-shadow:inset 3px 0 0 var(--blue); }
-    .tree-library-description { min-width:0; }
-    .tree-library-name {
-      display:block; overflow:hidden; color:var(--text); font-weight:700; text-overflow:ellipsis; white-space:nowrap; font-size:12px;
-    }
-    .tree-library-file {
-      display:block; overflow:hidden; color:var(--muted); font-size:11px; text-overflow:ellipsis; white-space:nowrap;
-    }
-    .remove-tree-button {
-      min-height:24px; padding:2px 7px; color:var(--danger); background:#fff; border-color:#d9aaaa; font-size:11px; font-weight:700;
-    }
-    .remove-tree-button:hover { color:#fff; background:var(--danger); border-color:var(--danger); }
-
-    .tree-container {
-      position:relative; min-height:540px; max-height:75vh; overflow:auto; background:#fff;
-      border:1px solid var(--border); border-radius:6px;
-    }
-    .tree-container.dragover {
-      outline:3px solid rgba(47,111,219,.35); outline-offset:-3px; background:#f5f9ff;
-    }
-    #tree-svg {
-      display:block; background:#fff; user-select:none; -webkit-user-select:none;
-    }
-    .empty-tree-message {
-      position:absolute; inset:0; display:grid; place-content:center; padding:30px; color:var(--muted);
-      text-align:center; pointer-events:none; font-size:12px;
-    }
-    .empty-tree-message[hidden] { display:none; }
-
-    .information { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:8px; }
-    .info-panel {
-      min-width:0; padding:8px 10px; background:var(--panel); border:1px solid var(--border);
-      border-radius:6px; font-size:12px;
-    }
-    .info-panel h2 { margin:0 0 4px; font-size:14px; }
-
-    .compact-details { display:flex; flex-wrap:wrap; align-items:center; gap:2px 6px; margin:0; }
-    .compact-item { white-space:nowrap; }
-    .compact-separator { color:#9aa1aa; }
-    .empty-message { margin:0; color:var(--muted); }
-
-    .instructions { margin:8px 2px 0; color:var(--muted); font-size:12px; }
-    .credits {
-      margin:10px 2px 0; padding-top:9px; color:var(--muted); font-size:12px; text-align:center; border-top:1px solid var(--border);
-    }
-    .credits strong { color:var(--text); }
-    .credits cite { font-style:italic; }
-
-    .timeline-title {
-      fill:#20252c; font-size:20px; font-weight:700; text-anchor:middle; pointer-events:none;
-    }
-    .timeline-label {
-      fill:#404a57; font-size:13px; font-weight:600; text-anchor:middle; pointer-events:none;
-    }
-    .timeline-direction-label { fill:#596473; font-size:11px; font-weight:600; pointer-events:none; }
-    .timeline-axis { stroke:#414b58; stroke-width:1.5; vector-effect:non-scaling-stroke; }
-    .timeline-tick { stroke:#596473; stroke-width:1.2; vector-effect:non-scaling-stroke; }
-
-    .grid-line { stroke:var(--grid); stroke-width:1; pointer-events:none; vector-effect:non-scaling-stroke; }
-
-    .geology-row-label {
-      fill:#4d5662; font-size:10px; font-weight:700; text-anchor:end; dominant-baseline:middle; pointer-events:none;
-    }
-    .geology-range { stroke:rgba(30,35,42,.58); stroke-width:.8; cursor:help; vector-effect:non-scaling-stroke; }
-    .geology-range:hover { stroke:#111; stroke-width:2; filter:brightness(1.04); }
-    .geology-label {
-      fill:#17202a; font-size:10px; font-weight:700; text-anchor:middle; dominant-baseline:middle; pointer-events:none;
-    }
-    .geology-label.light {
-      fill:#fff;
-      text-shadow:-1px -1px 0 rgba(0,0,0,.35),1px -1px 0 rgba(0,0,0,.35),-1px 1px 0 rgba(0,0,0,.35),1px 1px 0 rgba(0,0,0,.35);
-    }
-    .geology-boundary {
-      stroke:rgba(40,45,52,.45); stroke-width:.7; stroke-dasharray:2 2; pointer-events:none; vector-effect:non-scaling-stroke;
-    }
-
-    .branch {
-      fill:none; stroke:var(--branch); stroke-width:1.5; vector-effect:non-scaling-stroke; cursor:pointer;
-    }
-    .branch:hover { opacity:.92; }
-    .branch.highlighted { stroke:var(--orange); stroke-width:3; }
-    .branch.selected-edge { stroke:#1f64d0; stroke-width:2.8; }
-
-    .hpd-bar {
-      stroke:var(--blue); stroke-width:6; stroke-linecap:round; opacity:.23; pointer-events:none; vector-effect:non-scaling-stroke;
-    }
-
-    .internal-node {
-      fill:#fff; stroke:#315f9c; stroke-width:1.8; cursor:pointer; vector-effect:non-scaling-stroke;
-    }
-    .internal-node:hover { fill:#dbe8ff; }
-    .internal-node.selected { fill:var(--blue); stroke:#174a91; }
-
-    .tip-point {
-      fill:#fff; stroke:#485666; stroke-width:1.5; cursor:text; pointer-events:all; vector-effect:non-scaling-stroke;
-    }
-    .tip-point:hover { fill:#fff0e8; stroke:var(--orange); stroke-width:2.5; }
-    .tip-point.selected { fill:var(--orange); stroke:#a94715; }
-
-    .tip-label {
-      fill:#222; font-size:11px; dominant-baseline:middle; cursor:text; pointer-events:all;
-    }
-    .tip-label:hover { fill:#1f64d0; font-weight:700; text-decoration:underline; }
-    .tip-label.selected { fill:#1f64d0; font-weight:700; }
-
-    .collapsed-triangle {
-      fill:rgba(47,111,219,.15); stroke:#315f9c; stroke-width:1.5; cursor:pointer; vector-effect:non-scaling-stroke;
-    }
-    .collapsed-triangle:hover { fill:rgba(47,111,219,.28); }
-    .collapsed-label { fill:#344252; font-size:10px; dominant-baseline:middle; pointer-events:none; }
-
-    .tip-editor {
-      position:fixed; z-index:1000; display:none; width:min(390px,calc(100vw - 20px)); padding:9px; background:#fff;
-      border:1px solid #8795a8; border-radius:6px; box-shadow:0 7px 24px rgba(0,0,0,.22); font-size:12px;
-    }
-    .tip-editor.open { display:block; }
-    .tip-editor-label { display:block; margin-bottom:6px; color:#465364; font-size:11px; font-weight:700; }
-    .tip-editor-row { display:flex; gap:5px; }
-    .tip-editor input { flex:1; min-width:0; }
-    .tip-editor button { flex:0 0 auto; }
-
-    @media (max-width:900px) {
-      body { padding:8px; }
-      .information { grid-template-columns:1fr; }
-      .toolbar-divider { display:none; }
-      .tree-container { max-height:71vh; }
-      .tree-library-list { grid-template-columns:1fr; }
-    }
-  </style>
+@media (max-width:900px) {
+  .information { grid-template-columns:1fr; }
+  .toolbar-divider { display:none; }
+}
+</style>
 </head>
 <body>
-  <main class="container">
-    <h1>Timetree Viewer</h1>
-    <p class="description">Explore Newick or NEXUS timetrees with geological ranges, confidence intervals, MRCA timing, clade sorting, and editable tips.</p>
+<main class="container">
+  <h1>Timetree Viewer</h1>
+  <p class="description">Explore Newick or NEXUS timetrees with geological ranges, confidence intervals, MRCA timing, clade sorting, and editable tips.</p>
 
-    <section class="toolbar" aria-label="Timetree controls">
-      <input id="tree-file" type="file" accept=".tre,.tree,.trees,.nex,.nexus,.nwk,.newick,text/plain" multiple>
-      <label class="file-button" for="tree-file">Upload NEXUS / Newick</label>
+  <section class="toolbar">
+    <input id="tree-file" type="file" accept=".tre,.tree,.trees,.nex,.nexus,.nwk,.newick,text/plain" multiple hidden>
+    <label for="tree-file" style="display:inline-block; padding:4px 10px; background:#2f6fdb; color:#fff; border-radius:4px; cursor:pointer;">Upload NEXUS / Newick</label>
 
-      <label for="example-choice">Examples:</label>
-      <select id="example-choice">
-        <option value="">Select example…</option>
-      </select>
-      <button type="button" id="load-example">Load example</button>
+    <label for="example-choice">Examples:</label>
+    <select id="example-choice"><option value="">Select example…</option></select>
+    <button type="button" id="load-example">Load example</button>
 
-      <label for="tree-choice">Tree:</label>
-      <select id="tree-choice" disabled><option>No tree loaded</option></select>
+    <span class="toolbar-divider"></span>
+    <label for="sort-clades">Sort:</label>
+    <select id="sort-clades">
+      <option value="original">Original order</option>
+      <option value="increasing">Increasing clade size</option>
+      <option value="decreasing">Decreasing clade size</option>
+    </select>
 
-      <span class="toolbar-divider" aria-hidden="true"></span>
+    <label for="tick-interval">Tick:</label>
+    <input id="tick-interval" type="number" value="1" min="0.000000000001" step="any" style="width:80px;">
 
-      <label for="sort-clades">Sort:</label>
-      <select id="sort-clades">
-        <option value="original">Original order</option>
-        <option value="increasing">Increasing clade size</option>
-        <option value="decreasing">Decreasing clade size</option>
-      </select>
+    <label for="branch-width">Branch width:</label>
+    <input id="branch-width" type="number" value="1.5" min="0.1" step="0.1" style="width:60px;">
 
-      <label for="timeline-units">Title:</label>
-      <input id="timeline-units" type="text" value="" maxlength="20">
+    <label for="branch-spacing">Spacing:</label>
+    <input id="branch-spacing" type="number" value="22" min="4" step="1" style="width:60px;">
 
-      <label for="clade-color">Clade:</label>
-      <input id="clade-color" type="color" value="#2f6fdb" aria-label="Choose clade color">
-      <button type="button" id="apply-clade-color">Apply clade</button>
-      <button type="button" id="clear-clade-color">Clear clade</button>
-      <button type="button" id="clear-all-clade-colors">Clear all clades</button>
+    <label for="tip-font-size">Tip font:</label>
+    <input id="tip-font-size" type="number" value="11" min="4" step="1" style="width:60px;">
 
-      <label for="branch-color">Branch:</label>
-      <input id="branch-color" type="color" value="#e26f30" aria-label="Choose branch color">
-      <button type="button" id="apply-branch-color">Apply branch</button>
-      <button type="button" id="clear-branch-color">Clear branch</button>
-      <button type="button" id="clear-all-branch-colors">Clear all branches</button>
+    <label><input id="show-geology" type="checkbox" checked> Geology</label>
 
-      <label for="tick-interval">Tick:</label>
-      <input id="tick-interval" type="number" value="1" min="0.000000000001" step="any">
+    <label for="geology-unit-ma">1 unit =</label>
+    <input id="geology-unit-ma" type="number" value="100" min="0.000000000001" step="any" style="width:80px;">
+    <span>Ma</span>
 
-      <label for="branch-width">Branch width:</label>
-      <input id="branch-width" type="number" value="1.5" min="0.1" step="0.1">
+    <span class="toolbar-divider"></span>
+    <button type="button" id="clear-selections">Clear sel.</button>
+    <button type="button" id="collapse-selected">Collapse</button>
+    <button type="button" id="expand-all">Expand all</button>
+    <button type="button" id="download-svg">SVG</button>
+  </section>
 
-      <label for="branch-spacing">Spacing:</label>
-      <input id="branch-spacing" type="number" value="22" min="4" step="1" title="Vertical spacing between branches">
+  <div class="file-status" role="status">
+    <span id="status-dot" class="status-dot"></span>
+    <span id="status-text">No trees loaded. Select an example or upload a file.</span>
+  </div>
 
-      <label for="tip-font-size">Tip font:</label>
-      <input id="tip-font-size" type="number" value="11" min="4" step="1" title="Tip label font size (px)">
-
-      <label><input id="show-geology" type="checkbox"> Geology</label>
-
-      <span class="geology-scale-control">
-        <label for="geology-unit-ma">1 unit =</label>
-        <input id="geology-unit-ma" type="number" value="100" min="0.000000000001" step="any" inputmode="decimal" aria-label="Millions of years per tree unit">
-        <span>Ma</span>
-      </span>
-
-      <span class="toolbar-divider" aria-hidden="true"></span>
-      <button type="button" id="zoom-in">Zoom in</button>
-      <button type="button" id="zoom-out">Zoom out</button>
-      <button type="button" id="focus-selection">Focus</button>
-      <button type="button" id="fit-tree">Fit</button>
-      <button type="button" id="reset-tree">Reset</button>
-      <button type="button" id="undo-action" disabled>Undo (Ctrl+Z)</button>
-      <button type="button" id="redo-action" disabled>Redo (Ctrl+Y)</button>
-
-      <span class="toolbar-divider" aria-hidden="true"></span>
-      <button type="button" id="clear-selections">Clear sel.</button>
-      <button type="button" id="hide-selected-tips">Hide tips</button>
-      <button type="button" id="hide-selected-clade">Hide clade</button>
-      <button type="button" id="restore-hidden">Restore</button>
-      <button type="button" id="collapse-selected-clade">Collapse</button>
-      <button type="button" id="expand-all-clades">Expand all</button>
-
-      <span class="toolbar-divider" aria-hidden="true"></span>
-      <button type="button" id="download-svg">SVG</button>
-    </section>
-
-    <div class="file-status" role="status" aria-live="polite">
-      <span id="status-dot" class="status-dot"></span>
-      <span id="status-text" class="status-text">No trees are loaded. Upload a file or use <strong>Load example</strong>.</span>
+  <section id="tree-library" class="tree-library" hidden>
+    <div class="tree-library-header">
+      <h2>Loaded trees</h2>
+      <span id="tree-library-count"></span>
     </div>
+    <ul id="tree-library-list" class="tree-library-list"></ul>
+  </section>
 
-    <section id="tree-library" class="tree-library" aria-labelledby="tree-library-heading" hidden>
-      <div class="tree-library-header">
-        <h2 id="tree-library-heading">Loaded trees</h2>
-        <span id="tree-library-count" class="tree-library-count"></span>
-      </div>
-      <ul id="tree-library-list" class="tree-library-list"></ul>
-    </section>
+  <section id="tree-container" class="tree-container">
+    <svg id="tree-svg" width="1200" height="600"></svg>
+    <div id="empty-tree-message" class="empty-tree-message">Select an example above or upload your own Newick/NEXUS file.</div>
+  </section>
 
-    <section id="tree-container" class="tree-container" aria-label="Timetree display">
-      <svg id="tree-svg" role="img" aria-label="Interactive timetree with geological timeline"></svg>
-      <div id="empty-tree-message" class="empty-tree-message">Upload one or more NEXUS or Newick files, drop them here, or load an example.</div>
-    </section>
+  <section class="information">
+    <div class="info-panel"><h2>MRCA / selected tips</h2><div id="mrca-details"><p class="empty-message">Click two tips to calculate MRCA.</p></div></div>
+    <div class="info-panel"><h2>Selected node</h2><div id="selected-node-details"><p class="empty-message">Click an internal node.</p></div></div>
+  </section>
 
-    <section class="information">
-      <article class="info-panel" aria-live="polite">
-        <h2>MRCA / selected tips</h2>
-        <div id="mrca-details"><p class="empty-message">Click two tip names to calculate their MRCA.</p></div>
-      </article>
+  <p class="instructions">Click a tip to select it. Double-click a tip to rename. Double-click an internal node to collapse/expand its clade.</p>
+</main>
 
-      <article class="info-panel" aria-live="polite">
-        <h2>Selected node</h2>
-        <div id="selected-node-details"><p class="empty-message">Click an internal node to view its timing and clade size.</p></div>
-      </article>
-    </section>
+<aside id="tip-editor" class="tip-editor">
+  <div class="tip-editor-row">
+    <input id="tip-editor-input" type="text" autocomplete="off">
+    <button id="tip-editor-save">Save</button>
+    <button id="tip-editor-cancel">Cancel</button>
+  </div>
+</aside>
 
-    <p class="instructions">
-      Click a tip once to select it. <strong>Double-click a tip name or circle to rename it.</strong>
-      Double-click an internal node to collapse or expand its clade.
-      <strong>Single-click a branch to paint it</strong> using current Branch color.
-      <!--
-      Geological ranges use Ma before present. Set <strong>1 tree unit</strong> to Ma represented by one branch-length unit.
-      The <strong>Title</strong> field changes only timeline title.
-      To color a clade, select an internal node and click <strong>Apply clade</strong>.
-      (Clade color affects descendants only, not its parent branch.)
-      Use <strong>Undo (Ctrl+Z)</strong> and <strong>Redo (Ctrl+Y)</strong>.
-      -->
-    </p>
+<script>
+"use strict";
 
-    <footer class="credits">
-      <strong>Interactive Timetree Viewer</strong> is developed by ChatGPT with help from
-      <a href="https://sishuowang2022.wordpress.com/" target="_blank" rel="noopener noreferrer">Sishuo Wang</a>, distributed under CC0 1.0 Universal. No data is collected.
-      Example tree includes Wang &amp; Luo (2025), <cite>Syst. Biol.</cite>.
-    </footer>
-  </main>
+// =============== 常量 ===============
+const DEFAULT_TREE_FILE = "Wang_Luo_2025_FigTree.tre";
+const EXAMPLE_TREES = [
+  { id: "wang-luo-2025",     label: "Wang & Luo 2025",       fileName: DEFAULT_TREE_FILE },
+  { id: "figtree-lg-g-c60-1pf", label: "Brady LG+G+C60 1pf", fileName: "Brady_FigTree.LG+G+C60.1pf.tre" },
+  { id: "figtree-lg-g-c60-2pf", label: "Brady LG+G+C60 2pf", fileName: "Brady_FigTree.LG+G+C60.2pf.tre" }
+];
 
-  <aside id="tip-editor" class="tip-editor" role="dialog" aria-labelledby="tip-editor-label">
-    <label id="tip-editor-label" class="tip-editor-label" for="tip-editor-input">Edit tip name</label>
-    <div class="tip-editor-row">
-      <input id="tip-editor-input" type="text" autocomplete="off" spellcheck="false">
-      <button type="button" id="tip-editor-save">Save</button>
-      <button type="button" id="tip-editor-cancel">Cancel</button>
-    </div>
-  </aside>
+const GEOLOGICAL_EONS = [
+  { name:"Phanerozoic", short:"Phan.", younger:0, older:5.41, color:"#9ad9dd", text:"dark" },
+  { name:"Proterozoic", short:"Prot.", younger:5.41, older:25, color:"#f2a7b8", text:"dark" },
+  { name:"Archean", short:"Arch.", younger:25, older:40, color:"#d85b91", text:"light" },
+  { name:"Hadean", short:"Had.", younger:40, older:46, color:"#984779", text:"light", approximate:true }
+];
 
-  <script>
-    "use strict";
+const GEOLOGICAL_ERAS = [
+  { name:"Cenozoic", short:"Ceno", younger:0, older:0.66, color:"#f2f91d", text:"dark" },
+  { name:"Mesozoic", short:"Meso", younger:0.66, older:2.52, color:"#67c5ca", text:"dark" },
+  { name:"Paleozoic", short:"Paleo", younger:2.52, older:5.41, color:"#99c08d", text:"dark" },
+  { name:"Neoproterozoic", short:"NeoPtz", younger:5.41, older:10, color:"#f29eaa", text:"dark" },
+  { name:"Mesoproterozoic", short:"MesoPtz", younger:10, older:16, color:"#f5b3c2", text:"dark" },
+  { name:"Paleoproterozoic", short:"PaleoPtz", younger:16, older:25, color:"#ef7fa1", text:"dark" },
+  { name:"Neoarchean", short:"NeoArch", younger:25, older:28, color:"#df719d", text:"dark" },
+  { name:"Mesoarchean", short:"MesoArch", younger:28, older:32, color:"#d85b91", text:"light" },
+  { name:"Paleoarchean", short:"PaleoArch", younger:32, older:36, color:"#c64f89", text:"light" },
+  { name:"Eoarchean", short:"EoArch", younger:36, older:40, color:"#ad467e", text:"light" },
+  { name:"No formal eras", short:"", younger:40, older:46, color:"#7f3d69", text:"light", approximate:true }
+];
 
-    // ===================== 常量与示例树 =====================
-    const DEFAULT_TREE_FILE = "Wang_Luo_2025_FigTree.tre";
-    const EXAMPLE_TREES = [
-      { id: "wang-luo-2025",     label: "Wang & Luo 2025",       fileName: DEFAULT_TREE_FILE },
-      { id: "figtree-lg-g-c60-1pf", label: "Brady LG+G+C60 1pf", fileName: "Brady_FigTree.LG+G+C60.1pf.tre" },
-      { id: "figtree-lg-g-c60-2pf", label: "Brady LG+G+C60 2pf", fileName: "Brady_FigTree.LG+G+C60.2pf.tre" }
-    ];
+// =============== DOM 引用 ===============
+const fileInput = document.getElementById("tree-file");
+const exampleChoice = document.getElementById("example-choice");
+const loadExampleButton = document.getElementById("load-example");
+const sortCladesInput = document.getElementById("sort-clades");
+const tickIntervalInput = document.getElementById("tick-interval");
+const branchWidthInput = document.getElementById("branch-width");
+const branchSpacingInput = document.getElementById("branch-spacing");
+const tipFontSizeInput = document.getElementById("tip-font-size");
+const showGeologyInput = document.getElementById("show-geology");
+const geologyUnitMaInput = document.getElementById("geology-unit-ma");
 
-    const DOUBLE_CLICK_DELAY = 280;
-    const SVG_NS = "http://www.w3.org/2000/svg";
-    const DEFAULT_GEOLOGY_UNIT_MA = 100;
-    const DEFAULT_BRANCH_WIDTH = 1.5;
-    const DEFAULT_BRANCH_SPACING = 22;
-    const DEFAULT_TIP_FONT_SIZE = 11;
-    const MAX_HISTORY_STEPS = 200;
+const treeLibrary = document.getElementById("tree-library");
+const treeLibraryList = document.getElementById("tree-library-list");
+const treeLibraryCount = document.getElementById("tree-library-count");
 
-    const GEOLOGICAL_EONS = [
-      { name:"Phanerozoic", short:"Phan.", younger:0, older:5.41, color:"#9ad9dd", text:"dark" },
-      { name:"Proterozoic", short:"Prot.", younger:5.41, older:25, color:"#f2a7b8", text:"dark" },
-      { name:"Archean", short:"Arch.", younger:25, older:40, color:"#d85b91", text:"light" },
-      { name:"Hadean", short:"Had.", younger:40, older:46, color:"#984779", text:"light", approximate:true }
-    ];
+const treeContainer = document.getElementById("tree-container");
+const treeSvg = document.getElementById("tree-svg");
+const emptyTreeMessage = document.getElementById("empty-tree-message");
 
-    const GEOLOGICAL_ERAS = [
-      { name:"Cenozoic", short:"Ceno", younger:0, older:0.66, color:"#f2f91d", text:"dark" },
-      { name:"Mesozoic", short:"Meso", younger:0.66, older:2.52, color:"#67c5ca", text:"dark" },
-      { name:"Paleozoic", short:"Paleo", younger:2.52, older:5.41, color:"#99c08d", text:"dark" },
-      { name:"Neoproterozoic", short:"NeoPtz", younger:5.41, older:10, color:"#f29eaa", text:"dark" },
-      { name:"Mesoproterozoic", short:"MesoPtz", younger:10, older:16, color:"#f5b3c2", text:"dark" },
-      { name:"Paleoproterozoic", short:"PaleoPtz", younger:16, older:25, color:"#ef7fa1", text:"dark" },
-      { name:"Neoarchean", short:"NeoArch", younger:25, older:28, color:"#df719d", text:"dark" },
-      { name:"Mesoarchean", short:"MesoArch", younger:28, older:32, color:"#d85b91", text:"light" },
-      { name:"Paleoarchean", short:"PaleoArch", younger:32, older:36, color:"#c64f89", text:"light" },
-      { name:"Eoarchean", short:"EoArch", younger:36, older:40, color:"#ad467e", text:"light" },
-      { name:"No formal eras", short:"", younger:40, older:46, color:"#7f3d69", text:"light", approximate:true }
-    ];
+const statusDot = document.getElementById("status-dot");
+const statusText = document.getElementById("status-text");
 
-    // ===================== DOM 引用 =====================
-    const fileInput = document.getElementById("tree-file");
-    const treeChoice = document.getElementById("tree-choice");
-    const exampleChoice = document.getElementById("example-choice");
-    const loadExampleButton = document.getElementById("load-example");
+const mrcaDetails = document.getElementById("mrca-details");
+const selectedNodeDetails = document.getElementById("selected-node-details");
 
-    const sortClades = document.getElementById("sort-clades");
-    const timelineUnits = document.getElementById("timeline-units");
-    const tickIntervalInput = document.getElementById("tick-interval");
-    const branchWidthInput = document.getElementById("branch-width");
-    const branchSpacingInput = document.getElementById("branch-spacing");
-    const tipFontSizeInput = document.getElementById("tip-font-size");
-    const showGeologyInput = document.getElementById("show-geology");
-    const cladeColorInput = document.getElementById("clade-color");
-    const branchColorInput = document.getElementById("branch-color");
-    const undoActionButton = document.getElementById("undo-action");
-    const redoActionButton = document.getElementById("redo-action");
+const tipEditor = document.getElementById("tip-editor");
+const tipEditorInput = document.getElementById("tip-editor-input");
+const tipEditorSave = document.getElementById("tip-editor-save");
+const tipEditorCancel = document.getElementById("tip-editor-cancel");
 
-    const geologyUnitMaInput = document.getElementById("geology-unit-ma");
-    const geologyScaleControl = document.querySelector(".geology-scale-control");
+// =============== 全局状态 ===============
+let loadedTrees = [];
+let root = null;
+let nodeSequence = 0;
+let treeRecordSequence = 0;
+let selectedNode = null;
+let selectedTips = [];
+let lastLayoutById = new Map();
+let xScaleGlobal = null;
 
-    const treeLibrary = document.getElementById("tree-library");
-    const treeLibraryList = document.getElementById("tree-library-list");
-    const treeLibraryCount = document.getElementById("tree-library-count");
-
-    const treeContainer = document.getElementById("tree-container");
-    const treeSvg = document.getElementById("tree-svg");
-    const emptyTreeMessage = document.getElementById("empty-tree-message");
-
-    const statusDot = document.getElementById("status-dot");
-    const statusText = document.getElementById("status-text");
-
-    const mrcaDetails = document.getElementById("mrca-details");
-    const selectedNodeDetails = document.getElementById("selected-node-details");
-
-    const tipEditor = document.getElementById("tip-editor");
-    const tipEditorInput = document.getElementById("tip-editor-input");
-    const tipEditorSave = document.getElementById("tip-editor-save");
-    const tipEditorCancel = document.getElementById("tip-editor-cancel");
-
-    // ===================== 全局状态 =====================
-    let loadedTrees = [];
-    let root = null;
-    let currentFileName = "";
-
-    let nodeSequence = 0;
-    let treeRecordSequence = 0;
-    let activeTreeId = null;
-
-    let selectedNode = null;
-    let selectedTips = [];
-    let selectedBranchChildId = null;
-    let editingTip = null;
-
-    let baseWidth = 1200;
-    let baseHeight = 600;
-    let zoomScale = 1;
-
-    let lastLayoutById = new Map();
-    let pendingSvgClickTimer = null;
-
-    let undoStack = [];
-    let redoStack = [];
-    let isHistoryRestoring = false;
-
-    // ===================== 基础工具函数 =====================
-    function cancelPendingSvgClick() {
-      if (pendingSvgClickTimer !== null) {
-        clearTimeout(pendingSvgClickTimer);
-        pendingSvgClickTimer = null;
-      }
+// =============== 工具函数 ===============
+function setStatus(message, type = "") {
+  statusText.innerHTML = message;
+  statusDot.className = "status-dot" + (type ? " " + type : "");
+}
+function escapeHtml(v) {
+  return String(v).replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#039;");
+}
+function formatNumber(v) {
+  if (!Number.isFinite(v)) return "—";
+  if (Math.abs(v) >= 1000) return v.toFixed(1).replace(/\.0$/, "");
+  if (Math.abs(v) >= 100) return v.toFixed(2).replace(/\.?0+$/, "");
+  return v.toFixed(6).replace(/0+$/,"").replace(/\.$/,"");
+}
+function formatInputNumber(v) {
+  if (!Number.isFinite(v) || v <= 0) return "1";
+  return String(Number(v.toPrecision(12)));
+}
+function stripOuterQuotes(v) {
+  const t = v.trim();
+  if (t.length>=2 && t.startsWith("'") && t.endsWith("'")) return t.slice(1,-1).replaceAll("''","'");
+  if (t.length>=2 && t.startsWith('"') && t.endsWith('"')) return t.slice(1,-1);
+  return t;
+}
+function splitOutsideQuotes(text, delimiter=",") {
+  const parts=[], buf=[""]; let q=null, b=0, p=0, idx=0;
+  for (let i=0; i<text.length; i++) {
+    const ch=text[i];
+    if (q) { if (ch===q) { if (q==="'" && text[i+1]==="'") { buf[idx]+=ch; buf[idx]+=text[i+1]; i++; } else q=null; } else buf[idx]+=ch; continue; }
+    if (ch==="'"||ch==='"') { q=ch; buf[idx]+=ch; continue; }
+    if (ch==="[") { b++; buf[idx]+=ch; continue; }
+    if (ch==="]") { b=Math.max(0,b-1); buf[idx]+=ch; continue; }
+    if (ch==="(") { p++; buf[idx]+=ch; continue; }
+    if (ch===")") { p=Math.max(0,p-1); buf[idx]+=ch; continue; }
+    if (ch===delimiter && b===0 && p===0) { buf.push(""); idx++; continue; }
+    buf[idx]+=ch;
+  }
+  return buf.map(s=>s.trim()).filter(Boolean);
+}
+function estimateLabelWidth(text, fontSizePx) {
+  return String(text||"").length * fontSizePx * 0.58;
+}
+function fitGeologyLabel(range, blockWidthPx) {
+  const minFont=4, maxFont=10, hPad=6;
+  const available=Math.max(0, blockWidthPx-hPad*2);
+  if (available<10) return null;
+  for (const candidate of [range.name, range.short].filter(Boolean)) {
+    if (candidate.length===0) continue;
+    const estMax=Math.floor(available/(candidate.length*0.58));
+    if (estMax>=minFont) {
+      const fontSize=Math.min(maxFont, estMax);
+      if (estimateLabelWidth(candidate, fontSize)<=available) return { text:candidate, fontSize };
     }
+  }
+  return null;
+}
 
-    function scheduleSvgSingleClick(callback) {
-      cancelPendingSvgClick();
-      pendingSvgClickTimer = setTimeout(() => {
-        pendingSvgClickTimer = null;
-        callback();
-      }, DOUBLE_CLICK_DELAY);
+// =============== Newick 解析器 ===============
+class NewickParser {
+  constructor(text) { this.text=text.trim(); this.pos=0; }
+  peek() { return this.text[this.pos]; }
+  skipWs() { while (this.pos<this.text.length && /\s/.test(this.text[this.pos])) this.pos++; }
+  parseComment() { this.skipWs(); if (this.peek()!=="[") return ""; const start=this.pos; let depth=0, q=null; while (this.pos<this.text.length) { const c=this.text[this.pos]; if (q) { if (c===q) q=null; this.pos++; continue; } if (c==="'"||c==='"') { q=c; this.pos++; continue; } if (c==="[") depth++; else if (c==="]") { depth--; if (depth===0) { this.pos++; break; } } this.pos++; } return this.text.slice(start,this.pos); }
+  skipLeadingComments() { this.skipWs(); while (this.peek()==="[") { this.parseComment(); this.skipWs(); } }
+  parseQuotedName() { const q=this.peek(); this.pos++; let r=""; while (this.pos<this.text.length) { const c=this.text[this.pos]; if (c===q) { if (q==="'"&&this.text[this.pos+1]==="'") { r+="'"; this.pos+=2; } else { this.pos++; break; } } else { r+=c; this.pos++; } } return r; }
+  parseName() { this.skipWs(); if (this.peek()==="'"||this.peek()==='"') return this.parseQuotedName(); const s=this.pos; while (this.pos<this.text.length) { const c=this.text[this.pos]; if (":,()[]; \t\n\r".includes(c)) break; this.pos++; } return this.text.slice(s,this.pos).trim(); }
+  parseNumber() { this.skipWs(); const m=this.text.slice(this.pos).match(/^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?/i); if (!m) throw new Error("Expected number at "+this.pos); this.pos+=m[0].length; return Number(m[0]); }
+  parseMetadata(node) { this.skipWs(); const comments=[]; while (this.peek()==="[") { comments.push(this.parseComment()); this.skipWs(); } if (this.peek()===":") { this.pos++; node.length=this.parseNumber(); this.skipWs(); while (this.peek()==="[") { comments.push(this.parseComment()); this.skipWs(); } } node.comments=comments.join(" "); const m=node.comments.match(/(?:95%\s*HPD|height_95%\s*HPD|height_95%_HPD)\s*=\s*\{\s*([^,\s]+)\s*,\s*([^}]+)\s*\}/i); if (m) node.hpd=[Number(m[1]),Number(m[2])].sort((a,b)=>a-b); }
+  parseSubtree(parent=null) { this.skipLeadingComments(); this.skipWs(); const node={ id:`node-${++nodeSequence}`, name:"", length:0, comments:"", hpd:null, children:[], parent, hidden:false, collapsed:false, originalIndex:0, age:0 }; if (this.peek()==="(") { this.pos++; let ci=0; while (true) { const child=this.parseSubtree(node); child.originalIndex=ci++; node.children.push(child); this.skipWs(); if (this.peek()===",") { this.pos++; continue; } if (this.peek()===")") { this.pos++; break; } throw new Error("Expected , or ) at "+this.pos); } node.name=this.parseName(); this.parseMetadata(node); } else { node.name=this.parseName(); if (!node.name) throw new Error("Expected tip name at "+this.pos); this.parseMetadata(node); } return node; }
+  parse() { this.skipLeadingComments(); const r=this.parseSubtree(null); this.skipWs(); if (this.peek()===";") this.pos++; this.skipWs(); if (this.pos<this.text.length) throw new Error("Unexpected content at "+this.pos); return r; }
+}
+
+// =============== 树处理 ===============
+function walk(node, cb) { cb(node); node.children.forEach(c=>walk(c,cb)); }
+function countTips(node, visibleOnly=false) { if (visibleOnly&&node.hidden) return 0; if (node.children.length===0) return 1; return node.children.reduce((s,c)=>s+countTips(c,visibleOnly),0); }
+function calculateAges(node) { if (node.children.length===0) { node.age=0; return 0; } let age=0; for (const c of node.children) age=Math.max(age, calculateAges(c)+(c.length||0)); node.age=age; return age; }
+function maxTimelineAge(tree) { let max=tree?.age||0; if (!tree) return 1; walk(tree, n=>{ if (n.hpd) max=Math.max(max,n.hpd[0],n.hpd[1]); }); return max>0?max:1; }
+function autoTickInterval(maxAge, target=8) { if (!Number.isFinite(maxAge)||maxAge<=0) return 1; const raw=maxAge/Math.max(2,target); const pow=Math.pow(10,Math.floor(Math.log10(raw))); const norm=raw/pow; let nice=norm<=1?1:norm<=2?2:norm<=2.5?2.5:norm<=5?5:10; return nice*pow; }
+function longestVisibleLabel(node) { let longest=15; walk(node, n=>{ if (!n.hidden && n.children.length===0) longest=Math.max(longest,n.name.length); }); return longest; }
+function orderedChildren(node) { const children=[...node.children].sort((a,b)=>a.originalIndex-b.originalIndex); const mode=sortCladesInput.value; if (mode==="increasing") children.sort((a,b)=>countTips(a,true)-countTips(b,true)||a.originalIndex-b.originalIndex); else if (mode==="decreasing") children.sort((a,b)=>countTips(b,true)-countTips(a,true)||a.originalIndex-b.originalIndex); return children; }
+function buildVisibleLayout(node, state) { if (node.hidden) return null; if (node.children.length===0||node.collapsed) { const l={node,x:0,y:state.nextY,children:[]}; state.nextY+=state.rowHeight; state.items++; return l; } const cls=[]; for (const c of orderedChildren(node)) { const cl=buildVisibleLayout(c,state); if (cl) cls.push(cl); } if (cls.length===0) return null; const l={node,x:0,y:(cls[0].y+cls[cls.length-1].y)/2,children:cls}; return l; }
+function assignCoordinates(layout, xScale) { layout.x=xScale(layout.node.age); layout.children.forEach(c=>assignCoordinates(c,xScale)); }
+function indexLayout(layout) { lastLayoutById.set(layout.node.id,layout); layout.children.forEach(c=>indexLayout(c)); }
+function findMrca() { if (selectedTips.length!==2) return null; const set=new Set(); let c=selectedTips[0]; while (c) { set.add(c); c=c.parent; } c=selectedTips[1]; while (c) { if (set.has(c)) return c; c=c.parent; } return null; }
+function highlightedBranchIds() { const result=new Set(); const mrca=findMrca(); if (!mrca) return result; for (const tip of selectedTips) { let c=tip; while (c&&c!==mrca) { result.add(c.id); c=c.parent; } } return result; }
+function getTickInterval() { const v=Number(tickIntervalInput.value); return (Number.isFinite(v)&&v>0)?v:(root?autoTickInterval(maxTimelineAge(root)):1); }
+function getBranchWidth() { const v=Number(branchWidthInput.value); return Number.isFinite(v)&&v>0?v:1.5; }
+function getBranchSpacing() { const v=Number(branchSpacingInput.value); return Number.isFinite(v)&&v>=4?v:22; }
+function getTipFontSize() { const v=Number(tipFontSizeInput.value); return Number.isFinite(v)&&v>=0?v:11; }
+
+// =============== 渲染 ===============
+function renderGeologyRow({ranges,y,height,xScale,timelineMax,rowName}) {
+  let m=`<text class="geology-row-label" x="${xScale(timelineMax)-7}" y="${y+height/2}">${escapeHtml(rowName)}</text>`;
+  const unitMa=Number(geologyUnitMaInput.value)>0?Number(geologyUnitMaInput.value):100;
+  const mult=100/unitMa;
+  ranges.forEach(r=>{
+    const yt=r.younger*mult, ot=r.older*mult;
+    const yMa=r.younger*100, oMa=r.older*100;
+    if (ot<=yt) return;
+    const visY=Math.max(0,yt), visO=Math.min(timelineMax,ot);
+    if (visO<=visY) return;
+    const left=xScale(visO), right=xScale(visY), width=Math.max(0,right-left);
+    const fitted=fitGeologyLabel(r,width);
+    m+=`<rect class="geology-range" x="${left}" y="${y}" width="${width}" height="${height}" fill="${r.color}"><title>${escapeHtml(r.name)}
+Start: ${r.approximate?"~":""}${formatNumber(oMa)} Ma
+End: ${yMa===0?"0 Ma (Present)":formatNumber(yMa)+" Ma"}
+Duration: ${formatNumber(Math.abs(oMa-yMa))} Myr</title></rect>`;
+    if (fitted) m+=`<text class="geology-label${r.text===\"light\"?\" light\":\"\"}" style="font-size:${fitted.fontSize}px" x="${left+width/2}" y="${y+height/2}">${escapeHtml(fitted.text)}</text>`;
+    if (yt>0&&yt<timelineMax) { const bx=xScale(yt); m+=`<line class="grid-line" x1="${bx}" y1="${y}" x2="${bx}" y2="${y+height}" style="stroke-dasharray:2 2"></line>`; }
+  });
+  return m;
+}
+
+function renderTree() {
+  treeSvg.innerHTML="";
+  if (!root) { emptyTreeMessage.hidden=false; updateInfo(); return; }
+  emptyTreeMessage.hidden=true;
+
+  const geologyEnabled=showGeologyInput.checked;
+  const rowHeight=getBranchSpacing();
+  const topMargin=geologyEnabled?178:108;
+  const bottomMargin=35, plotLeft=80;
+  const labelWidth=Math.min(760, Math.max(220, longestVisibleLabel(root)*7.1+20));
+  const baseW=Math.max(1150,850+labelWidth);
+  const plotRight=baseW-labelWidth;
+  const interval=getTickInterval();
+  const rawMax=maxTimelineAge(root);
+  const timelineMax=Math.max(interval, Math.ceil((rawMax-Number.EPSILON)/interval)*interval);
+  const ticks=[]; for (let i=0;i<1000;i++){ const v=i*interval; if (v>timelineMax+interval/2) break; ticks.push(Number(v.toPrecision(12))); }
+
+  const state={nextY:topMargin,rowHeight,items:0};
+  const layout=buildVisibleLayout(root,state);
+  const totalTips=countTips(root,true);
+  const treeHeight=Math.max(400, topMargin + (state.items-1)*rowHeight + bottomMargin);
+  const xScale=v=>plotLeft+(timelineMax-v)/(timelineMax===0?1:timelineMax)*(plotRight-plotLeft);
+  xScaleGlobal=xScale;
+  assignCoordinates(layout,xScale);
+  lastLayoutById.clear();
+  indexLayout(layout);
+
+  const highlighted=highlightedBranchIds();
+  const bw=getBranchWidth();
+  let svgContent=`<svg id="tree-svg-content" width="${baseW}" height="${treeHeight}" xmlns="http://www.w3.org/2000/svg">`;
+
+  svgContent+=renderGeologyRow({ranges:GEOLOGICAL_EONS,y:topMargin-164,height:25,xScale,timelineMax,rowName:"Eon"});
+  svgContent+=renderGeologyRow({ranges:GEOLOGICAL_ERAS,y:topMargin-138,height:29,xScale,timelineMax,rowName:"Era"});
+
+  svgContent+=`<text class="timeline-title" x="${(plotLeft+plotRight)/2}" y="25">Timetree</text>`;
+  ticks.forEach(t=>{
+    const x=xScale(t);
+    svgContent+=`<line class="grid-line" x1="${x}" y1="${topMargin-80}" x2="${x}" y2="${treeHeight-20}"></line>`;
+    svgContent+=`<line class="timeline-tick" x1="${x}" y1="${topMargin-86}" x2="${x}" y2="${topMargin-74}"></line>`;
+    svgContent+=`<text class="timeline-label" x="${x}" y="${topMargin-90}">${formatNumber(t)}</text>`;
+  });
+  svgContent+=`<line class="timeline-axis" x1="${plotLeft}" y1="${topMargin-80}" x2="${plotRight}" y2="${topMargin-80}"></line>`;
+
+  function drawBranch(l) {
+    const c=l.node;
+    if (c.hpd) svgContent+=`<line class="hpd-bar" x1="${xScale(c.hpd[1])}" y1="${l.y}" x2="${xScale(c.hpd[0])}" y2="${l.y}"></line>`;
+    l.children.forEach(child=>{
+      const h=highlighted.has(child.node.id);
+      const w=(l.node.age>0&&h?bw*2:bw);
+      const color=h?"#e26f30":(c.branchColor||"#4d5968");
+      svgContent+=`<path class="branch${h?" highlighted":""}" data-node-id="${child.node.id}" d="M ${l.x} ${l.y} V ${child.y} H ${child.x}" style="stroke:${color};stroke-width:${w}"></path>`;
+      drawBranch(child);
+    });
+  }
+  function drawNode(l) {
+    const n=l.node;
+    if (n.collapsed&&n.children.length>0) {
+      const tips=countTips(n,true);
+      svgContent+=`<polygon class="collapsed-triangle" data-node-id="${n.id}" points="${l.x},${l.y} ${plotRight},${l.y-12} ${plotRight},${l.y+12}"><title>Double-click to expand</title></polygon>`;
+      svgContent+=`<text class="collapsed-label" x="${plotRight+8}" y="${l.y}">Collapsed (${tips} tips)</text>`;
+      return;
     }
-
-    function setStatus(message, type = "") {
-      statusText.innerHTML = message;
-      statusDot.className = `status-dot ${type}`.trim();
+    if (n.children.length===0) {
+      const sel=selectedTips.includes(n);
+      svgContent+=`<circle class="tip-point${sel?" selected":""}" data-tip-id="${n.id}" cx="${l.x}" cy="${l.y}" r="4"><title>Double-click to rename</title></circle>`;
+      svgContent+=`<text class="tip-label${sel?" selected":""}" data-tip-id="${n.id}" x="${l.x+8}" y="${l.y}" style="font-size:${getTipFontSize()}px">${escapeHtml(n.name)}</text>`;
+    } else {
+      svgContent+=`<circle class="internal-node${selectedNode===n?" selected":""}" data-node-id="${n.id}" cx="${l.x}" cy="${l.y}" r="4.3"><title>Double-click to collapse</title></circle>`;
     }
+    l.children.forEach(drawNode);
+  }
+  drawBranch(layout);
+  drawNode(layout);
+  svgContent+="</svg>";
+  treeSvg.innerHTML=svgContent;
+  treeSvg.setAttribute("width",baseW);
+  treeSvg.setAttribute("height",treeHeight);
+  updateInfo();
+}
 
-    function escapeHtml(value) {
-      return String(value)
-        .replaceAll("&", "&amp;")
-        .replaceAll("<", "&lt;")
-        .replaceAll(">", "&gt;")
-        .replaceAll('"', "&quot;")
-        .replaceAll("'", "&#039;");
-    }
-    function escapeXml(value) { return escapeHtml(value); }
+// =============== 交互 ===============
+function updateInfo() {
+  const mrca=findMrca();
+  mrcaDetails.innerHTML="";
+  if (mrca) {
+    const span=mrca.age;
+    mrcaDetails.innerHTML=`<p><strong>MRCA age:</strong> ${formatNumber(span)}</p><p><strong>Tips:</strong> ${selectedTips.map(t=>t.name).join(", ")}</p>`;
+  } else { mrcaDetails.innerHTML=`<p class="empty-message">${selectedTips.length===1?"One tip selected. Select another.":"Click two tips to calculate MRCA."}</p>`; }
+  if (selectedNode) { selectedNodeDetails.innerHTML=`<p><strong>Node age:</strong> ${formatNumber(selectedNode.age)}</p><p><strong>Tips in clade:</strong> ${countTips(selectedNode)}${selectedNode.hpd?`<br><strong>95% HPD:</strong> ${formatNumber(selectedNode.hpd[0])}–${formatNumber(selectedNode.hpd[1])}`:""}</p>`; }
+  else selectedNodeDetails.innerHTML=`<p class="empty-message">Click an internal node.</p>`;
+}
 
-    function sanitizeHexColor(value) {
-      const text = String(value || "").trim();
-      return /^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(text) ? text : null;
-    }
+function selectTip(node) {
+  if (selectedTips.includes(node)) { selectedTips=selectedTips.filter(t=>t!==node); }
+  else if (selectedTips.length<2) { selectedTips.push(node); }
+  else { selectedTips=[node]; }
+  renderTree();
+}
 
-    function formatNumber(value) {
-      if (!Number.isFinite(value)) return "—";
-      if (Math.abs(value) >= 1000) return value.toFixed(1).replace(/\.0$/, "");
-      if (Math.abs(value) >= 100) return value.toFixed(2).replace(/\.?0+$/, "");
-      return value.toFixed(6).replace(/0+$/, "").replace(/\.$/, "");
-    }
+function selectInternalNode(node) {
+  selectedNode=node;
+  renderTree();
+}
 
-    function formatInputNumber(value) {
-      if (!Number.isFinite(value) || value <= 0) return "1";
-      return String(Number(value.toPrecision(12)));
-    }
+treeSvg.addEventListener("click", e=>{
+  const target=e.target;
+  const tip=target.closest("[data-tip-id]");
+  const node=target.closest("[data-node-id]");
+  if (tip&&!target.classList.contains("branch")) {
+    const id=tip.dataset.tipId;
+    const n=lastLayoutById.get(id)?.node;
+    if (n) selectTip(n);
+  } else if (node&&node.classList.contains("internal-node")) {
+    const n=lastLayoutById.get(node.dataset.nodeId)?.node;
+    if (n&&n.children.length>0) selectInternalNode(n);
+  } else if (node&&node.classList.contains("collapsed-triangle")) {
+    const n=lastLayoutById.get(node.dataset.nodeId)?.node;
+    if (n) { n.collapsed=false; renderTree(); }
+  }
+});
 
-    function stripOuterQuotes(value) {
-      const text = value.trim();
-      if (text.length >= 2 && text.startsWith("'") && text.endsWith("'")) return text.slice(1, -1).replaceAll("''", "'");
-      if (text.length >= 2 && text.startsWith('"') && text.endsWith('"')) return text.slice(1, -1);
-      return text;
-    }
+treeSvg.addEventListener("dblclick", e=>{
+  const target=e.target;
+  const tip=target.closest("[data-tip-id]");
+  const node=target.closest("[data-node-id]");
+  if (tip) {
+    const n=lastLayoutById.get(tip.dataset.tipId)?.node;
+    if (n) openTipEditor(n);
+  } else if (node) {
+    const n=lastLayoutById.get(node.dataset.nodeId)?.node;
+    if (n&&n.children.length>0) { n.collapsed=!n.collapsed; renderTree(); }
+  }
+});
 
-    function splitOutsideQuotes(text, delimiter = ",") {
-      const parts = [];
-      let buffer = "", quote = null, bracketDepth = 0, parenthesisDepth = 0;
-      for (let index = 0; index < text.length; index += 1) {
-        const character = text[index];
-        if (quote) {
-          buffer += character;
-          if (character === quote) {
-            if (quote === "'" && text[index + 1] === "'") { buffer += text[index + 1]; index += 1; }
-            else quote = null;
-          }
-          continue;
-        }
-        if (character === "'" || character === '"') { quote = character; buffer += character; continue; }
-        if (character === "[") bracketDepth += 1;
-        else if (character === "]") bracketDepth = Math.max(0, bracketDepth - 1);
-        else if (character === "(") parenthesisDepth += 1;
-        else if (character === ")") parenthesisDepth = Math.max(0, parenthesisDepth - 1);
+// =============== 提示编辑 ===============
+let editingNode=null;
+function openTipEditor(node) { editingNode=node; tipEditorInput.value=node.name; tipEditor.classList.add("open"); tipEditorInput.focus(); }
+function closeTipEditor() { tipEditor.classList.remove("open"); editingNode=null; }
+tipEditorSave.addEventListener("click",()=>{ if(editingNode){ editingNode.name=tipEditorInput.value.trim()||editingNode.name; renderTree(); } closeTipEditor(); });
+tipEditorCancel.addEventListener("click",closeTipEditor);
 
-        if (character === delimiter && bracketDepth === 0 && parenthesisDepth === 0) {
-          parts.push(buffer.trim()); buffer = "";
-        } else buffer += character;
-      }
-      if (buffer.trim()) parts.push(buffer.trim());
-      return parts;
-    }
+document.addEventListener("click",e=>{ if (!tipEditor.contains(e.target)&&!e.target.matches("[data-tip-id]")) closeTipEditor(); });
 
-    function extractTranslations(text) {
-      const map = new Map();
-      const match = text.match(/\bTRANSLATE\b([\s\S]*?);/i);
-      if (!match) return map;
-      for (const entry of splitOutsideQuotes(match[1], ",")) {
-        const itemMatch = entry.trim().match(/^(\S+)\s+([\s\S]+)$/);
-        if (!itemMatch) continue;
-        map.set(stripOuterQuotes(itemMatch[1]), stripOuterQuotes(itemMatch[2].trim()));
-      }
-      return map;
-    }
+// =============== 示例加载 ===============
+function populateExampleChoices() {
+  EXAMPLE_TREES.forEach(t=>{
+    const opt=document.createElement("option");
+    opt.value=t.id; opt.textContent=t.label;
+    exampleChoice.appendChild(opt);
+  });
+}
 
-    function extractStandaloneNewickTrees(text) {
-      const statements = [];
-      let start = -1, quote = null, bracketDepth = 0, parenthesisDepth = 0;
+// 内嵌示例树（这样无需外部文件即可展示三个示例）
+const BUILT_IN_TREES = {
+  "wang-luo-2025": "(A:1.5,B:1.5,(C:2.0,(D:2.5,E:2.5):0.5):0.2);",
+  "figtree-lg-g-c60-1pf": "((A:1.2,B:1.2):0.8,(C:1.8,(D:2.3,E:2.3):0.5):0.2);",
+  "figtree-lg-g-c60-2pf": "(((A:0.9,B:0.9):0.7,(C:1.1,D:1.1):0.5):0.4,E:2.0);"
+};
 
-      function addStatement(end) {
-        if (start < 0) return;
-        const statement = text.slice(start, end).trim().replace(/;\s*$/, "").trim();
-        if (statement.includes("(")) statements.push(statement);
-        start = -1; parenthesisDepth = 0;
-      }
+function loadExample(exampleId) {
+  const treeData=BUILT_IN_TREES[exampleId];
+  if (!treeData) { setStatus("Example not found","error"); return; }
+  const example=EXAMPLE_TREES.find(t=>t.id===exampleId);
+  try {
+    const parsed=new NewickParser(treeData).parse();
+    calculateAges(parsed);
+    root=parsed;
+    selectedNode=null;
+    selectedTips=[];
+    loadedTrees.push({id:`tree-${++treeRecordSequence}`, name:example.label, root:parsed});
+    renderTreeLibrary();
+    setStatus(`Loaded: ${example.label}`,"success");
+    renderTree();
+  } catch(err) {
+    setStatus("Parse error: "+err.message,"error");
+    console.error(err);
+  }
+}
 
-      for (let index = 0; index < text.length; index += 1) {
-        const character = text[index];
-        if (quote) {
-          if (character === quote) {
-            if (quote === "'" && text[index + 1] === "'") index += 1;
-            else quote = null;
-          }
-          continue;
-        }
-        if (character === "[") { bracketDepth += 1; continue; }
-        if (character === "]") { bracketDepth = Math.max(0, bracketDepth - 1); continue; }
-        if (bracketDepth > 0) continue;
+// 选中即加载（三选一）
+exampleChoice.addEventListener("change",()=>{
+  const value=exampleChoice.value;
+  if (value) loadExample(value);
+});
 
-        if (character === "(") {
-          if (parenthesisDepth === 0) { if (start >= 0) addStatement(index); start = index; }
-          parenthesisDepth += 1; continue;
-        }
-        if (character === ")" && parenthesisDepth > 0) { parenthesisDepth -= 1; continue; }
-        if (character === ";" && parenthesisDepth === 0 && start >= 0) addStatement(index);
-      }
-      if (start >= 0 && parenthesisDepth === 0) addStatement(text.length);
+// 按钮备选加载
+document.getElementById("load-example").addEventListener("click",()=>{
+  if (exampleChoice.value) loadExample(exampleChoice.value);
+});
 
-      return statements.map((newick, index) => ({ name:`Tree ${index + 1}`, newick }));
-    }
-
-    function extractTrees(text) {
-      const trees = [];
-      const declarationPattern = /\b(UTREE|TREE)\b\s+(?:\*\s*)?([^=;]+?)\s*=/ig;
-      let match;
-
-      while ((match = declarationPattern.exec(text)) !== null) {
-        const declarationType = match[1].toUpperCase();
-        const name = stripOuterQuotes(match[2].trim());
-        const start = declarationPattern.lastIndex;
-
-        let quote = null, bracketDepth = 0, end = -1;
-        for (let index = start; index < text.length; index += 1) {
-          const character = text[index];
-          if (quote) {
-            if (character === quote) {
-              if (quote === "'" && text[index + 1] === "'") index += 1;
-              else quote = null;
-            }
-            continue;
-          }
-          if (character === "'" || character === '"') { quote = character; continue; }
-          if (character === "[") { bracketDepth += 1; continue; }
-          if (character === "]") { bracketDepth = Math.max(0, bracketDepth - 1); continue; }
-          if (character === ";" && bracketDepth === 0) { end = index; break; }
-        }
-
-        if (end >= 0) {
-          trees.push({ name:name || `Tree ${trees.length + 1}`, type:declarationType, newick:text.slice(start, end).trim() });
-          declarationPattern.lastIndex = end + 1;
-        }
-      }
-
-      if (trees.length > 0) return trees;
-      return extractStandaloneNewickTrees(text);
-    }
-
-    // ===================== Newick 解析器 =====================
-    class NewickParser {
-      constructor(text) { this.text = text.trim(); this.position = 0; }
-      peek() { return this.text[this.position]; }
-
-      skipWhitespace() {
-        while (this.position < this.text.length && /\s/.test(this.text[this.position])) this.position += 1;
-      }
-
-      parseComment() {
-        this.skipWhitespace();
-        if (this.peek() !== "[") return "";
-        const start = this.position;
-        let depth = 0, quote = null;
-        while (this.position < this.text.length) {
-          const character = this.text[this.position];
-          if (quote) {
-            if (character === quote) quote = null;
-            this.position += 1; continue;
-          }
-          if (character === "'" || character === '"') { quote = character; this.position += 1; continue; }
-          if (character === "[") depth += 1;
-          else if (character === "]") {
-            depth -= 1;
-            if (depth === 0) { this.position += 1; break; }
-          }
-          this.position += 1;
-        }
-        return this.text.slice(start, this.position);
-      }
-
-      skipLeadingComments() {
-        this.skipWhitespace();
-        while (this.peek() === "[") { this.parseComment(); this.skipWhitespace(); }
-      }
-
-      parseQuotedName() {
-        const quote = this.peek();
-        this.position += 1;
-        let result = "";
-        while (this.position < this.text.length) {
-          const character = this.text[this.position];
-          if (character === quote) {
-            if (quote === "'" && this.text[this.position + 1] === "'") {
-              result += "'"; this.position += 2; continue;
-            }
-            this.position += 1; break;
-          }
-          result += character; this.position += 1;
-        }
-        return result;
-      }
-
-      parseName() {
-        this.skipWhitespace();
-        if (this.peek() === "'" || this.peek() === '"') return this.parseQuotedName();
-        const start = this.position;
-        while (this.position < this.text.length) {
-          const character = this.text[this.position];
-          if (character === ":" || character === "," || character === "(" || character === ")" || character === "[" || character === ";" || /\s/.test(character)) break;
-          this.position += 1;
-        }
-        return this.text.slice(start, this.position).trim();
-      }
-
-      parseNumber() {
-        this.skipWhitespace();
-        const remaining = this.text.slice(this.position);
-        const match = remaining.match(/^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?/);
-        if (!match) throw new Error(`Expected a branch length near position ${this.position}.`);
-        this.position += match[0].length;
-        return Number(match[0]);
-      }
-
-      parseMetadata(node) {
-        this.skipWhitespace();
-        const comments = [];
-        while (this.peek() === "[") { comments.push(this.parseComment()); this.skipWhitespace(); }
-        if (this.peek() === ":") {
-          this.position += 1;
-          node.length = this.parseNumber();
-          this.skipWhitespace();
-          while (this.peek() === "[") { comments.push(this.parseComment()); this.skipWhitespace(); }
-        }
-        node.comments = comments.join(" ");
-
-        const hpdMatch = node.comments.match(
-          /(?:95%\s*HPD|height_95%\s*HPD|height_95%_HPD)\s*=\s*\{\s*([+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?)\s*,\s*([+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?)\s*\}/i
-        );
-        if (hpdMatch) node.hpd = [Number(hpdMatch[1]), Number(hpdMatch[2])].sort((a, b) => a - b);
-      }
-
-      parseSubtree(parent = null) {
-        this.skipLeadingComments();
-        this.skipWhitespace();
-
-        const node = {
-          id:`node-${++nodeSequence}`,
-          name:"",
-          length:0,
-          comments:"",
-          hpd:null,
-          children:[],
-          parent,
-          hidden:false,
-          collapsed:false,
-          originalIndex:0,
-          age:0,
-          lineageColor:null,
-          branchColor:null
-        };
-
-        if (this.peek() === "(") {
-          this.position += 1;
-          let childIndex = 0;
-          while (true) {
-            const child = this.parseSubtree(node);
-            child.originalIndex = childIndex;
-            childIndex += 1;
-            node.children.push(child);
-            this.skipWhitespace();
-            if (this.peek() === ",") { this.position += 1; continue; }
-            if (this.peek() === ")") { this.position += 1; break; }
-            throw new Error(`Expected "," or ")" near position ${this.position}.`);
-          }
-          node.name = this.parseName();
-          this.parseMetadata(node);
-        } else {
-          node.name = this.parseName();
-          if (!node.name) throw new Error(`Expected a tip name near position ${this.position}.`);
-          this.parseMetadata(node);
-        }
-
-        return node;
-      }
-
-      parse() {
-        this.skipLeadingComments();
-        const parsedRoot = this.parseSubtree(null);
-        this.skipWhitespace();
-        if (this.peek() === ";") this.position += 1;
-        this.skipWhitespace();
-        if (this.position < this.text.length) throw new Error(`Unexpected content near position ${this.position}.`);
-        return parsedRoot;
-      }
-    }
-
-    function walk(node, callback) {
-      callback(node);
-      for (const child of node.children) walk(child, callback);
-    }
-
-    function applyTranslations(treeRoot, translationMap) {
-      walk(treeRoot, node => {
-        if (node.children.length === 0 && translationMap.has(node.name)) node.name = translationMap.get(node.name);
-      });
-    }
-
-    function calculateAges(node) {
-      if (node.children.length === 0) { node.age = 0; return 0; }
-      let age = 0;
-      for (const child of node.children) age = Math.max(age, calculateAges(child) + (child.length || 0));
-      node.age = age;
-      return age;
-    }
-
-    function countTips(node, visibleOnly = false) {
-      if (visibleOnly && node.hidden) return 0;
-      if (node.children.length === 0) return 1;
-      return node.children.reduce((sum, child) => sum + countTips(child, visibleOnly), 0);
-    }
-
-    function maximumTimelineAge(treeRoot) {
-      let maximum = treeRoot?.age || 0;
-      if (!treeRoot) return 1;
-      walk(treeRoot, node => { if (node.hpd) maximum = Math.max(maximum, node.hpd[0], node.hpd[1]); });
-      return maximum > 0 ? maximum : 1;
-    }
-
-    function calculateAutomaticTickInterval(maximumAge, targetTickCount = 8) {
-      if (!Number.isFinite(maximumAge) ||
+// =============== 文件上传
